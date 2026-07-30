@@ -95,7 +95,7 @@
     background:var(--card-bg);
     border-bottom:1px solid var(--border);
     padding:20px 24px;
-    max-height:400px;
+    max-height:450px;
     overflow-y:auto;
   }
   #synthPanel.open{display:block;}
@@ -197,7 +197,7 @@
 
 <header>
   <h1><span class="roundel"></span>TfL Jazz: Every Train, Every Delay, Every Cancellation, a Note.</h1>
-  <p class="sub">Live London Underground arrivals from the TfL Unified API, sonified in real time. Customize synthesizer parameters for each tube line dynamically below.</p>
+  <p class="sub">Live London Underground arrivals from the TfL Unified API, sonified in real time. Customize synth types and parameters dynamically below.</p>
   <div class="actions">
     <button id="startBtn">Start listening</button>
     <button id="toggleConfig" class="btn-outline">Configure Tones</button>
@@ -221,7 +221,8 @@
 <script>
 const SCALE = ['F1', 'Bb1', 'F2', 'Bb2', 'C3', 'D3', 'F3', 'Bb3', 'D4', 'F4', 'Bb4'];
 
-// Config definition mapping initial synth settings
+const SYNTH_TYPES = ['FMSynth', 'AMSynth', 'MetalSynth', 'PluckSynth', 'MembraneSynth', 'DuoSynth', 'Synth'];
+
 const LINES = [
   { id:'bakerloo',        name:'Bakerloo',        color:'var(--line-bakerloo)',        type:'FMSynth',       harmonicity:1.5, resonance:3, cutoff:2000, attack:0.05, decay:0.2, sustain:0.2, release:0.6 },
   { id:'central',         name:'Central',         color:'var(--line-central)',         type:'MetalSynth',    harmonicity:4.1, resonance:800, cutoff:3000, attack:0.01, decay:0.1, sustain:0.1, release:0.3 },
@@ -239,7 +240,6 @@ const LINES = [
 const reverb = new Tone.Reverb({decay:3, wet:0.25}).toDestination();
 const limiter = new Tone.Limiter(-6).connect(reverb);
 
-// Instantiate builders for Tone types dynamically
 function createSynthInstance(cfg) {
   let s;
   const env = { attack: cfg.attack, decay: cfg.decay, sustain: cfg.sustain, release: cfg.release };
@@ -276,8 +276,31 @@ function createSynthInstance(cfg) {
 const board = document.getElementById('board');
 const panelGrid = document.getElementById('panelGrid');
 
+function buildControlPanel() {
+  panelGrid.innerHTML = '';
+  LINES.forEach(line => {
+    const card = document.createElement('div');
+    card.className = 'synth-card';
+    card.id = `card-${line.id}`;
+    
+    let typeOptions = SYNTH_TYPES.map(t => `<option value="${t}" ${line.type === t ? 'selected' : ''}>${t}</option>`).join('');
+    
+    card.innerHTML = `
+      <h3><span class="swatch" style="background:${line.color}"></span>${line.name}</h3>
+      <div class="control-group"><label>Synth Type</label><select data-line="${line.id}" data-param="type">${typeOptions}</select></div>
+      <div class="control-group"><label>Harmonic</label><input type="range" min="0.5" max="5" step="0.1" value="${line.harmonicity}" data-line="${line.id}" data-param="harmonicity"></div>
+      <div class="control-group"><label>Resonance</label><input type="range" min="10" max="5000" step="10" value="${line.resonance}" data-line="${line.id}" data-param="resonance"></div>
+      <div class="control-group"><label>Cut-off</label><input type="range" min="200" max="10000" step="100" value="${line.cutoff}" data-line="${line.id}" data-param="cutoff"></div>
+      <div class="control-group"><label>Attack</label><input type="range" min="0.001" max="1" step="0.01" value="${line.attack}" data-line="${line.id}" data-param="attack"></div>
+      <div class="control-group"><label>Decay</label><input type="range" min="0.05" max="2" step="0.05" value="${line.decay}" data-line="${line.id}" data-param="decay"></div>
+      <div class="control-group"><label>Release</label><input type="range" min="0.05" max="3" step="0.05" value="${line.release}" data-line="${line.id}" data-param="release"></div>
+    `;
+    panelGrid.appendChild(card);
+  });
+  attachControlListeners();
+}
+
 LINES.forEach(line => {
-  // Main Track row
   const row = document.createElement('div');
   row.className = 'track';
   row.innerHTML = `
@@ -286,23 +309,10 @@ LINES.forEach(line => {
     <div class="note-out" id="note-${line.id}">–</div>
   `;
   board.appendChild(row);
-
-  // Synth Config Card
-  const card = document.createElement('div');
-  card.className = 'synth-card';
-  card.innerHTML = `
-    <h3><span class="swatch" style="background:${line.color}"></span>${line.name} (${line.type})</h3>
-    <div class="control-group"><label>Harmonic</label><input type="range" min="0.5" max="5" step="0.1" value="${line.harmonicity}" data-line="${line.id}" data-param="harmonicity"></div>
-    <div class="control-group"><label>Resonance</label><input type="range" min="10" max="5000" step="10" value="${line.resonance}" data-line="${line.id}" data-param="resonance"></div>
-    <div class="control-group"><label>Cut-off</label><input type="range" min="200" max="10000" step="100" value="${line.cutoff}" data-line="${line.id}" data-param="cutoff"></div>
-    <div class="control-group"><label>Attack</label><input type="range" min="0.001" max="1" step="0.01" value="${line.attack}" data-line="${line.id}" data-param="attack"></div>
-    <div class="control-group"><label>Decay</label><input type="range" min="0.05" max="2" step="0.05" value="${line.decay}" data-line="${line.id}" data-param="decay"></div>
-    <div class="control-group"><label>Release</label><input type="range" min="0.05" max="3" step="0.05" value="${line.release}" data-line="${line.id}" data-param="release"></div>
-  `;
-  panelGrid.appendChild(card);
 });
 
-// Toggle config drawer
+buildControlPanel();
+
 document.getElementById('toggleConfig').addEventListener('click', () => {
   document.getElementById('synthPanel').classList.toggle('open');
 });
@@ -324,36 +334,48 @@ document.getElementById('startBtn').addEventListener('click', async () => {
   setInterval(pollArrivals, 18000);
 });
 
-// Listen to modifications from configuration inputs
-document.querySelectorAll('.synth-card input').forEach(input => {
-  input.addEventListener('input', (e) => {
-    const lineId = e.target.getAttribute('data-line');
-    const param = e.target.getAttribute('data-param');
-    const val = parseFloat(e.target.value);
-    
-    const line = LINES.find(l => l.id === lineId);
-    if (!line) return;
-    
-    line[param] = val;
-    if (!audioReady || !line.node) return;
-
-    try {
-      if (param === 'cutoff' && line.filter) {
-        line.filter.frequency.rampTo(val, 0.1);
-      } else if (param === 'resonance') {
-        if (line.node.resonance) line.node.resonance.value = val;
-        else if (line.node.modulationIndex) line.node.modulationIndex.value = val;
-        else if (line.node.dampening) line.node.dampening.value = val;
-      } else if (param === 'harmonicity' && line.node.harmonicity) {
-        line.node.harmonicity.value = val;
-      } else if (['attack', 'decay', 'sustain', 'release'].includes(param)) {
-        if (line.node.envelope) line.node.envelope[param] = val;
+function attachControlListeners() {
+  document.querySelectorAll('.synth-card input, .synth-card select').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const lineId = e.target.getAttribute('data-line');
+      const param = e.target.getAttribute('data-param');
+      const val = e.target.type === 'select-one' ? e.target.value : parseFloat(e.target.value);
+      
+      const line = LINES.find(l => l.id === lineId);
+      if (!line) return;
+      
+      line[param] = val;
+      
+      if (param === 'type' && audioReady) {
+        if (line.node) line.node.dispose();
+        if (line.filter) line.filter.dispose();
+        const nodeSet = createSynthInstance(line);
+        line.node = nodeSet.synth;
+        line.filter = nodeSet.filter;
+        if (line.node.volume) line.node.volume.value = -8;
+        return;
       }
-    } catch(err) {
-      console.warn('Parameter update error:', err);
-    }
+
+      if (!audioReady || !line.node) return;
+
+      try {
+        if (param === 'cutoff' && line.filter) {
+          line.filter.frequency.rampTo(val, 0.1);
+        } else if (param === 'resonance') {
+          if (line.node.resonance) line.node.resonance.value = val;
+          else if (line.node.modulationIndex) line.node.modulationIndex.value = val;
+          else if (line.node.dampening) line.node.dampening.value = val;
+        } else if (param === 'harmonicity' && line.node.harmonicity) {
+          line.node.harmonicity.value = val;
+        } else if (['attack', 'decay', 'sustain', 'release'].includes(param)) {
+          if (line.node.envelope) line.node.envelope[param] = val;
+        }
+      } catch(err) {
+        console.warn('Parameter update error:', err);
+      }
+    });
   });
-});
+}
 
 // ---------- Live API Fetching & Playback Loops ----------
 function hashToIndex(str, mod){
