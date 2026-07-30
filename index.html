@@ -148,20 +148,20 @@
 <script>
 // ---------- Line config: id used by TfL, display color, instrument, scale ----------
 // Notes drawn from one shared scale so every line stays harmonically compatible.
-const SCALE = ['C3','D3','E3','G3','A3','C4','D4','E4','G4','A4','C5','D5'];
+const SCALE = ['F1', 'Bb1', 'F2', 'Bb2', 'C3', 'D3', 'F3', 'Bb3', 'D4', 'F4', 'Bb4'];
 
 const LINES = [
-  { id:'bakerloo',        name:'Bakerloo',        color:'var(--line-bakerloo)',    synth:()=> new Tone.FMSynth({harmonicity:1.5, modulationIndex:3}), release:5.6 },
-  { id:'central',         name:'Central',         color:'var(--line-central)',     synth:()=> new Tone.MetalSynth({harmonicity:4.1, resonance:800}), release:5.3 },
-  { id:'circle',          name:'Circle',          color:'var(--line-circle)',      synth:()=> new Tone.PluckSynth({dampening:3000}), release:5.4 },
+  { id:'bakerloo',        name:'Bakerloo',        color:'var(--line-bakerloo)',    synth:()=> new Tone.FMSynth({harmonicity:1.5, modulationIndex:3}), release:0.6 },
+  { id:'central',         name:'Central',         color:'var(--line-central)',     synth:()=> new Tone.MetalSynth({harmonicity:4.1, resonance:800}), release:0.3 },
+  { id:'circle',          name:'Circle',          color:'var(--line-circle)',      synth:()=> new Tone.PluckSynth({dampening:3000}), release:0.4 },
   { id:'district',        name:'District',        color:'var(--line-district)',    synth:()=> new Tone.AMSynth(), release:0.7 },
-  { id:'hammersmith-city',name:'Ham. & City',     color:'var(--line-hammersmith)', synth:()=> new Tone.PluckSynth({dampening:5000}), release:5.4 },
-  { id:'jubilee',         name:'Jubilee',         color:'var(--line-jubilee)',     synth:()=> new Tone.MetalSynth({harmonicity:2.2, resonance:400}), release:5.25 },
-  { id:'metropolitan',    name:'Metropolitan',    color:'var(--line-metropolitan)',synth:()=> new Tone.DuoSynth(), release:5.8 },
-  { id:'northern',        name:'Northern',        color:'var(--line-northern)',    synth:()=> new Tone.MembraneSynth({octaves:2}), release:5.5 },
-  { id:'piccadilly',      name:'Piccadilly',      color:'var(--line-piccadilly)',  synth:()=> new Tone.DuoSynth({vibratoAmount:0.2}), release:5.9 },
-  { id:'victoria',        name:'Victoria',        color:'var(--line-victoria)',    synth:()=> new Tone.Synth({oscillator:{type:'triangle'}}), release:5.3 },
-  { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',    synth:()=> new Tone.Synth({oscillator:{type:'sine'}}), release:5.5 },
+  { id:'hammersmith-city',name:'Ham. & City',     color:'var(--line-hammersmith)', synth:()=> new Tone.PluckSynth({dampening:5000}), release:0.4 },
+  { id:'jubilee',         name:'Jubilee',         color:'var(--line-jubilee)',     synth:()=> new Tone.MetalSynth({harmonicity:2.2, resonance:400}), release:0.25 },
+  { id:'metropolitan',    name:'Metropolitan',    color:'var(--line-metropolitan)',synth:()=> new Tone.DuoSynth(), release:0.8 },
+  { id:'northern',        name:'Northern',        color:'var(--line-northern)',    synth:()=> new Tone.MembraneSynth({octaves:2}), release:0.5 },
+  { id:'piccadilly',      name:'Piccadilly',      color:'var(--line-piccadilly)',  synth:()=> new Tone.DuoSynth({vibratoAmount:0.2}), release:0.9 },
+  { id:'victoria',        name:'Victoria',        color:'var(--line-victoria)',    synth:()=> new Tone.Synth({oscillator:{type:'triangle'}}), release:0.3 },
+  { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',    synth:()=> new Tone.Synth({oscillator:{type:'sine'}}), release:0.5 },
 ];
 
 const reverb = new Tone.Reverb({decay:3, wet:0.25}).toDestination();
