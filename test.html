@@ -429,15 +429,14 @@ const STATIC_ANNOUNCEMENTS = [
   "Please stand behind the yellow line."
 ];
 
-// Line-specific template databases for focused announcements
 const LINE_SPECIFIC_ANNOUNCEMENTS = {
   bakerloo: [
-    "This is a Bakerloo line train to Queen's Park and Harrow & Wealdstone.",
+    "This is a Bakerloo line service to Queen's Park and Harrow & Wealdstone.",
     "Change here for the Bakerloo line.",
     "This train is bound for Elephant & Castle via Westminster."
   ],
   central: [
-    "This is a Central line train via Epping and Hainault.",
+    "This is a Central line service via Epping and Hainault.",
     "Change here for the Central line.",
     "Mind the gap when boarding at Bank and Oxford Circus."
   ],
@@ -496,7 +495,7 @@ const STATIONS = [
   "Buckhurst Hill", "Burnt Oak", "Caledonian Road", "Camden Town", "Canada Water", "Canary Wharf", "Canning Town", 
   "Cannon Street", "Canons Park", "Chalfont & Latimer", "Chalk Farm", "Chancery Lane", "Charing Cross", "Chesham", 
   "Chigwell", "Chiswick Park", "Chorleywood", "Clapham Common", "Clapham North", "Clapham South", "Covent Garden", 
-  "Croxley", "Dagenham East", "Dagenham Heathway", "Debden", "Dollis Hill", "Ealing Broadway", 
+  "Croxley", "Canning Town", "Dagenham East", "Dagenham Heathway", "Debden", "Dollis Hill", "Ealing Broadway", 
   "Ealing Common", "Earl's Court", "East Acton", "East Finchley", "East Putney", "Eastcote", "Edgware", 
   "Edgware Road", "Elephant & Castle", "Elm Park", "Embankment", "Epping", "Euston", "Euston Square", "Fairlop", 
   "Farringdon", "Finchley Central", "Finchley Road", "Finsbury Park", "Fulham Broadway", "Gants Hill", "Gloucester Road", 
@@ -555,27 +554,23 @@ function triggerSpokenAnnouncement() {
   if (gapDuration > 1.5 && Math.random() < announcementConfig.frequency) {
     isAnnouncementPlaying = true;
     
-    let text;
-    const lineNamesArr = LINES.map(l => ({ id: l.id, name: l.name }));
-    
-    // Determine pool of available announcements based on target line configuration
     let activeLineId = announcementConfig.targetLine;
     if (activeLineId === 'all') {
-      const randomLineObj = lineNamesArr[Math.floor(Math.random() * lineNamesArr.length)];
+      const randomLineObj = LINES[Math.floor(Math.random() * LINES.length)];
       activeLineId = randomLineObj.id;
     }
 
     const specificPool = LINE_SPECIFIC_ANNOUNCEMENTS[activeLineId] || STATIC_ANNOUNCEMENTS;
-    
-    if (Math.random() < 0.6) {
+    const targetLineObj = LINES.find(l => l.id === activeLineId) || LINES[0];
+
+    let text;
+    const roll = Math.random();
+    if (roll < 0.45) {
       const randomStation = STATIONS[Math.floor(Math.random() * STATIONS.length)];
-      const targetLineObj = LINES.find(l => l.id === activeLineId) || LINES[0];
-      const formats = [
-        `Change here for ${randomStation}.`,
-        `This station is ${randomStation}. Change here for the ${targetLineObj.name} line.`,
-        `Next station, ${randomStation}.`
-      ];
-      text = formats[Math.floor(Math.random() * formats.length)];
+      text = `This is a ${targetLineObj.name} line service to ${randomStation}.`;
+    } else if (roll < 0.8) {
+      const randomStation = STATIONS[Math.floor(Math.random() * STATIONS.length)];
+      text = `Change here for ${randomStation}. Connecting services available on the ${targetLineObj.name} line.`;
     } else {
       text = specificPool[Math.floor(Math.random() * specificPool.length)];
     }
@@ -830,14 +825,14 @@ function attachControlListeners() {
         alert('Please click "Start listening" first!');
         return;
       }
-      const randomStation = STATIONS[Math.floor(Math.random() * STATIONS.length)];
       let activeLineId = announcementConfig.targetLine;
       if (activeLineId === 'all') {
         const randomLineObj = LINES[Math.floor(Math.random() * LINES.length)];
         activeLineId = randomLineObj.id;
       }
-      const specificPool = LINE_SPECIFIC_ANNOUNCEMENTS[activeLineId] || STATIC_ANNOUNCEMENTS;
-      const text = Math.random() < 0.5 ? `Change here for ${randomStation}.` : specificPool[Math.floor(Math.random() * specificPool.length)];
+      const targetLineObj = LINES.find(l => l.id === activeLineId) || LINES[0];
+      const randomStation = STATIONS[Math.floor(Math.random() * STATIONS.length)];
+      const text = `This is a ${targetLineObj.name} line service to ${randomStation}.`;
       
       try {
         delay.wet.value = announcementConfig.reverb;
