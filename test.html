@@ -124,11 +124,45 @@
     border:1px solid var(--border);
   }
   .btn-outline:hover{background:var(--card-bg);}
+  
   #status{
     color:var(--dim);
     font-size:12px;
     margin-top:10px;
     font-family: monospace;
+  }
+
+  /* Live Announcement Display Banner */
+  .announcement-banner {
+    margin-top: 14px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--ink);
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    max-width: 700px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: opacity 0.3s ease;
+  }
+  .announcement-banner.hidden {
+    display: none;
+  }
+  .announcement-icon {
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 10px;
+    letter-spacing: 1px;
+    background: var(--border);
+    padding: 3px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .announcement-text {
+    font-family: Arial, sans-serif;
+    color: var(--ink);
   }
 
   /* Control Panel Drawer */
@@ -375,6 +409,12 @@
     </button>
   </div>
   <div id="status">Audio is off. Click start (browsers require a user gesture before playing sound).</div>
+  
+  <!-- On-Screen Announcement Text Banner -->
+  <div id="announcementBanner" class="announcement-banner hidden">
+    <div class="announcement-icon">Announcement</div>
+    <div id="announcementText" class="announcement-text"></div>
+  </div>
 </header>
 
 <!-- Configuration Drawer for Synths -->
@@ -500,6 +540,22 @@ function getSelectedVoice() {
   return targetVoices[0] || pool[0] || null;
 }
 
+function displayAnnouncementBanner(text) {
+  const banner = document.getElementById('announcementBanner');
+  const bannerText = document.getElementById('announcementText');
+  if (!banner || !bannerText) return;
+
+  bannerText.textContent = text;
+  banner.classList.remove('hidden');
+}
+
+function hideAnnouncementBanner() {
+  const banner = document.getElementById('announcementBanner');
+  if (banner) {
+    banner.classList.add('hidden');
+  }
+}
+
 function triggerSpokenAnnouncement() {
   if (!audioReady || announcementConfig.muted || isAnnouncementPlaying || !('speechSynthesis' in window)) return;
 
@@ -529,6 +585,8 @@ function triggerSpokenAnnouncement() {
       synthAnnouncementChime.triggerAttackRelease("C4", "2n");
     } catch(e) {}
 
+    displayAnnouncementBanner(text);
+
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.90; 
     utterance.volume = announcementConfig.volume;
@@ -540,13 +598,14 @@ function triggerSpokenAnnouncement() {
     utterance.onend = () => {
       isAnnouncementPlaying = false;
       lastSoundTime = Date.now();
+      setTimeout(hideAnnouncementBanner, 4000); // Leave text on screen briefly after audio finishes
     };
     
     utterance.onerror = () => {
       isAnnouncementPlaying = false;
+      hideAnnouncementBanner();
     };
 
-    document.getElementById('status').textContent = `Announcement: "${text}"`;
     window.speechSynthesis.speak(utterance);
   }
 }
@@ -819,6 +878,8 @@ function attachControlListeners() {
         synthAnnouncementChime.triggerAttackRelease("C4", "2n");
       } catch(e) {}
 
+      displayAnnouncementBanner(text);
+
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 0.90;
       utterance.volume = announcementConfig.volume;
@@ -826,6 +887,11 @@ function attachControlListeners() {
       
       const chosenVoice = getSelectedVoice();
       if (chosenVoice) utterance.voice = chosenVoice;
+
+      utterance.onend = () => {
+        setTimeout(hideAnnouncementBanner, 4000);
+      };
+
       window.speechSynthesis.speak(utterance);
     });
   }
