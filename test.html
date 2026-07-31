@@ -280,7 +280,8 @@
 <script>
 const SCALE = ['F1', 'Bb1', 'F2', 'Bb2', 'C3', 'D3', 'F3', 'Bb3', 'D4', 'F4', 'Bb4'];
 
-const SYNTH_TYPES = ['FMSynth', 'AMSynth', 'MetalSynth', 'PluckSynth', 'MembraneSynth', 'DuoSynth', 'Synth'];
+// Extended synth options including MonoSynth, NoiseSynth, and PolySynth
+const SYNTH_TYPES = ['FMSynth', 'AMSynth', 'MetalSynth', 'PluckSynth', 'MembraneSynth', 'DuoSynth', 'Synth', 'MonoSynth', 'NoiseSynth', 'PolySynth'];
 
 const LINES = [
   { id:'bakerloo',        name:'Bakerloo',        color:'var(--line-bakerloo)',        type:'FMSynth',       harmonicity:1.5, resonance:3, cutoff:2000, attack:0.05, decay:0.2, sustain:0.5, release:0.6, volume:-8, muted:false },
@@ -321,6 +322,15 @@ function createSynthInstance(cfg) {
     case 'DuoSynth':
       s = new Tone.DuoSynth({ vibratoAmount: cfg.harmonicity/10, voice0: { envelope: env } });
       break;
+    case 'MonoSynth':
+      s = new Tone.MonoSynth({ oscillator: { type: 'square' }, envelope: env, filterEnvelope: { attack: cfg.attack, decay: cfg.decay, sustain: cfg.sustain, release: cfg.release, baseFrequency: 200 } });
+      break;
+    case 'NoiseSynth':
+      s = new Tone.NoiseSynth({ noise: { type: 'white' }, envelope: env });
+      break;
+    case 'PolySynth':
+      s = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'triangle' }, envelope: env });
+      break;
     default:
       s = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: env });
       break;
@@ -334,8 +344,14 @@ function createSynthInstance(cfg) {
   
   const volNode = new Tone.Volume(cfg.muted ? -Infinity : cfg.volume);
 
-  s.connect(filter);
-  filter.connect(volNode);
+  if (cfg.type !== 'NoiseSynth') {
+    s.connect(filter);
+    filter.connect(volNode);
+  } else {
+    // NoiseSynth doesn't take pitch frequencies, bypass standard filter routing for safety
+    s.connect(volNode);
+  }
+  
   volNode.connect(limiter);
   
   return { synth: s, filter: filter, volumeNode: volNode };
@@ -581,12 +597,16 @@ function playNote(line, prediction){
   const note = SCALE[idx];
   
   try{
-    line.node.triggerAttackRelease(note, line.release || 0.5);
+    if (line.type === 'NoiseSynth') {
+      line.node.triggerAttackRelease(line.release || 0.5);
+    } else {
+      line.node.triggerAttackRelease(note, line.release || 0.5);
+    }
   }catch(e){ console.warn('note failed', e); }
 
   const out = document.getElementById(`note-${line.id}`);
   if (out) {
-    out.textContent = note;
+    out.textContent = line.type === 'NoiseSynth' ? 'NOISE' : note;
     out.style.color = '#fff';
     setTimeout(()=>{ out.style.color = ''; }, 400);
   }
