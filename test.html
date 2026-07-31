@@ -49,24 +49,21 @@
   header{
     padding:32px 24px 16px;
     border-bottom:1px solid var(--border);
-    position: relative;
   }
-  .theme-switcher {
-    position: absolute;
-    top: 32px;
-    right: 24px;
-    display: flex;
-    gap: 8px;
-    align-items: center;
+  .actions{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    flex-wrap:wrap;
   }
   .theme-btn {
     background: var(--card-bg);
     color: var(--ink);
     border: 1px solid var(--border);
-    padding: 6px 12px;
-    border-radius: 16px;
+    padding: 10px 16px;
+    border-radius: 20px;
     cursor: pointer;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 700;
     display: flex;
     align-items: center;
@@ -106,12 +103,6 @@
     font-size:13px;
     max-width:700px;
     font-family: Arial, sans-serif;
-  }
-  .actions{
-    display:flex;
-    gap:12px;
-    align-items:center;
-    flex-wrap:wrap;
   }
   button{
     background:var(--ink);
@@ -303,7 +294,11 @@
 <body>
 
 <header>
-  <div class="theme-switcher">
+  <h1><span class="roundel"></span>TfL Jazz: Every Train, Every Delay, Every Cancellation, a Note.</h1>
+  <p class="sub">Live London Underground arrivals from the TfL Unified API, sonified in real time. Customize synth types and parameters dynamically below.</p>
+  <div class="actions">
+    <button id="startBtn">Start listening</button>
+    <button id="toggleConfig" class="btn-outline">Configure Tones</button>
     <button class="theme-btn" id="dayTubeBtn" onclick="setTheme('light')">
       <svg class="tfl-icon" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="12" cy="12" r="4"/></svg>
       Day Tube
@@ -312,12 +307,6 @@
       <svg class="tfl-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.38 5.38 0 0 1-4.24 2.16A5.38 5.38 0 0 1 11.3 7.56 5.38 5.38 0 0 1 13.46 3.3 9 9 0 0 0 12 3z"/></svg>
       Night Tube
     </button>
-  </div>
-  <h1><span class="roundel"></span>TfL Jazz: Every Train, Every Delay, Every Cancellation, a Note.</h1>
-  <p class="sub">Live London Underground arrivals from the TfL Unified API, sonified in real time. Customize synth types and parameters dynamically below.</p>
-  <div class="actions">
-    <button id="startBtn">Start listening</button>
-    <button id="toggleConfig" class="btn-outline">Configure Tones</button>
   </div>
   <div id="status">Audio is off. Click start (browsers require a user gesture before playing sound).</div>
 </header>
