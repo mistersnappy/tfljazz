@@ -208,35 +208,6 @@
     font-weight: 700;
   }
   .rand-btn:hover { background: var(--border); }
-  .rand-btn.active {
-    background: var(--ink);
-    color: var(--bg);
-    border-color: var(--ink);
-  }
-
-  .preset-section {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  .preset-title {
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--dim);
-  }
-  .preset-buttons {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-  }
 
   .global-scale-select {
     background: var(--card-bg);
@@ -466,18 +437,6 @@
       <button class="rand-btn" onclick="randomizeGlobalScale()">🎲 Random Scale</button>
     </div>
   </div>
-
-  <!-- Global Preset Override Bar -->
-  <div class="preset-section">
-    <span class="preset-title">Global Preset Overrides:</span>
-    <div class="preset-buttons">
-      <button class="rand-btn preset-override-btn" data-preset="chimes" onclick="applyPreset('chimes')">🔔 Wind Chimes</button>
-      <button class="rand-btn preset-override-btn" data-preset="piano" onclick="applyPreset('piano')">🎹 Acoustic Piano</button>
-      <button class="rand-btn preset-override-btn" data-preset="bells" onclick="applyPreset('bells')">🏛️ Tubular Bells</button>
-      <button class="rand-btn" id="resetPresetBtn" onclick="resetPresets()" style="border-color: var(--ink);">↺ Revert Custom</button>
-    </div>
-  </div>
-
   <div class="panel-grid" id="panelGrid"></div>
 </div>
 
@@ -517,7 +476,7 @@ let currentGlobalScale = "Major Pentatonic";
 const OCTAVES = [1, 2, 3, 4];
 const SYNTH_TYPES = ['FMSynth', 'AMSynth', 'MetalSynth', 'PluckSynth', 'MembraneSynth', 'DuoSynth', 'Synth', 'MonoSynth', 'NoiseSynth', 'PolySynth'];
 
-const DEFAULT_LINES = [
+const LINES = [
   { id:'bakerloo',        name:'Bakerloo',        color:'var(--line-bakerloo)',        type:'FMSynth',       octave:2, scale: 'Major Pentatonic', harmonicity:1.5, resonance:4, cutoff:1200, attack:0.4, decay:0.8, sustain:0.7, release:2.5, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
   { id:'central',         name:'Central',         color:'var(--line-central)',         type:'MetalSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:3.1, resonance:600, cutoff:1800, attack:0.2, decay:0.5, sustain:0.5, release:2.0, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
   { id:'circle',          name:'Circle',          color:'var(--line-circle)',          type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2500, cutoff:2200, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
@@ -530,10 +489,6 @@ const DEFAULT_LINES = [
   { id:'victoria',        name:'Victoria',        color:'var(--line-victoria)',        type:'Synth',         octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
   { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
 ];
-
-let LINES = JSON.parse(JSON.stringify(DEFAULT_LINES));
-let userBackupLines = null;
-let activePresetKey = null;
 
 let announcementConfig = {
   muted: false,
@@ -716,16 +671,6 @@ function updateGlobalScaleSelectOptions() {
   selectElem.innerHTML = SCALE_NAMES.map(s => `<option value="${s}" ${currentGlobalScale === s ? 'selected' : ''}>Scale: ${s}</option>`).join('');
 }
 
-function updatePresetUIState() {
-  document.querySelectorAll('.preset-override-btn').forEach(btn => {
-    if (btn.getAttribute('data-preset') === activePresetKey) {
-      btn.classList.add('active');
-    } else {
-      btn.classList.remove('active');
-    }
-  });
-}
-
 function buildControlPanel() {
   panelGrid.innerHTML = '';
   
@@ -788,7 +733,6 @@ function buildControlPanel() {
     panelGrid.appendChild(card);
   });
   updateGlobalScaleSelectOptions();
-  updatePresetUIState();
   attachControlListeners();
 }
 
@@ -831,75 +775,8 @@ document.getElementById('toggleConfig').addEventListener('click', () => {
   document.getElementById('synthPanel').classList.toggle('open');
 });
 
-// ---------- Global Preset Override System ----------
-function applyPreset(presetKey) {
-  if (!userBackupLines) {
-    userBackupLines = JSON.parse(JSON.stringify(LINES));
-  }
-
-  // If clicking the currently active preset toggle button, turn it off and revert back
-  if (activePresetKey === presetKey) {
-    resetPresets();
-    return;
-  }
-
-  activePresetKey = presetKey;
-
-  LINES.forEach(line => {
-    if (presetKey === 'chimes') {
-      line.type = 'MetalSynth';
-      line.octave = 3;
-      line.harmonicity = 3.5;
-      line.resonance = 1200;
-      line.cutoff = 3500;
-      line.attack = 0.05;
-      line.decay = 1.5;
-      line.sustain = 0.1;
-      line.release = 3.5;
-    } else if (presetKey === 'piano') {
-      line.type = 'PolySynth';
-      line.octave = 3;
-      line.harmonicity = 1.0;
-      line.resonance = 100;
-      line.cutoff = 2200;
-      line.attack = 0.02;
-      line.decay = 0.8;
-      line.sustain = 0.2;
-      line.release = 2.0;
-    } else if (presetKey === 'bells') {
-      line.type = 'FMSynth';
-      line.octave = 2;
-      line.harmonicity = 2.0;
-      line.resonance = 8;
-      line.cutoff = 1500;
-      line.attack = 0.1;
-      line.decay = 2.0;
-      line.sustain = 0.4;
-      line.release = 4.0;
-    }
-
-    if (audioReady) recreateSynth(line);
-  });
-
-  buildControlPanel();
-}
-
-function resetPresets() {
-  if (userBackupLines) {
-    LINES = JSON.parse(JSON.stringify(userBackupLines));
-    userBackupLines = null;
-    if (audioReady) {
-      LINES.forEach(line => recreateSynth(line));
-    }
-  }
-  activePresetKey = null;
-  buildControlPanel();
-}
-
 // ---------- Randomizer & Global Scale Functions ----------
 function randomizeVoices() {
-  userBackupLines = JSON.parse(JSON.stringify(LINES));
-  activePresetKey = null;
   LINES.forEach(line => {
     line.type = SYNTH_TYPES[Math.floor(Math.random() * SYNTH_TYPES.length)];
     if (audioReady) recreateSynth(line);
@@ -908,8 +785,6 @@ function randomizeVoices() {
 }
 
 function randomizeOctaves() {
-  userBackupLines = JSON.parse(JSON.stringify(LINES));
-  activePresetKey = null;
   LINES.forEach(line => {
     line.octave = OCTAVES[Math.floor(Math.random() * OCTAVES.length)];
   });
@@ -1036,10 +911,6 @@ function attachControlListeners() {
 
   document.querySelectorAll('.synth-card:not(#card-announcements) input, .synth-card:not(#card-announcements) select').forEach(input => {
     input.addEventListener('input', (e) => {
-      if (!userBackupLines) userBackupLines = JSON.parse(JSON.stringify(LINES));
-      activePresetKey = null;
-      updatePresetUIState();
-
       const lineId = e.target.getAttribute('data-line');
       const param = e.target.getAttribute('data-param');
       const val = e.target.type === 'select-one' ? (param === 'octave' ? parseInt(e.target.value) : e.target.value) : parseFloat(e.target.value);
