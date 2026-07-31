@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TfL Jazz: Every train, every delay, every cancellation, a sound.</title>
+<title>TfL Jazz: Ambient Underground Soundscape</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
 <style>
   :root {
@@ -220,7 +220,7 @@
     border-radius:3px;
   }
 
-  /* Board layout: Simplified Map styling for performance */
+  /* Board layout: Map styling with terminal ticks and station nodes */
   .board{
     padding:24px;
     display:flex;
@@ -231,7 +231,7 @@
     display:grid;
     grid-template-columns:170px 1fr 60px;
     align-items:center;
-    height:38px;
+    height:42px;
     border-bottom:1px solid var(--border);
     position:relative;
   }
@@ -249,24 +249,56 @@
   
   .rail{
     position:relative;
-    height:4px;
+    height:6px;
     margin-right:12px;
-    background: currentColor;
-    opacity: 0.8;
-    overflow: hidden;
+    display:flex;
+    align-items:center;
   }
+  .rail::before, .rail::after {
+    content:'';
+    position:absolute;
+    top: -3px;
+    width: 2px;
+    height: 12px;
+    background: inherit;
+    z-index: 2;
+  }
+  .rail::before { left: 0; }
+  .rail::after { right: 0; }
+
+  .rail-line {
+    position: absolute;
+    top: 0; bottom: 0; left: 0; right: 0;
+    background: currentColor;
+    border-radius: 1px;
+  }
+
+  .station-node {
+    position: absolute;
+    top: 50%;
+    width: 6px; height: 6px;
+    background: var(--station-bg);
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 3;
+  }
+  .station-node:nth-child(1) { left: 25%; }
+  .station-node:nth-child(2) { left: 50%; }
+  .station-node:nth-child(3) { left: 75%; }
 
   .train{
     position:absolute;
     top:50%;
     left:0;
-    width:8px;
-    height:8px;
-    background: var(--ink);
+    width:10px;height:10px;
+    background:var(--card-bg);
+    border:2px solid currentColor;
     border-radius:50%;
     transform:translate(-50%,-50%);
+    box-shadow:0 0 10px 2px currentColor;
     opacity:0;
-    z-index:2;
+    z-index:4;
     will-change: left, opacity;
   }
 
@@ -290,7 +322,7 @@
 <body>
 
 <header>
-  <h1><span class="roundel"></span>TfL Jazz: Every train, every delay, every cancellation, a sound.</h1>
+  <h1><span class="roundel"></span>TfL Jazz: Ambient Underground Soundscape</h1>
   <p class="sub">Live London Underground arrivals from the TfL Unified API, transformed into lush ambient generative chords with ethereal reverb and delay.</p>
   <div class="actions">
     <button id="startBtn">Start listening</button>
@@ -472,7 +504,12 @@ LINES.forEach(line => {
   const resolvedLineColor = getResolvedColor(line.color);
   row.innerHTML = `
     <div class="track-label"><span class="swatch" style="background:${line.color}"></span>${line.name}</div>
-    <div class="rail" id="rail-${line.id}" style="color: ${resolvedLineColor};"></div>
+    <div class="rail" id="rail-${line.id}" style="color: ${resolvedLineColor};">
+      <div class="rail-line" style="color: ${resolvedLineColor};"></div>
+      <div class="station-node" style="color: ${resolvedLineColor};"></div>
+      <div class="station-node" style="color: ${resolvedLineColor};"></div>
+      <div class="station-node" style="color: ${resolvedLineColor};"></div>
+    </div>
     <div class="note-out" id="note-${line.id}">–</div>
   `;
   board.appendChild(row);
@@ -658,12 +695,12 @@ function animateTrain(line, seconds){
   rail.appendChild(dot);
   
   requestAnimationFrame(()=>{
-    dot.style.transition = `left ${seconds}s linear`;
+    dot.style.transition = `left ${seconds}s linear, opacity 0.3s ease`;
     dot.style.opacity = '1';
     dot.style.left = '100%';
   });
   
-  setTimeout(()=> dot.remove(), seconds * 1000 + 100);
+  setTimeout(()=> dot.remove(), seconds * 1000 + 400);
 }
 
 function playNote(line, prediction){
