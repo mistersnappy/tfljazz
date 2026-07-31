@@ -763,7 +763,7 @@ LINES.forEach(line => {
           alert('Please click "Start listening" first!');
           return;
         }
-        playNote(line, { stationName: line.name }, 1.2);
+        playNote(line, { stationName: line.name + Math.random() }, 1.2);
       });
     }
   }, 0);
@@ -971,7 +971,7 @@ function attachControlListeners() {
         alert('Please click "Start listening" first!');
         return;
       }
-      playNote(line, { stationName: 'Ambient Test' });
+      playNote(line, { stationName: 'Ambient Test' + Math.random() });
     });
   });
 }
@@ -1103,7 +1103,7 @@ function animateTrain(line, seconds, trainRecord){
     if (progress >= 1.0) {
       if (!trainRecord.soundFired) {
         trainRecord.soundFired = true;
-        playNote(line, { stationName: line.name }, 1.2);
+        playNote(line, { stationName: trainRecord.id + Math.random() }, 1.2);
       }
       dot.remove();
       return;
@@ -1122,7 +1122,7 @@ function playNote(line, prediction, intensity = 1.0){
 
   const lineScaleName = line.scale || currentGlobalScale;
   const currentScaleNotes = MUSICAL_SCALES[lineScaleName] || MUSICAL_SCALES["Major Pentatonic"];
-  const noteName = currentScaleNotes[hashToIndex(prediction.stationName || prediction.towards || 'x', currentScaleNotes.length)];
+  const noteName = currentScaleNotes[hashToIndex(prediction.stationName || prediction.towards || Math.random().toString(), currentScaleNotes.length)];
   const note = `${noteName}${line.octave}`;
   
   try{
