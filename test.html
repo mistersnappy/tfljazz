@@ -393,8 +393,9 @@ const LINES = [
 let announcementConfig = {
   muted: false,
   volume: 1.0,     
-  frequency: 0.45, 
+  frequency: 0.65, 
   reverb: 0.3,     
+  targetLine: 'all', // 'all' or specific line id
   voiceType: 'male'
 };
 
@@ -408,9 +409,6 @@ ambientReverb.generate().then(() => {
   limiter.toDestination();
 });
 
-// ---------- Tone.js Synthesized Chime/Announcement Simulation for Reverb Channel ----------
-// Since browser native speechSynthesis can't be routed through Web Audio nodes,
-// we use a dual approach: Speech + a Tone.js ambient station chime tail that responds to the reverb slider.
 const synthAnnouncementChime = new Tone.Synth({
   oscillator: { type: 'sine' },
   envelope: { attack: 0.1, decay: 0.5, sustain: 0.2, release: 1.5 }
@@ -420,16 +418,6 @@ const STATIC_ANNOUNCEMENTS = [
   "Mind the gap between the train and the platform.",
   "Please stand clear of the closing doors.",
   "This train terminates here.",
-  "Change here for the Northern line.",
-  "Change here for the Central line.",
-  "Change here for the Metropolitan line.",
-  "Change here for the Jubilee line.",
-  "Change here for the Hammersmith and City line.",
-  "Change here for the Circle line.",
-  "Change here for the Bakerloo line.",
-  "Change here for the Waterloo and City line.",
-  "Change here for the District line.",
-  "Change here for the Victoria line.",
   "Customer announcement, a good service is operating on all lines.",
   "This train terminates here. All change please. Please ensure you take all your personal belongings with you.",
   "Obstructing the doors or pulling the emergency alarm can cause delays and is a criminal offence.",
@@ -441,6 +429,65 @@ const STATIC_ANNOUNCEMENTS = [
   "Please stand behind the yellow line."
 ];
 
+// Line-specific template databases for focused announcements
+const LINE_SPECIFIC_ANNOUNCEMENTS = {
+  bakerloo: [
+    "This is a Bakerloo line train to Queen's Park and Harrow & Wealdstone.",
+    "Change here for the Bakerloo line.",
+    "This train is bound for Elephant & Castle via Westminster."
+  ],
+  central: [
+    "This is a Central line train via Epping and Hainault.",
+    "Change here for the Central line.",
+    "Mind the gap when boarding at Bank and Oxford Circus."
+  ],
+  circle: [
+    "This is a Circle line service via High Street Kensington and Victoria.",
+    "Change here for the Circle line.",
+    "This train runs around the Inner Circle."
+  ],
+  district: [
+    "This is a District line service to Wimbledon, Richmond, and Ealing Broadway.",
+    "Change here for the District line.",
+    "Please check the front of the train for your destination station."
+  ],
+  'hammersmith-city': [
+    "This is a Hammersmith & City line service to Barking.",
+    "Change here for the Hammersmith & City line.",
+    "This train serves King's Cross St. Pancras and Liverpool Street."
+  ],
+  jubilee: [
+    "This is a Jubilee line service to Stanmore and Stratford.",
+    "Change here for the Jubilee line.",
+    "Platform edge doors are in operation at all underground Jubilee line stations."
+  ],
+  metropolitan: [
+    "This is a Metropolitan line fast service to Amersham, Chesham, and Uxbridge.",
+    "Change here for the Metropolitan line.",
+    "Please note this train stops at all main junction stations."
+  ],
+  northern: [
+    "This is a Northern line train via the Charing Cross branch.",
+    "This is a Northern line train via the Bank branch.",
+    "Change here for the Northern line."
+  ],
+  piccadilly: [
+    "This is a Piccadilly line service to Cockfosters and Heathrow Terminals.",
+    "Change here for the Piccadilly line.",
+    "Please have your tickets ready at barrier gates."
+  ],
+  victoria: [
+    "This is a Victoria line service to Brixton and Walthamstow Central.",
+    "Change here for the Victoria line.",
+    "Trains on the Victoria line run frequently."
+  ],
+  'waterloo-city': [
+    "This is the Waterloo & City line express service to Bank.",
+    "Change here for the Waterloo & City line.",
+    "The Waterloo & City line operates Monday to Saturday."
+  ]
+};
+
 const STATIONS = [
   "Acton Town", "Aldgate", "Aldgate East", "Alperton", "Amersham", "Angel", "Archway", "Arnos Grove", "Arsenal", 
   "Baker Street", "Balham", "Bank", "Barbican", "Barking", "Barkingside", "Barons Court", "Battersea Power Station", 
@@ -449,7 +496,7 @@ const STATIONS = [
   "Buckhurst Hill", "Burnt Oak", "Caledonian Road", "Camden Town", "Canada Water", "Canary Wharf", "Canning Town", 
   "Cannon Street", "Canons Park", "Chalfont & Latimer", "Chalk Farm", "Chancery Lane", "Charing Cross", "Chesham", 
   "Chigwell", "Chiswick Park", "Chorleywood", "Clapham Common", "Clapham North", "Clapham South", "Covent Garden", 
-  "Croxley", "Canning Town", "Dagenham East", "Dagenham Heathway", "Debden", "Dollis Hill", "Ealing Broadway", 
+  "Croxley", "Dagenham East", "Dagenham Heathway", "Debden", "Dollis Hill", "Ealing Broadway", 
   "Ealing Common", "Earl's Court", "East Acton", "East Finchley", "East Putney", "Eastcote", "Edgware", 
   "Edgware Road", "Elephant & Castle", "Elm Park", "Embankment", "Epping", "Euston", "Euston Square", "Fairlop", 
   "Farringdon", "Finchley Central", "Finchley Road", "Finsbury Park", "Fulham Broadway", "Gants Hill", "Gloucester Road", 
@@ -467,7 +514,7 @@ const STATIONS = [
   "Notting Hill Gate", "Oakwood", "Old Street", "Osterley", "Oval", "Oxford Circus", "Paddington", "Park Royal", 
   "Parsons Green", "Perivale", "Piccadilly Circus", "Pimlico", "Pinner", "Plaistow", "Poplar", "Preston Road", 
   "Putney Bridge", "Queen's Park", "Queensbury", "Queensway", "Ravenscourt Park", "Rayners Lane", "Redbridge", 
-  "Regent's Park", "Richmond", "Rickmansworth", "Roding Valley", "Rotherhithe", "Rotherhithe", "Royal Oak", "Ruislip", 
+  "Regent's Park", "Richmond", "Rickmansworth", "Roding Valley", "Rotherhithe", "Royal Oak", "Ruislip", 
   "Ruislip Gardens", "Ruislip Manor", "Russell Square", "Seven Sisters", "Shadwell", "Shepherd's Bush", "Shepherd's Bush Market", 
   "Sloane Square", "Snaresbrook", "South Ealing", "South Harrow", "South Kensington", "South Kenton", "South Ruislip", 
   "South Wimbledon", "South Woodford", "Southfields", "Southgate", "Southwark", "St. James's Park", "St. John's Wood", 
@@ -505,18 +552,34 @@ function triggerSpokenAnnouncement() {
   const now = Date.now();
   const gapDuration = (now - lastSoundTime) / 1000;
 
-  if (gapDuration > 2.0 && Math.random() < announcementConfig.frequency) {
+  if (gapDuration > 1.5 && Math.random() < announcementConfig.frequency) {
     isAnnouncementPlaying = true;
     
     let text;
-    if (Math.random() < 0.4) {
-      const randomStation = STATIONS[Math.floor(Math.random() * STATIONS.length)];
-      text = `Change here for ${randomStation}.`;
-    } else {
-      text = STATIC_ANNOUNCEMENTS[Math.floor(Math.random() * STATIC_ANNOUNCEMENTS.length)];
+    const lineNamesArr = LINES.map(l => ({ id: l.id, name: l.name }));
+    
+    // Determine pool of available announcements based on target line configuration
+    let activeLineId = announcementConfig.targetLine;
+    if (activeLineId === 'all') {
+      const randomLineObj = lineNamesArr[Math.floor(Math.random() * lineNamesArr.length)];
+      activeLineId = randomLineObj.id;
     }
 
-    // Play station chime tail through Tone.js reverb channel based on slider settings
+    const specificPool = LINE_SPECIFIC_ANNOUNCEMENTS[activeLineId] || STATIC_ANNOUNCEMENTS;
+    
+    if (Math.random() < 0.6) {
+      const randomStation = STATIONS[Math.floor(Math.random() * STATIONS.length)];
+      const targetLineObj = LINES.find(l => l.id === activeLineId) || LINES[0];
+      const formats = [
+        `Change here for ${randomStation}.`,
+        `This station is ${randomStation}. Change here for the ${targetLineObj.name} line.`,
+        `Next station, ${randomStation}.`
+      ];
+      text = formats[Math.floor(Math.random() * formats.length)];
+    } else {
+      text = specificPool[Math.floor(Math.random() * specificPool.length)];
+    }
+
     try {
       delay.wet.value = announcementConfig.reverb;
       synthAnnouncementChime.volume.value = (announcementConfig.volume > 0) ? -10 : -Infinity;
@@ -612,6 +675,11 @@ function getResolvedColor(colorVar) {
 function buildControlPanel() {
   panelGrid.innerHTML = '';
   
+  let lineSelectOptions = `<option value="all" ${announcementConfig.targetLine === 'all' ? 'selected' : ''}>All Lines</option>`;
+  LINES.forEach(l => {
+    lineSelectOptions += `<option value="${l.id}" ${announcementConfig.targetLine === l.id ? 'selected' : ''}>${l.name}</option>`;
+  });
+
   const annCard = document.createElement('div');
   annCard.className = `synth-card ${announcementConfig.muted ? 'muted' : ''}`;
   annCard.id = `card-announcements`;
@@ -625,6 +693,7 @@ function buildControlPanel() {
         <button class="test-btn" data-test-announcements>Test</button>
       </div>
     </h3>
+    <div class="control-group"><label>Target Line</label><select data-ann-param="targetLine">${lineSelectOptions}</select></div>
     <div class="control-group"><label>Volume</label><input type="range" min="0" max="1" step="0.1" value="${announcementConfig.volume}" data-ann-param="volume"></div>
     <div class="control-group"><label>Frequency</label><input type="range" min="0.1" max="1" step="0.05" value="${announcementConfig.frequency}" data-ann-param="frequency"></div>
     <div class="control-group"><label>Reverb</label><input type="range" min="0" max="1" step="0.05" value="${announcementConfig.reverb}" data-ann-param="reverb"></div>
@@ -737,10 +806,10 @@ function recreateSynth(line) {
 }
 
 function attachControlListeners() {
-  document.querySelectorAll('#card-announcements input').forEach(input => {
+  document.querySelectorAll('#card-announcements input, #card-announcements select').forEach(input => {
     input.addEventListener('input', (e) => {
       const param = e.target.getAttribute('data-ann-param');
-      announcementConfig[param] = parseFloat(e.target.value);
+      announcementConfig[param] = e.target.type === 'select-one' ? e.target.value : parseFloat(e.target.value);
     });
   });
 
@@ -762,7 +831,13 @@ function attachControlListeners() {
         return;
       }
       const randomStation = STATIONS[Math.floor(Math.random() * STATIONS.length)];
-      const text = Math.random() < 0.5 ? `Change here for ${randomStation}.` : STATIC_ANNOUNCEMENTS[Math.floor(Math.random() * STATIC_ANNOUNCEMENTS.length)];
+      let activeLineId = announcementConfig.targetLine;
+      if (activeLineId === 'all') {
+        const randomLineObj = LINES[Math.floor(Math.random() * LINES.length)];
+        activeLineId = randomLineObj.id;
+      }
+      const specificPool = LINE_SPECIFIC_ANNOUNCEMENTS[activeLineId] || STATIC_ANNOUNCEMENTS;
+      const text = Math.random() < 0.5 ? `Change here for ${randomStation}.` : specificPool[Math.floor(Math.random() * specificPool.length)];
       
       try {
         delay.wet.value = announcementConfig.reverb;
