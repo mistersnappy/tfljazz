@@ -390,12 +390,12 @@ const LINES = [
   { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false },
 ];
 
-// Announcements Configuration Object
+// Announcements Configuration Object (Male voice locked as default)
 let announcementConfig = {
   muted: false,
   volume: 1.0,     
   frequency: 0.45, 
-  voiceType: 'female'
+  voiceType: 'male'
 };
 
 const delay = new Tone.FeedbackDelay({ delayTime: "8n.", feedback: 0.35, wet: 0.3 });
@@ -408,7 +408,7 @@ ambientReverb.generate().then(() => {
   limiter.toDestination();
 });
 
-// ---------- Native Speech Synthesis Announcements with British English Tuning ----------
+// ---------- Native Speech Synthesis Announcements ----------
 const STATIC_ANNOUNCEMENTS = [
   "Mind the gap between the train and the platform.",
   "Please stand clear of the closing doors.",
@@ -437,21 +437,13 @@ let isAnnouncementPlaying = false;
 
 function getSelectedVoice() {
   const voices = window.speechSynthesis.getVoices();
-  // Strictly filter for British English (`en-GB`) voices first
   const ukVoices = voices.filter(v => v.lang === 'en-GB' || v.lang === 'en_GB' || v.name.includes('UK') || v.name.includes('British'));
-  
   const pool = ukVoices.length > 0 ? ukVoices : voices;
 
   const targetVoices = pool.filter(v => {
     const nameLower = v.name.toLowerCase();
-    const isFemale = nameLower.includes('female') || nameLower.includes('hazel') || nameLower.includes('susan') || nameLower.includes('catherine') || nameLower.includes('victoria') || nameLower.includes('libby') || nameLower.includes('serena') || nameLower.includes('amy') || nameLower.includes('kate') || nameLower.includes('stephanie') || nameLower.includes('zira');
     const isMale = nameLower.includes('male') || nameLower.includes('george') || nameLower.includes('daniel') || nameLower.includes('oliver') || nameLower.includes('ryan') || nameLower.includes('brian') || nameLower.includes('arthur');
-    
-    if (announcementConfig.voiceType === 'female') {
-      return isFemale || (!isMale && !nameLower.includes('male'));
-    } else {
-      return isMale;
-    }
+    return isMale;
   });
 
   return targetVoices[0] || pool[0] || null;
@@ -476,16 +468,9 @@ function triggerSpokenAnnouncement() {
 
     const utterance = new SpeechSynthesisUtterance(text);
     
-    // Tuned parameters for a realistic British station announcer cadence
     utterance.rate = 0.90; 
     utterance.volume = announcementConfig.volume;
-    
-    if (announcementConfig.voiceType === 'male') {
-      utterance.pitch = 0.75;
-    } else {
-      // Slightly higher, articulate pitch characteristic of TfL female automated announcers (Elinor Hamilton style)
-      utterance.pitch = 1.05;
-    }
+    utterance.pitch = 0.75; // Male voice cadence
     
     const chosenVoice = getSelectedVoice();
     if (chosenVoice) utterance.voice = chosenVoice;
@@ -584,13 +569,6 @@ function buildControlPanel() {
         <button class="test-btn" data-test-announcements>Test</button>
       </div>
     </h3>
-    <div class="control-group">
-      <label>Voice Tone</label>
-      <select data-ann-param="voiceType">
-        <option value="female" ${announcementConfig.voiceType === 'female' ? 'selected' : ''}>Female</option>
-        <option value="male" ${announcementConfig.voiceType === 'male' ? 'selected' : ''}>Male</option>
-      </select>
-    </div>
     <div class="control-group"><label>Volume</label><input type="range" min="0" max="1" step="0.1" value="${announcementConfig.volume}" data-ann-param="volume"></div>
     <div class="control-group"><label>Frequency</label><input type="range" min="0.1" max="1" step="0.05" value="${announcementConfig.frequency}" data-ann-param="frequency"></div>
   `;
@@ -702,10 +680,10 @@ function recreateSynth(line) {
 }
 
 function attachControlListeners() {
-  document.querySelectorAll('#card-announcements input, #card-announcements select').forEach(element => {
-    element.addEventListener('input', (e) => {
+  document.querySelectorAll('#card-announcements input').forEach(input => {
+    input.addEventListener('input', (e) => {
       const param = e.target.getAttribute('data-ann-param');
-      announcementConfig[param] = e.target.type === 'select-one' ? e.target.value : parseFloat(e.target.value);
+      announcementConfig[param] = parseFloat(e.target.value);
     });
   });
 
@@ -732,7 +710,7 @@ function attachControlListeners() {
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 0.90;
       utterance.volume = announcementConfig.volume;
-      utterance.pitch = announcementConfig.voiceType === 'male' ? 0.75 : 1.05;
+      utterance.pitch = 0.75;
       
       const chosenVoice = getSelectedVoice();
       if (chosenVoice) utterance.voice = chosenVoice;
@@ -829,7 +807,7 @@ async function pollArrivals(){
   const ids = LINES.map(l=>l.id).join(',');
   try{
     const res = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Arrivals`);
-  if (!res.ok) throw new Error('API network failure');
+    if (!res.ok) throw new Error('API network failure');
     const data = await res.json();
     
     document.getElementById('status').textContent =
