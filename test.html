@@ -153,6 +153,7 @@
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+    align-items: center;
   }
   .rand-btn {
     background: var(--card-bg);
@@ -165,6 +166,18 @@
     font-weight: 700;
   }
   .rand-btn:hover { background: var(--border); }
+
+  .global-scale-select {
+    background: var(--card-bg);
+    color: var(--ink);
+    border: 1px solid var(--border);
+    font-size: 11px;
+    padding: 6px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 700;
+    font-family: inherit;
+  }
 
   .panel-grid{
     display:grid;
@@ -345,9 +358,12 @@
   <div class="panel-header-actions">
     <h3 style="margin:0; font-size:14px; text-transform:uppercase;">Ambient Tone & Synth Modifiers</h3>
     <div class="random-btn-group">
+      <select id="globalScaleSelect" class="global-scale-select" onchange="setGlobalScale(this.value)">
+        <!-- Options populated dynamically -->
+      </select>
       <button class="rand-btn" onclick="randomizeVoices()">🎲 Random Voices</button>
       <button class="rand-btn" onclick="randomizeOctaves()">🎲 Random Octaves</button>
-      <button class="rand-btn" onclick="randomizeScales()">🎲 Random Scales</button>
+      <button class="rand-btn" onclick="randomizeGlobalScale()">🎲 Random Scale</button>
     </div>
   </div>
   <div class="panel-grid" id="panelGrid"></div>
@@ -373,7 +389,7 @@ function setTheme(mode) {
   }
 }
 
-// Recognized and accepted musical scales mapped as note pools relative to a root or direct note sets
+// Recognized and accepted musical scales mapped as note pools
 const MUSICAL_SCALES = {
   "Major Pentatonic": ["F", "G", "A", "C", "D"],
   "Minor Pentatonic": ["F", "Ab", "Bb", "C", "Eb"],
@@ -385,21 +401,23 @@ const MUSICAL_SCALES = {
 };
 
 const SCALE_NAMES = Object.keys(MUSICAL_SCALES);
+let currentGlobalScale = "Major Pentatonic";
+
 const OCTAVES = [1, 2, 3, 4];
 const SYNTH_TYPES = ['FMSynth', 'AMSynth', 'MetalSynth', 'PluckSynth', 'MembraneSynth', 'DuoSynth', 'Synth', 'MonoSynth', 'NoiseSynth', 'PolySynth'];
 
 const LINES = [
-  { id:'bakerloo',        name:'Bakerloo',        color:'var(--line-bakerloo)',        type:'FMSynth',       octave:2, scale:'Major Pentatonic', harmonicity:1.5, resonance:4, cutoff:1200, attack:0.4, decay:0.8, sustain:0.7, release:2.5, volume:-6, muted:false },
-  { id:'central',         name:'Central',         color:'var(--line-central)',         type:'MetalSynth',    octave:3, scale:'Minor Pentatonic', harmonicity:3.1, resonance:600, cutoff:1800, attack:0.2, decay:0.5, sustain:0.5, release:2.0, volume:-8, muted:false },
-  { id:'circle',          name:'Circle',          color:'var(--line-circle)',          type:'PluckSynth',    octave:3, scale:'Mixolydian Mode',  harmonicity:1.0, resonance:2500, cutoff:2200, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false },
-  { id:'district',        name:'District',        color:'var(--line-district)',        type:'AMSynth',       octave:2, scale:'Major Diatonic',   harmonicity:2.0, resonance:6, cutoff:1500, attack:0.5, decay:1.0, sustain:0.8, release:3.0, volume:-6, muted:false },
-  { id:'hammersmith-city',name:'Ham. & City',     color:'var(--line-hammersmith)', type:'PluckSynth',    octave:3, scale:'Major Pentatonic', harmonicity:1.0, resonance:4000, cutoff:3000, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false },
-  { id:'jubilee',         name:'Jubilee',         color:'var(--line-jubilee)',         type:'MetalSynth',    octave:2, scale:'Blues Scale',      harmonicity:2.2, resonance:300, cutoff:1000, attack:0.3, decay:0.4, sustain:0.4, release:1.8, volume:-8, muted:false },
-  { id:'metropolitan',    name:'Metropolitan',    color:'var(--line-metropolitan)',type:'DuoSynth',      octave:3, scale:'Dorian Mode',      harmonicity:1.5, resonance:5, cutoff:2000, attack:0.6, decay:1.2, sustain:0.8, release:3.5, volume:-6, muted:false },
-  { id:'northern',        name:'Northern',        color:'var(--line-northern)',        type:'MembraneSynth', octave:2, scale:'Natural Minor',    harmonicity:1.0, resonance:3, cutoff:800, attack:0.2, decay:0.8, sustain:0.5, release:2.5, volume:-6, muted:false },
-  { id:'piccadilly',      name:'Piccadilly',      color:'var(--line-piccadilly)',      type:'DuoSynth',      octave:3, scale:'Mixolydian Mode',  harmonicity:2.0, resonance:7, cutoff:2500, attack:0.5, decay:1.0, sustain:0.8, release:3.2, volume:-6, muted:false },
-  { id:'victoria',        name:'Victoria',        color:'var(--line-victoria)',        type:'Synth',         octave:3, scale:'Major Diatonic',   harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false },
-  { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, scale:'Minor Pentatonic', harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false },
+  { id:'bakerloo',        name:'Bakerloo',        color:'var(--line-bakerloo)',        type:'FMSynth',       octave:2, harmonicity:1.5, resonance:4, cutoff:1200, attack:0.4, decay:0.8, sustain:0.7, release:2.5, volume:-6, muted:false },
+  { id:'central',         name:'Central',         color:'var(--line-central)',         type:'MetalSynth',    octave:3, harmonicity:3.1, resonance:600, cutoff:1800, attack:0.2, decay:0.5, sustain:0.5, release:2.0, volume:-8, muted:false },
+  { id:'circle',          name:'Circle',          color:'var(--line-circle)',          type:'PluckSynth',    octave:3, harmonicity:1.0, resonance:2500, cutoff:2200, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false },
+  { id:'district',        name:'District',        color:'var(--line-district)',        type:'AMSynth',       octave:2, harmonicity:2.0, resonance:6, cutoff:1500, attack:0.5, decay:1.0, sustain:0.8, release:3.0, volume:-6, muted:false },
+  { id:'hammersmith-city',name:'Ham. & City',     color:'var(--line-hammersmith)', type:'PluckSynth',    octave:3, harmonicity:1.0, resonance:4000, cutoff:3000, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false },
+  { id:'jubilee',         name:'Jubilee',         color:'var(--line-jubilee)',         type:'MetalSynth',    octave:2, harmonicity:2.2, resonance:300, cutoff:1000, attack:0.3, decay:0.4, sustain:0.4, release:1.8, volume:-8, muted:false },
+  { id:'metropolitan',    name:'Metropolitan',    color:'var(--line-metropolitan)',type:'DuoSynth',      octave:3, harmonicity:1.5, resonance:5, cutoff:2000, attack:0.6, decay:1.2, sustain:0.8, release:3.5, volume:-6, muted:false },
+  { id:'northern',        name:'Northern',        color:'var(--line-northern)',        type:'MembraneSynth', octave:2, harmonicity:1.0, resonance:3, cutoff:800, attack:0.2, decay:0.8, sustain:0.5, release:2.5, volume:-6, muted:false },
+  { id:'piccadilly',      name:'Piccadilly',      color:'var(--line-piccadilly)',      type:'DuoSynth',      octave:3, harmonicity:2.0, resonance:7, cutoff:2500, attack:0.5, decay:1.0, sustain:0.8, release:3.2, volume:-6, muted:false },
+  { id:'victoria',        name:'Victoria',        color:'var(--line-victoria)',        type:'Synth',         octave:3, harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false },
+  { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false },
 ];
 
 let announcementConfig = {
@@ -695,6 +713,12 @@ function getResolvedColor(colorVar) {
   return colorVar;
 }
 
+function updateGlobalScaleSelectOptions() {
+  const selectElem = document.getElementById('globalScaleSelect');
+  if (!selectElem) return;
+  selectElem.innerHTML = SCALE_NAMES.map(s => `<option value="${s}" ${currentGlobalScale === s ? 'selected' : ''}>Scale: ${s}</option>`).join('');
+}
+
 function buildControlPanel() {
   panelGrid.innerHTML = '';
   
@@ -730,7 +754,6 @@ function buildControlPanel() {
     
     let typeOptions = SYNTH_TYPES.map(t => `<option value="${t}" ${line.type === t ? 'selected' : ''}>${t}</option>`).join('');
     let octaveOptions = OCTAVES.map(o => `<option value="${o}" ${line.octave === o ? 'selected' : ''}>Octave ${o}</option>`).join('');
-    let scaleOptions = SCALE_NAMES.map(s => `<option value="${s}" ${line.scale === s ? 'selected' : ''}>${s}</option>`).join('');
     
     card.innerHTML = `
       <h3>
@@ -744,7 +767,6 @@ function buildControlPanel() {
       </h3>
       <div class="control-group"><label>Synth Type</label><select data-line="${line.id}" data-param="type">${typeOptions}</select></div>
       <div class="control-group"><label>Octave</label><select data-line="${line.id}" data-param="octave">${octaveOptions}</select></div>
-      <div class="control-group"><label>Scale</label><select data-line="${line.id}" data-param="scale">${scaleOptions}</select></div>
       <div class="control-group"><label>Volume</label><input type="range" min="-30" max="6" step="1" value="${line.volume}" data-line="${line.id}" data-param="volume"></div>
       <div class="control-group"><label>Harmonic</label><input type="range" min="0.5" max="5" step="0.1" value="${line.harmonicity}" data-line="${line.id}" data-param="harmonicity"></div>
       <div class="control-group"><label>Resonance</label><input type="range" min="10" max="5000" step="10" value="${line.resonance}" data-line="${line.id}" data-param="resonance"></div>
@@ -756,6 +778,7 @@ function buildControlPanel() {
     `;
     panelGrid.appendChild(card);
   });
+  updateGlobalScaleSelectOptions();
   attachControlListeners();
 }
 
@@ -782,7 +805,7 @@ document.getElementById('toggleConfig').addEventListener('click', () => {
   document.getElementById('synthPanel').classList.toggle('open');
 });
 
-// ---------- Randomizer Functions ----------
+// ---------- Randomizer & Global Scale Functions ----------
 function randomizeVoices() {
   LINES.forEach(line => {
     const randomType = SYNTH_TYPES[Math.floor(Math.random() * SYNTH_TYPES.length)];
@@ -802,12 +825,16 @@ function randomizeOctaves() {
   buildControlPanel();
 }
 
-function randomizeScales() {
-  LINES.forEach(line => {
-    const randomScale = SCALE_NAMES[Math.floor(Math.random() * SCALE_NAMES.length)];
-    line.scale = randomScale;
-  });
-  buildControlPanel();
+function setGlobalScale(scaleName) {
+  if (MUSICAL_SCALES[scaleName]) {
+    currentGlobalScale = scaleName;
+    updateGlobalScaleSelectOptions();
+  }
+}
+
+function randomizeGlobalScale() {
+  const randomScale = SCALE_NAMES[Math.floor(Math.random() * SCALE_NAMES.length)];
+  setGlobalScale(randomScale);
 }
 
 // ---------- Audio Setup & Runtime Control Bindings ----------
@@ -1026,7 +1053,7 @@ function playNote(line, prediction){
   
   lastSoundTime = Date.now();
 
-  const currentScaleNotes = MUSICAL_SCALES[line.scale] || MUSICAL_SCALES["Major Pentatonic"];
+  const currentScaleNotes = MUSICAL_SCALES[currentGlobalScale] || MUSICAL_SCALES["Major Pentatonic"];
   const noteName = currentScaleNotes[hashToIndex(prediction.stationName || prediction.towards || 'x', currentScaleNotes.length)];
   const note = `${noteName}${line.octave}`;
   
