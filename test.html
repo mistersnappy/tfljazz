@@ -390,12 +390,12 @@ const LINES = [
   { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false },
 ];
 
-// Announcements Configuration Object with Voice Type Option
+// Announcements Configuration Object
 let announcementConfig = {
   muted: false,
   volume: 1.0,     
   frequency: 0.45, 
-  voiceType: 'female' // 'female' or 'male'
+  voiceType: 'female'
 };
 
 const delay = new Tone.FeedbackDelay({ delayTime: "8n.", feedback: 0.35, wet: 0.3 });
@@ -408,14 +408,28 @@ ambientReverb.generate().then(() => {
   limiter.toDestination();
 });
 
-// ---------- Native Speech Synthesis Announcements ----------
-const ANNOUNCEMENTS = [
+// ---------- Native Speech Synthesis Announcements with British English Tuning ----------
+const STATIC_ANNOUNCEMENTS = [
   "Mind the gap between the train and the platform.",
   "Please stand clear of the closing doors.",
   "This train terminates here.",
-  "Change here for the Victoria line.",
-  "Customer announcement, a good service is operating on all lines.",
-  "Change here for the Northern line."
+  "Change here for the Northern line.",
+  "Customer announcement, a good service is operating on all lines."
+];
+
+const STATIONS = [
+  "King's Cross St. Pancras",
+  "Oxford Circus",
+  "Waterloo",
+  "Victoria",
+  "Piccadilly Circus",
+  "Euston",
+  "London Bridge",
+  "Bank",
+  "Green Park",
+  "Liverpool Street",
+  "Holborn",
+  "Tottenham Court Road"
 ];
 
 let lastSoundTime = Date.now();
@@ -423,15 +437,14 @@ let isAnnouncementPlaying = false;
 
 function getSelectedVoice() {
   const voices = window.speechSynthesis.getVoices();
-  // Filter for British English voices if possible
-  const ukVoices = voices.filter(v => v.lang === 'en-GB' || v.name.includes('UK') || v.name.includes('British') || v.lang.startsWith('en'));
+  // Strictly filter for British English (`en-GB`) voices first
+  const ukVoices = voices.filter(v => v.lang === 'en-GB' || v.lang === 'en_GB' || v.name.includes('UK') || v.name.includes('British'));
   
-  if (ukVoices.length === 0) return voices[0] || null;
+  const pool = ukVoices.length > 0 ? ukVoices : voices;
 
-  // Try to heuristically match female or male based on voice names / metadata
-  const targetVoices = ukVoices.filter(v => {
+  const targetVoices = pool.filter(v => {
     const nameLower = v.name.toLowerCase();
-    const isFemale = nameLower.includes('female') || nameLower.includes('zira') || nameLower.includes('hazel') || nameLower.includes('susan') || nameLower.includes('catherine') || nameLower.includes('victoria') || nameLower.includes('libby') || nameLower.includes('serena') || nameLower.includes('amy');
+    const isFemale = nameLower.includes('female') || nameLower.includes('hazel') || nameLower.includes('susan') || nameLower.includes('catherine') || nameLower.includes('victoria') || nameLower.includes('libby') || nameLower.includes('serena') || nameLower.includes('amy') || nameLower.includes('kate') || nameLower.includes('stephanie') || nameLower.includes('zira');
     const isMale = nameLower.includes('male') || nameLower.includes('george') || nameLower.includes('daniel') || nameLower.includes('oliver') || nameLower.includes('ryan') || nameLower.includes('brian') || nameLower.includes('arthur');
     
     if (announcementConfig.voiceType === 'female') {
@@ -441,7 +454,7 @@ function getSelectedVoice() {
     }
   });
 
-  return targetVoices[0] || ukVoices[0] || null;
+  return targetVoices[0] || pool[0] || null;
 }
 
 function triggerSpokenAnnouncement() {
@@ -452,19 +465,28 @@ function triggerSpokenAnnouncement() {
 
   if (gapDuration > 2.0 && Math.random() < announcementConfig.frequency) {
     isAnnouncementPlaying = true;
-    const text = ANNOUNCEMENTS[Math.floor(Math.random() * ANNOUNCEMENTS.length)];
+    
+    let text;
+    if (Math.random() < 0.4) {
+      const randomStation = STATIONS[Math.floor(Math.random() * STATIONS.length)];
+      text = `Change here for ${randomStation}.`;
+    } else {
+      text = STATIC_ANNOUNCEMENTS[Math.floor(Math.random() * STATIC_ANNOUNCEMENTS.length)];
+    }
+
     const utterance = new SpeechSynthesisUtterance(text);
     
-    utterance.rate = 0.95; 
+    // Tuned parameters for a realistic British station announcer cadence
+    utterance.rate = 0.90; 
     utterance.volume = announcementConfig.volume;
     
-    // Adjust pitch contextually based on selected voice type
     if (announcementConfig.voiceType === 'male') {
       utterance.pitch = 0.75;
     } else {
-      utterance.pitch = 1.1;
+      // Slightly higher, articulate pitch characteristic of TfL female automated announcers (Elinor Hamilton style)
+      utterance.pitch = 1.05;
     }
-
+    
     const chosenVoice = getSelectedVoice();
     if (chosenVoice) utterance.voice = chosenVoice;
 
@@ -549,7 +571,6 @@ function getResolvedColor(colorVar) {
 function buildControlPanel() {
   panelGrid.innerHTML = '';
   
-  // 1. Announcements Control Card with Voice Type Selector
   const annCard = document.createElement('div');
   annCard.className = `synth-card ${announcementConfig.muted ? 'muted' : ''}`;
   annCard.id = `card-announcements`;
@@ -575,7 +596,6 @@ function buildControlPanel() {
   `;
   panelGrid.appendChild(annCard);
 
-  // 2. Train Lines Cards
   LINES.forEach(line => {
     const card = document.createElement('div');
     card.className = `synth-card ${line.muted ? 'muted' : ''}`;
@@ -682,7 +702,6 @@ function recreateSynth(line) {
 }
 
 function attachControlListeners() {
-  // Announcements card listener inputs and select elements
   document.querySelectorAll('#card-announcements input, #card-announcements select').forEach(element => {
     element.addEventListener('input', (e) => {
       const param = e.target.getAttribute('data-ann-param');
@@ -707,11 +726,13 @@ function attachControlListeners() {
         alert('Please click "Start listening" first!');
         return;
       }
-      const text = ANNOUNCEMENTS[Math.floor(Math.random() * ANNOUNCEMENTS.length)];
+      const randomStation = STATIONS[Math.floor(Math.random() * STATIONS.length)];
+      const text = Math.random() < 0.5 ? `Change here for ${randomStation}.` : STATIC_ANNOUNCEMENTS[Math.floor(Math.random() * STATIC_ANNOUNCEMENTS.length)];
+      
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.95;
+      utterance.rate = 0.90;
       utterance.volume = announcementConfig.volume;
-      utterance.pitch = announcementConfig.voiceType === 'male' ? 0.75 : 1.1;
+      utterance.pitch = announcementConfig.voiceType === 'male' ? 0.75 : 1.05;
       
       const chosenVoice = getSelectedVoice();
       if (chosenVoice) utterance.voice = chosenVoice;
@@ -719,7 +740,6 @@ function attachControlListeners() {
     });
   }
 
-  // Train lines input listeners
   document.querySelectorAll('.synth-card:not(#card-announcements) input, .synth-card:not(#card-announcements) select').forEach(input => {
     input.addEventListener('input', (e) => {
       const lineId = e.target.getAttribute('data-line');
@@ -766,7 +786,6 @@ function attachControlListeners() {
     });
   });
 
-  // Mute Button Handlers for lines
   document.querySelectorAll('.synth-card:not(#card-announcements) .mute-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const lineId = e.target.getAttribute('data-mute-line');
@@ -784,7 +803,6 @@ function attachControlListeners() {
     });
   });
 
-  // Test Note Button Handlers for lines
   document.querySelectorAll('.synth-card:not(#card-announcements) .test-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const lineId = e.target.getAttribute('data-test-line');
@@ -811,7 +829,7 @@ async function pollArrivals(){
   const ids = LINES.map(l=>l.id).join(',');
   try{
     const res = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Arrivals`);
-    if (!res.ok) throw new Error('API network failure');
+  if (!res.ok) throw new Error('API network failure');
     const data = await res.json();
     
     document.getElementById('status').textContent =
