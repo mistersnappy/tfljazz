@@ -362,7 +362,7 @@
 
 <header>
   <h1><span class="roundel"></span>TfL Jazz: Ambient Underground Soundscape</h1>
-  <p class="sub">Live London Underground arrivals, status updates & dynamic network drone bed. Click any line visualization to pluck its chord.</p>
+  <p class="sub">Live London Underground arrivals, status updates & dynamic network arrival density drone. Click any line visualization to pluck its chord.</p>
   <div class="actions">
     <button id="startBtn">Start listening</button>
     <button id="toggleConfig" class="btn-outline">Configure Tones</button>
@@ -442,21 +442,21 @@ const LINES = [
   { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false, crowdingFactor: 1.0 },
 ];
 
-// Dedicated ever-evolving Network Drone Voice configured identically to train lines
+// Dedicated Network Arrival Density Drone Bed configured fully with standard line options
 let droneVoiceConfig = {
   id: 'network-drone',
-  name: 'Network Drone Bed',
+  name: 'Arrival Density Drone',
   color: 'var(--line-drone)',
   type: 'FMSynth',
   octave: 1,
-  harmonicity: 2.0,
+  harmonicity: 1.5,
   resonance: 2,
-  cutoff: 800,
-  attack: 2.0,
-  decay: 3.0,
+  cutoff: 600,
+  attack: 3.0,
+  decay: 4.0,
   sustain: 0.9,
-  release: 5.0,
-  volume: -10,
+  release: 6.0,
+  volume: -12,
   muted: false
 };
 
@@ -665,7 +665,7 @@ function buildControlPanel() {
   `;
   panelGrid.appendChild(annCard);
 
-  // Add configuration card for the Network Drone Bed
+  // Add configuration card for the Arrival Density Drone Bed
   const droneCard = document.createElement('div');
   droneCard.className = `synth-card ${droneVoiceConfig.muted ? 'muted' : ''}`;
   droneCard.id = `card-${droneVoiceConfig.id}`;
@@ -788,7 +788,7 @@ function randomizeOctaves() {
     const randomOctave = OCTAVES[Math.floor(Math.random() * OCTAVES.length)];
     line.octave = randomOctave;
   });
-  droneVoiceConfig.octave = OCTAVES[Math.floor(Math.random() * 2)]; // Keep drone in lower octaves (1-2)
+  droneVoiceConfig.octave = OCTAVES[Math.floor(Math.random() * 2)];
   buildControlPanel();
 }
 
@@ -816,7 +816,7 @@ document.getElementById('startBtn').addEventListener('click', async () => {
     line.volumeNode = nodeSet.volumeNode;
   });
 
-  // Initialize Network Drone Synth
+  // Initialize Network Arrival Density Drone Synth
   const droneNodeSet = createSynthInstance(droneVoiceConfig);
   droneVoiceConfig.node = droneNodeSet.synth;
   droneVoiceConfig.filter = droneNodeSet.filter;
@@ -824,7 +824,7 @@ document.getElementById('startBtn').addEventListener('click', async () => {
 
   audioReady = true;
   document.getElementById('startBtn').disabled = true;
-  document.getElementById('status').textContent = 'Listening — ambient soundscape & evolving drone active…';
+  document.getElementById('status').textContent = 'Listening — ambient soundscape & arrival density drone active…';
   
   startEvolvingDrone();
   pollAllData();
@@ -870,10 +870,9 @@ function updateDroneNote() {
 function startEvolvingDrone() {
   if (activeDroneLoop) clearInterval(activeDroneLoop);
   updateDroneNote();
-  // Continuously sustain and morph the drone bed every 8 seconds organically
   activeDroneLoop = setInterval(() => {
     updateDroneNote();
-  }, 8000);
+  }, 9000);
 }
 
 function attachControlListeners() {
@@ -1058,7 +1057,7 @@ function attachControlListeners() {
   });
 }
 
-// ---------- Live API Fetching (Arrivals & Line Status / Congestion) ----------
+// ---------- Live API Fetching (Arrivals & Arrival Density Mapping) ----------
 function hashToIndex(str, mod){
   let h = 0;
   for (let i=0; i<str.length; i++){ h = (h*31 + str.charCodeAt(i)) >>> 0; }
@@ -1070,59 +1069,32 @@ const activeTrainTracker = new Map();
 async function pollAllData() {
   const ids = LINES.map(l=>l.id).join(',');
   
-  // 1. Fetch Line Status & Congestion metrics to modulate drone filter and line pacing
+  // 1. Fetch Line Status (for UI badges)
   try {
     const statusRes = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Status`);
     if (statusRes.ok) {
       const statusData = await statusRes.json();
-      let disruptionCount = 0;
-
       statusData.forEach(lineStatus => {
         const badgeElem = document.getElementById(`status-${lineStatus.id}`);
-        const lineObj = LINES.find(l => l.id === lineStatus.id);
-
         if (badgeElem && lineStatus.lineStatuses && lineStatus.lineStatuses.length > 0) {
           const statusObj = lineStatus.lineStatuses[0];
           const statusDesc = statusObj.statusSeverityDescription;
           badgeElem.textContent = statusDesc;
-
-          let crowdingFactor = 1.0;
-          if (statusDesc === 'Severe Delays' || statusDesc === 'Suspended') {
+          if (statusDesc !== 'Good Service') {
             badgeElem.className = 'status-badge alert';
             badgeElem.title = statusObj.reason || '';
-            crowdingFactor = 1.8;
-            disruptionCount += 2;
-          } else if (statusDesc === 'Minor Delays') {
-            badgeElem.className = 'status-badge alert';
-            badgeElem.title = statusObj.reason || '';
-            crowdingFactor = 1.3;
-            disruptionCount += 1;
           } else {
             badgeElem.className = 'status-badge';
             badgeElem.title = '';
-            crowdingFactor = 1.0;
-          }
-
-          if (lineObj) {
-            lineObj.crowdingFactor = crowdingFactor;
-            if (audioReady && lineObj.node && lineObj.node.envelope) {
-              lineObj.node.envelope.release = Math.max(0.4, 2.5 / crowdingFactor);
-            }
           }
         }
       });
-
-      // Drive network-wide drone evolution based on overall network friction/disruptions
-      if (audioReady && droneVoiceConfig.filter && !droneVoiceConfig.muted) {
-        const dynamicCutoff = Math.max(300, droneVoiceConfig.cutoff + (disruptionCount * 250));
-        droneVoiceConfig.filter.frequency.rampTo(dynamicCutoff, 2.0);
-      }
     }
   } catch(e) {
     console.warn('Status fetch warning:', e);
   }
 
-  // 2. Fetch Live Arrivals
+  // 2. Fetch Live Arrivals & Drive Arrival Density Drone
   try{
     const res = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Arrivals`);
     if (!res.ok) throw new Error('API network failure');
@@ -1130,8 +1102,22 @@ async function pollAllData() {
     
     latestArrivalsPool = data.filter(p => p.timeToStation != null && p.timeToStation > 5 && p.timeToStation < 300);
 
+    // Map total network arrival density count directly to reverb wetness & filter brightness
+    const networkDensityCount = data.length;
+    const normalizedDensity = Math.min(1.0, networkDensityCount / 350); // Scale factor for heavy traffic vs quiet hours
+
+    if (audioReady) {
+      // Heavy traffic makes the drone feel cavernous and dense (higher reverb wetness), quiet thins out
+      ambientReverb.wet.value = 0.35 + (normalizedDensity * 0.45);
+      
+      if (droneVoiceConfig.filter && !droneVoiceConfig.muted) {
+        const dynamicCutoff = droneVoiceConfig.cutoff + (normalizedDensity * 1200);
+        droneVoiceConfig.filter.frequency.rampTo(dynamicCutoff, 3.0);
+      }
+    }
+
     document.getElementById('status').textContent =
-      `Listening — ${data.length} tracked records, last updated ${new Date().toLocaleTimeString()}`;
+      `Listening — ${networkDensityCount} active trains tracked, last updated ${new Date().toLocaleTimeString()}`;
 
     const now = Date.now();
 
@@ -1180,9 +1166,8 @@ function animateTrain(line, seconds, trainRecord){
   dot.className = 'train';
   rail.appendChild(dot);
   
-  const adjustedSeconds = seconds / (line.crowdingFactor || 1.0);
   const startTime = performance.now();
-  const durationMs = adjustedSeconds * 1000;
+  const durationMs = seconds * 1000;
 
   function step(currentTime) {
     const elapsed = currentTime - startTime;
