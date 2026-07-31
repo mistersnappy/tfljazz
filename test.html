@@ -410,7 +410,6 @@
   </div>
   <div id="status">Audio is off. Click start (browsers require a user gesture before playing sound).</div>
   
-  <!-- On-Screen Announcement Text Banner -->
   <div id="announcementBanner" class="announcement-banner hidden">
     <div class="announcement-icon">Announcement</div>
     <div id="announcementText" class="announcement-text"></div>
@@ -468,17 +467,17 @@ const OCTAVES = [1, 2, 3, 4];
 const SYNTH_TYPES = ['FMSynth', 'AMSynth', 'MetalSynth', 'PluckSynth', 'MembraneSynth', 'DuoSynth', 'Synth', 'MonoSynth', 'NoiseSynth', 'PolySynth'];
 
 const LINES = [
-  { id:'bakerloo',        name:'Bakerloo',        color:'var(--line-bakerloo)',        type:'FMSynth',       octave:2, harmonicity:1.5, resonance:4, cutoff:1200, attack:0.4, decay:0.8, sustain:0.7, release:2.5, volume:-6, muted:false, crowdingFactor: 1.0 },
-  { id:'central',         name:'Central',         color:'var(--line-central)',         type:'MetalSynth',    octave:3, harmonicity:3.1, resonance:600, cutoff:1800, attack:0.2, decay:0.5, sustain:0.5, release:2.0, volume:-8, muted:false, crowdingFactor: 1.0 },
-  { id:'circle',          name:'Circle',          color:'var(--line-circle)',          type:'PluckSynth',    octave:3, harmonicity:1.0, resonance:2500, cutoff:2200, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0 },
-  { id:'district',        name:'District',        color:'var(--line-district)',        type:'AMSynth',       octave:2, harmonicity:2.0, resonance:6, cutoff:1500, attack:0.5, decay:1.0, sustain:0.8, release:3.0, volume:-6, muted:false, crowdingFactor: 1.0 },
-  { id:'hammersmith-city',name:'Ham. & City',     color:'var(--line-hammersmith)', type:'PluckSynth',    octave:3, harmonicity:1.0, resonance:4000, cutoff:3000, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0 },
-  { id:'jubilee',         name:'Jubilee',         color:'var(--line-jubilee)',         type:'MetalSynth',    octave:2, harmonicity:2.2, resonance:300, cutoff:1000, attack:0.3, decay:0.4, sustain:0.4, release:1.8, volume:-8, muted:false, crowdingFactor: 1.0 },
-  { id:'metropolitan',    name:'Metropolitan',    color:'var(--line-metropolitan)',type:'DuoSynth',      octave:3, harmonicity:1.5, resonance:5, cutoff:2000, attack:0.6, decay:1.2, sustain:0.8, release:3.5, volume:-6, muted:false, crowdingFactor: 1.0 },
-  { id:'northern',        name:'Northern',        color:'var(--line-northern)',        type:'MembraneSynth', octave:2, harmonicity:1.0, resonance:3, cutoff:800, attack:0.2, decay:0.8, sustain:0.5, release:2.5, volume:-6, muted:false, crowdingFactor: 1.0 },
-  { id:'piccadilly',      name:'Piccadilly',      color:'var(--line-piccadilly)',      type:'DuoSynth',      octave:3, harmonicity:2.0, resonance:7, cutoff:2500, attack:0.5, decay:1.0, sustain:0.8, release:3.2, volume:-6, muted:false, crowdingFactor: 1.0 },
-  { id:'victoria',        name:'Victoria',        color:'var(--line-victoria)',        type:'Synth',         octave:3, harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, crowdingFactor: 1.0 },
-  { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false, crowdingFactor: 1.0 },
+  { id:'bakerloo',        name:'Bakerloo',        color:'var(--line-bakerloo)',        type:'FMSynth',       octave:2, scale: 'Major Pentatonic', harmonicity:1.5, resonance:4, cutoff:1200, attack:0.4, decay:0.8, sustain:0.7, release:2.5, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0 },
+  { id:'central',         name:'Central',         color:'var(--line-central)',         type:'MetalSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:3.1, resonance:600, cutoff:1800, attack:0.2, decay:0.5, sustain:0.5, release:2.0, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0 },
+  { id:'circle',          name:'Circle',          color:'var(--line-circle)',          type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2500, cutoff:2200, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0 },
+  { id:'district',        name:'District',        color:'var(--line-district)',        type:'AMSynth',       octave:2, scale: 'Major Pentatonic', harmonicity:2.0, resonance:6, cutoff:1500, attack:0.5, decay:1.0, sustain:0.8, release:3.0, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0 },
+  { id:'hammersmith-city',name:'Ham. & City',     color:'var(--line-hammersmith)', type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:4000, cutoff:3000, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0 },
+  { id:'jubilee',         name:'Jubilee',         color:'var(--line-jubilee)',         type:'MetalSynth',    octave:2, scale: 'Major Pentatonic', harmonicity:2.2, resonance:300, cutoff:1000, attack:0.3, decay:0.4, sustain:0.4, release:1.8, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0 },
+  { id:'metropolitan',    name:'Metropolitan',    color:'var(--line-metropolitan)',type:'DuoSynth',      octave:3, scale: 'Major Pentatonic', harmonicity:1.5, resonance:5, cutoff:2000, attack:0.6, decay:1.2, sustain:0.8, release:3.5, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0 },
+  { id:'northern',        name:'Northern',        color:'var(--line-northern)',        type:'MembraneSynth', octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:3, cutoff:800, attack:0.2, decay:0.8, sustain:0.5, release:2.5, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0 },
+  { id:'piccadilly',      name:'Piccadilly',      color:'var(--line-piccadilly)',      type:'DuoSynth',      octave:3, scale: 'Major Pentatonic', harmonicity:2.0, resonance:7, cutoff:2500, attack:0.5, decay:1.0, sustain:0.8, release:3.2, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0 },
+  { id:'victoria',        name:'Victoria',        color:'var(--line-victoria)',        type:'Synth',         octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0 },
+  { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0 },
 ];
 
 let announcementConfig = {
@@ -544,16 +543,13 @@ function displayAnnouncementBanner(text) {
   const banner = document.getElementById('announcementBanner');
   const bannerText = document.getElementById('announcementText');
   if (!banner || !bannerText) return;
-
   bannerText.textContent = text;
   banner.classList.remove('hidden');
 }
 
 function hideAnnouncementBanner() {
   const banner = document.getElementById('announcementBanner');
-  if (banner) {
-    banner.classList.add('hidden');
-  }
+  if (banner) banner.classList.add('hidden');
 }
 
 function triggerSpokenAnnouncement() {
@@ -598,7 +594,7 @@ function triggerSpokenAnnouncement() {
     utterance.onend = () => {
       isAnnouncementPlaying = false;
       lastSoundTime = Date.now();
-      setTimeout(hideAnnouncementBanner, 4000); // Leave text on screen briefly after audio finishes
+      setTimeout(hideAnnouncementBanner, 4000);
     };
     
     utterance.onerror = () => {
@@ -616,36 +612,16 @@ function createSynthInstance(cfg) {
   let s;
   const env = { attack: cfg.attack, decay: cfg.decay, sustain: cfg.sustain, release: cfg.release };
   switch(cfg.type) {
-    case 'FMSynth':
-      s = new Tone.FMSynth({ harmonicity: cfg.harmonicity, modulationIndex: cfg.resonance, envelope: env });
-      break;
-    case 'AMSynth':
-      s = new Tone.AMSynth({ harmonicity: cfg.harmonicity, envelope: env });
-      break;
-    case 'MetalSynth':
-      s = new Tone.MetalSynth({ harmonicity: cfg.harmonicity, resonance: cfg.resonance, envelope: { attack: cfg.attack, decay: cfg.decay, release: cfg.release } });
-      break;
-    case 'PluckSynth':
-      s = new Tone.PluckSynth({ dampening: cfg.resonance, attackNoise: cfg.attack });
-      break;
-    case 'MembraneSynth':
-      s = new Tone.MembraneSynth({ octaves: cfg.resonance / 500, envelope: env });
-      break;
-    case 'DuoSynth':
-      s = new Tone.DuoSynth({ vibratoAmount: cfg.harmonicity/10, voice0: { envelope: env } });
-      break;
-    case 'MonoSynth':
-      s = new Tone.MonoSynth({ oscillator: { type: 'sine' }, envelope: env, filterEnvelope: { attack: cfg.attack, decay: cfg.decay, sustain: cfg.sustain, release: cfg.release, baseFrequency: 150 } });
-      break;
-    case 'NoiseSynth':
-      s = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: env });
-      break;
-    case 'PolySynth':
-      s = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: env });
-      break;
-    default:
-      s = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: env });
-      break;
+    case 'FMSynth': s = new Tone.FMSynth({ harmonicity: cfg.harmonicity, modulationIndex: cfg.resonance, envelope: env }); break;
+    case 'AMSynth': s = new Tone.AMSynth({ harmonicity: cfg.harmonicity, envelope: env }); break;
+    case 'MetalSynth': s = new Tone.MetalSynth({ harmonicity: cfg.harmonicity, resonance: cfg.resonance, envelope: { attack: cfg.attack, decay: cfg.decay, release: cfg.release } }); break;
+    case 'PluckSynth': s = new Tone.PluckSynth({ dampening: cfg.resonance, attackNoise: cfg.attack }); break;
+    case 'MembraneSynth': s = new Tone.MembraneSynth({ octaves: cfg.resonance / 500, envelope: env }); break;
+    case 'DuoSynth': s = new Tone.DuoSynth({ vibratoAmount: cfg.harmonicity/10, voice0: { envelope: env } }); break;
+    case 'MonoSynth': s = new Tone.MonoSynth({ oscillator: { type: 'sine' }, envelope: env, filterEnvelope: { attack: cfg.attack, decay: cfg.decay, sustain: cfg.sustain, release: cfg.release, baseFrequency: 150 } }); break;
+    case 'NoiseSynth': s = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: env }); break;
+    case 'PolySynth': s = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: env }); break;
+    default: s = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: env }); break;
   }
   
   const filter = new Tone.Filter({ frequency: cfg.cutoff, type: "lowpass", Q: 1.5 });
@@ -715,6 +691,7 @@ function buildControlPanel() {
     
     let typeOptions = SYNTH_TYPES.map(t => `<option value="${t}" ${line.type === t ? 'selected' : ''}>${t}</option>`).join('');
     let octaveOptions = OCTAVES.map(o => `<option value="${o}" ${line.octave === o ? 'selected' : ''}>Octave ${o}</option>`).join('');
+    let scaleOptions = SCALE_NAMES.map(s => `<option value="${s}" ${line.scale === s ? 'selected' : ''}>${s}</option>`).join('');
     
     card.innerHTML = `
       <h3>
@@ -727,6 +704,7 @@ function buildControlPanel() {
         </div>
       </h3>
       <div class="control-group"><label>Synth Type</label><select data-line="${line.id}" data-param="type">${typeOptions}</select></div>
+      <div class="control-group"><label>Scale</label><select data-line="${line.id}" data-param="scale">${scaleOptions}</select></div>
       <div class="control-group"><label>Octave</label><select data-line="${line.id}" data-param="octave">${octaveOptions}</select></div>
       <div class="control-group"><label>Volume</label><input type="range" min="-30" max="6" step="1" value="${line.volume}" data-line="${line.id}" data-param="volume"></div>
       <div class="control-group"><label>Harmonic</label><input type="range" min="0.5" max="5" step="0.1" value="${line.harmonicity}" data-line="${line.id}" data-param="harmonicity"></div>
@@ -750,7 +728,7 @@ LINES.forEach(line => {
   row.innerHTML = `
     <div class="track-info">
       <div class="track-label"><span class="swatch" style="background:${line.color}"></span>${line.name}</div>
-      <div class="status-badge" id="status-${line.id}">Checking status...</div>
+      <div class="status-badge" id="status-${line.id}">0 trains active</div>
     </div>
     <div class="rail" id="rail-${line.id}" style="color: ${resolvedLineColor};" title="Click to pluck line chord">
       <div class="rail-line" style="color: ${resolvedLineColor};"></div>
@@ -802,6 +780,10 @@ function setGlobalScale(scaleName) {
   if (MUSICAL_SCALES[scaleName]) {
     currentGlobalScale = scaleName;
     updateGlobalScaleSelectOptions();
+    LINES.forEach(line => {
+      line.scale = scaleName;
+    });
+    buildControlPanel();
   }
 }
 
@@ -996,25 +978,26 @@ async function pollAllData() {
         if (badgeElem && lineStatus.lineStatuses && lineStatus.lineStatuses.length > 0) {
           const statusObj = lineStatus.lineStatuses[0];
           const statusDesc = statusObj.statusSeverityDescription;
-          badgeElem.textContent = statusDesc;
 
           let crowdingFactor = 1.0;
+          let alertClass = 'status-badge';
           if (statusDesc === 'Severe Delays' || statusDesc === 'Suspended') {
-            badgeElem.className = 'status-badge alert';
+            alertClass = 'status-badge alert';
             badgeElem.title = statusObj.reason || '';
             crowdingFactor = 1.8;
           } else if (statusDesc === 'Minor Delays') {
-            badgeElem.className = 'status-badge alert';
+            alertClass = 'status-badge alert';
             badgeElem.title = statusObj.reason || '';
             crowdingFactor = 1.3;
           } else {
-            badgeElem.className = 'status-badge';
             badgeElem.title = '';
             crowdingFactor = 1.0;
           }
 
           if (lineObj) {
             lineObj.crowdingFactor = crowdingFactor;
+            badgeElem.className = alertClass;
+            badgeElem.textContent = `${lineObj.activeCount || 0} trains active (${statusDesc})`;
             if (audioReady && lineObj.node && lineObj.node.envelope) {
               lineObj.node.envelope.release = Math.max(0.4, 2.5 / crowdingFactor);
             }
@@ -1030,6 +1013,27 @@ async function pollAllData() {
     const data = await res.json();
     
     latestArrivalsPool = data.filter(p => p.timeToStation != null && p.timeToStation > 5 && p.timeToStation < 300);
+
+    // Count unique physical trains currently active per line using vehicleId or id
+    const lineTrainSets = {};
+    LINES.forEach(l => { lineTrainSets[l.id] = new Set(); });
+
+    data.forEach(p => {
+      if (lineTrainSets[p.lineId]) {
+        const trainId = p.vehicleId || p.id || `${p.stationName}-${p.expectedArrival}`;
+        lineTrainSets[p.lineId].add(trainId);
+      }
+    });
+
+    LINES.forEach(line => {
+      const count = lineTrainSets[line.id] ? lineTrainSets[line.id].size : 0;
+      line.activeCount = count;
+      const badgeElem = document.getElementById(`status-${line.id}`);
+      if (badgeElem) {
+        const currentText = badgeElem.textContent.split('(')[1] || 'Good Service';
+        badgeElem.textContent = `${count} trains active (${currentText.replace(')', '')})`;
+      }
+    });
 
     document.getElementById('status').textContent =
       `Listening — ${data.length} tracked records, last updated ${new Date().toLocaleTimeString()}`;
@@ -1100,7 +1104,8 @@ function playNote(line, prediction, intensity = 1.0){
   
   lastSoundTime = Date.now();
 
-  const currentScaleNotes = MUSICAL_SCALES[currentGlobalScale] || MUSICAL_SCALES["Major Pentatonic"];
+  const lineScaleName = line.scale || currentGlobalScale;
+  const currentScaleNotes = MUSICAL_SCALES[lineScaleName] || MUSICAL_SCALES["Major Pentatonic"];
   const noteName = currentScaleNotes[hashToIndex(prediction.stationName || prediction.towards || 'x', currentScaleNotes.length)];
   const note = `${noteName}${line.octave}`;
   
