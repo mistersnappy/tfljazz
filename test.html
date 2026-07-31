@@ -234,7 +234,7 @@
     border-radius:3px;
   }
 
-  /* Board layout: Clean full-width tracks matching original stable layout */
+  /* Board layout */
   .board{
     padding:24px;
     display:flex;
@@ -990,14 +990,14 @@ function attachControlListeners() {
   });
 }
 
-// ---------- Live API Fetching & Playback Loops ----------
+// ---------- Live API Fetching & Unique Train Deduplication ----------
 function hashToIndex(str, mod){
   let h = 0;
   for (let i=0; i<str.length; i++){ h = (h*31 + str.charCodeAt(i)) >>> 0; }
   return h % mod;
 }
 
-const scheduled = new Set();
+const activeTrainTracker = new Map();
 
 async function pollArrivals(){
   const ids = LINES.map(l=>l.id).join(',');
@@ -1007,39 +1007,63 @@ async function pollArrivals(){
     const data = await res.json();
     
     document.getElementById('status').textContent =
-      `Listening — ${data.length} tracked trains, last updated ${new Date().toLocaleTimeString()}`;
+      `Listening — ${data.length} tracked records, last updated ${new Date().toLocaleTimeString()}`;
 
-    // Shuffle/sort slightly or group to stagger processing updates
-    data.sort((a, b) => a.timeToStation - b.timeToStation);
+    const now = Date.now();
 
-    let trackingTimeOffset = 0;
-    let lastSeenTime = -1;
-
-    data.forEach((p, index)=>{
-      const key = `${p.id || p.vehicleId}-${p.expectedArrival}`;
-      if (scheduled.has(key)) return;
-      if (p.timeToStation == null || p.timeToStation < 2 || p.timeToStation > 90) return; 
-
-      // Introduce subtle micro-jitter (0 to 1.8 seconds) for trains arriving at identical timestamps
-      if (p.timeToStation === lastSeenTime) {
-        trackingTimeOffset += 0.35;
-      } else {
-        trackingTimeOffset = 0;
-        lastSeenTime = p.timeToStation;
+    // Clean up stale train states older than 3 minutes
+    for (const [id, record] of activeTrainTracker.entries()) {
+      if (now - record.lastSeen > 180000) {
+        activeTrainTracker.delete(id);
       }
+    }
 
-      const adjustedArrivalSeconds = p.timeToStation + trackingTimeOffset;
+    data.forEach(p => {
+      const vehicleId = p.vehicleId || p.id || `${p.lineId}-${p.stationName}-${p.expectedArrival}`;
+      if (p.timeToStation == null || p.timeToStation < 2 || p.timeToStation > 120) return;
 
-      scheduled.add(key);
-      setTimeout(() => scheduled.delete(key), (adjustedArrivalSeconds + 10) * 1000);
-
-      const line = LINES.find(l=>l.id === p.lineId);
+      const line = LINES.find(l => l.id === p.lineId);
       if (!line) return;
 
-      animateTrain(line, adjustedArrivalSeconds);
-      setTimeout(() => playNote(line, p), adjustedArrivalSeconds * 1000);
+      let trainRecord = activeTrainTracker.get(vehicleId);
+
+      if (!trainRecord) {
+        // Register brand new unique train
+        trainRecord = {
+          id: vehicleId,
+          lineId: p.lineId,
+          totalTime: p.timeToStation,
+          startTime: now,
+          lastSeen: now,
+          milestonesHit: { node1: false, node2: false, arrival: false }
+        };
+        activeTrainTracker.set(vehicleId, trainRecord);
+        animateTrain(line, p.timeToStation);
+      } else {
+        // Update existing unique train tracking parameters dynamically without re-triggering sounds
+        trainRecord.lastSeen = now;
+      }
+
+      // Calculate real-time progression through the 3 station nodes (25%, 50%, 100% journey markers)
+      const elapsedSec = (now - trainRecord.startTime) / 1000;
+      const progressRatio = Math.min(1, elapsedSec / trainRecord.totalTime);
+
+      // Trigger node milestone notes organically as the train approaches stations
+      if (progressRatio >= 0.25 && !trainRecord.milestonesHit.node1) {
+        trainRecord.milestonesHit.node1 = true;
+        playNote(line, p, 0.6); // Waypoint chime
+      }
+      if (progressRatio >= 0.60 && !trainRecord.milestonesHit.node2) {
+        trainRecord.milestonesHit.node2 = true;
+        playNote(line, p, 0.8); // Approach chime
+      }
+      if (progressRatio >= 0.95 && !trainRecord.milestonesHit.arrival) {
+        trainRecord.milestonesHit.arrival = true;
+        playNote(line, p, 1.0); // Final station arrival chime
+      }
     });
-  }catch(err){
+
+  } catch(err) {
     document.getElementById('status').textContent = 'Could not reach TfL API — retrying soon.';
     console.error(err);
   }
@@ -1062,7 +1086,7 @@ function animateTrain(line, seconds){
   setTimeout(()=> dot.remove(), seconds * 1000 + 400);
 }
 
-function playNote(line, prediction){
+function playNote(line, prediction, intensity = 1.0){
   if (!audioReady || !line.node || line.muted) return;
   
   lastSoundTime = Date.now();
@@ -1073,9 +1097,9 @@ function playNote(line, prediction){
   
   try{
     if (line.type === 'NoiseSynth') {
-      line.node.triggerAttackRelease(line.release || 2.0);
+      line.node.triggerAttackRelease((line.release || 2.0) * intensity);
     } else {
-      line.node.triggerAttackRelease(note, line.release || 2.0);
+      line.node.triggerAttackRelease(note, (line.release || 2.0) * intensity);
     }
   }catch(e){ console.warn('note failed', e); }
 
