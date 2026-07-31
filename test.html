@@ -665,7 +665,7 @@ function createSynthInstance(cfg) {
       s = new Tone.PluckSynth({ dampening: cfg.resonance, attackNoise: cfg.attack });
       break;
     case 'MembraneSynth':
-      s = new Tone.MembraneSynth({ octaves: cfg.resonance, envelope: env });
+      s = new Tone.MembraneSynth({ octaves: cfg.resonance / 500, envelope: env });
       break;
     case 'DuoSynth':
       s = new Tone.DuoSynth({ vibratoAmount: cfg.harmonicity/10, voice0: { envelope: env } });
@@ -1011,7 +1011,6 @@ async function pollArrivals(){
 
     const now = Date.now();
 
-    // Clean up stale train states older than 3 minutes
     for (const [id, record] of activeTrainTracker.entries()) {
       if (now - record.lastSeen > 180000) {
         activeTrainTracker.delete(id);
@@ -1028,7 +1027,6 @@ async function pollArrivals(){
       let trainRecord = activeTrainTracker.get(vehicleId);
 
       if (!trainRecord) {
-        // Register brand new unique train
         trainRecord = {
           id: vehicleId,
           lineId: p.lineId,
@@ -1040,26 +1038,23 @@ async function pollArrivals(){
         activeTrainTracker.set(vehicleId, trainRecord);
         animateTrain(line, p.timeToStation);
       } else {
-        // Update existing unique train tracking parameters dynamically without re-triggering sounds
         trainRecord.lastSeen = now;
       }
 
-      // Calculate real-time progression through the 3 station nodes (25%, 50%, 100% journey markers)
       const elapsedSec = (now - trainRecord.startTime) / 1000;
       const progressRatio = Math.min(1, elapsedSec / trainRecord.totalTime);
 
-      // Trigger node milestone notes organically as the train approaches stations
       if (progressRatio >= 0.25 && !trainRecord.milestonesHit.node1) {
         trainRecord.milestonesHit.node1 = true;
-        playNote(line, p, 0.6); // Waypoint chime
+        playNote(line, p, 0.6);
       }
       if (progressRatio >= 0.60 && !trainRecord.milestonesHit.node2) {
         trainRecord.milestonesHit.node2 = true;
-        playNote(line, p, 0.8); // Approach chime
+        playNote(line, p, 0.8);
       }
       if (progressRatio >= 0.95 && !trainRecord.milestonesHit.arrival) {
         trainRecord.milestonesHit.arrival = true;
-        playNote(line, p, 1.0); // Final station arrival chime
+        playNote(line, p, 1.0);
       }
     });
 
