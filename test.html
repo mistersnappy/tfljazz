@@ -363,7 +363,7 @@
 
 <header>
   <h1><span class="roundel"></span>TfL Jazz: Ambient Underground Soundscape</h1>
-  <p class="sub">Live London Underground arrivals, status updates & continuous data-driven drone bed. Click any line visualization to pluck its chord.</p>
+  <p class="sub">Live London Underground arrivals, status updates & event-driven ambient pad bed. Click any line visualization to pluck its chord.</p>
   <div class="actions">
     <button id="startBtn">Start listening</button>
     <button id="toggleConfig" class="btn-outline">Configure Tones</button>
@@ -442,14 +442,11 @@ const LINES = [
   { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false },
 ];
 
-let droneVoiceConfig = {
-  id: 'network-drone',
-  name: 'Continuous Drone Bed',
+let ambientPadConfig = {
+  id: 'ambient-pad',
+  name: 'Data Ambient Pad',
   color: 'var(--line-drone)',
   octave: 1,
-  voices: 3,
-  detuneSpread: 12,
-  cutoff: 550,
   volume: -10,
   muted: false
 };
@@ -462,16 +459,13 @@ let announcementConfig = {
   targetLine: 'all'
 };
 
-// Safe audio chain setup
 const delay = new Tone.FeedbackDelay({ delayTime: "8n.", feedback: 0.4, wet: 0.35 });
 const ambientReverb = new Tone.Reverb({ decay: 9.0, wet: 0.6 });
 const limiter = new Tone.Limiter(-4);
 
-// Connect directly to limiter instantly as fallback so audio works immediately
 delay.connect(limiter);
 limiter.toDestination();
 
-// Try building the reverb impulse asynchronously in the background
 ambientReverb.generate().then(() => {
   delay.disconnect(limiter);
   delay.connect(ambientReverb);
@@ -487,6 +481,34 @@ let lastSoundTime = Date.now();
 let isAnnouncementPlaying = false;
 let latestArrivalsPool = [];
 let liveDisruptionsPool = [];
+
+// Safe Event-Driven Ambient Pad PolySynth
+let ambientPadSynth = null;
+let ambientPadVolume = null;
+
+function initAmbientPad() {
+  if (ambientPadSynth) {
+    ambientPadSynth.dispose();
+    ambientPadVolume.dispose();
+  }
+  ambientPadVolume = new Tone.Volume(ambientPadConfig.muted ? -Infinity : ambientPadConfig.volume).connect(delay);
+  ambientPadSynth = new Tone.PolySynth(Tone.Synth, {
+    oscillator: { type: "triangle" },
+    envelope: { attack: 3.0, decay: 2.0, sustain: 0.8, release: 5.0 }
+  }).connect(ambientPadVolume);
+}
+
+function triggerAmbientPadChord(densityRatio) {
+  if (!audioReady || ambientPadConfig.muted || !ambientPadSynth) return;
+  const scale = MUSICAL_SCALES[currentGlobalScale] || MUSICAL_SCALES["Major Pentatonic"];
+  const root = `${scale[0]}${ambientPadConfig.octave}`;
+  const third = `${scale[2 % scale.length]}${ambientPadConfig.octave}`;
+  const fifth = `${scale[4 % scale.length]}${ambientPadConfig.octave}`;
+  
+  try {
+    ambientPadSynth.triggerAttackRelease([root, third, fifth], 6.0);
+  } catch(e) {}
+}
 
 function getSelectedVoice() {
   if (!('speechSynthesis' in window)) return null;
@@ -516,9 +538,7 @@ function triggerSpokenAnnouncement() {
       text = liveDisruptionsPool[Math.floor(Math.random() * liveDisruptionsPool.length)];
     }
 
-    try {
-      synthAnnouncementChime.triggerAttackRelease("C4", "2n");
-    } catch(e) {}
+    try { synthAnnouncementChime.triggerAttackRelease("C4", "2n"); } catch(e) {}
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.90; 
@@ -561,36 +581,6 @@ function createSynthInstance(cfg) {
   }
   volNode.connect(delay);
   return { synth: s, filter: filter, volumeNode: volNode };
-}
-
-let droneRig = { oscillators: [], filter: null, volumeNode: null };
-
-function createContinuousDroneRig() {
-  if (droneRig.volumeNode) {
-    droneRig.oscillators.forEach(o => { try { o.stop(); o.dispose(); } catch(e){} });
-    if (droneRig.filter) droneRig.filter.dispose();
-    if (droneRig.volumeNode) droneRig.volumeNode.dispose();
-    droneRig.oscillators = [];
-  }
-
-  const filter = new Tone.Filter({ frequency: droneVoiceConfig.cutoff, type: "lowpass", Q: 2.0 });
-  const volNode = new Tone.Volume(droneVoiceConfig.muted ? -Infinity : droneVoiceConfig.volume);
-  filter.connect(volNode);
-  volNode.connect(delay);
-
-  droneRig.filter = filter;
-  droneRig.volumeNode = volNode;
-
-  const scale = MUSICAL_SCALES[currentGlobalScale] || MUSICAL_SCALES["Major Pentatonic"];
-  const baseFreq = Tone.Frequency(`${scale[0]}${droneVoiceConfig.octave}`).toHz();
-
-  for (let i = 0; i < droneVoiceConfig.voices; i++) {
-    const osc = new Tone.Oscillator({ frequency: baseFreq, type: i % 2 === 0 ? "sawtooth" : "triangle" });
-    osc.detune.value = (i - (droneVoiceConfig.voices - 1) / 2) * droneVoiceConfig.detuneSpread;
-    osc.connect(filter);
-    osc.start();
-    droneRig.oscillators.push(osc);
-  }
 }
 
 const board = document.getElementById('board');
@@ -639,17 +629,16 @@ function buildControlPanel() {
   `;
   panelGrid.appendChild(annCard);
 
-  const droneCard = document.createElement('div');
-  droneCard.className = `synth-card ${droneVoiceConfig.muted ? 'muted' : ''}`;
-  droneCard.id = `card-${droneVoiceConfig.id}`;
-  let droneOctaveOptions = OCTAVES.map(o => `<option value="${o}" ${droneVoiceConfig.octave === o ? 'selected' : ''}>Octave ${o}</option>`).join('');
-  droneCard.innerHTML = `
-    <h3>Continuous Drone <button class="mute-btn ${droneVoiceConfig.muted ? 'active' : ''}" data-mute-drone="${droneVoiceConfig.id}">${droneVoiceConfig.muted ? 'Unmute' : 'Mute'}</button></h3>
-    <div class="control-group"><label>Octave</label><select data-drone-param="octave">${droneOctaveOptions}</select></div>
-    <div class="control-group"><label>Voices</label><input type="range" min="1" max="6" step="1" value="${droneVoiceConfig.voices}" data-drone-param="voices"></div>
-    <div class="control-group"><label>Volume</label><input type="range" min="-30" max="6" step="1" value="${droneVoiceConfig.volume}" data-drone-param="volume"></div>
+  const padCard = document.createElement('div');
+  padCard.className = `synth-card ${ambientPadConfig.muted ? 'muted' : ''}`;
+  padCard.id = `card-${ambientPadConfig.id}`;
+  let padOctaveOptions = OCTAVES.map(o => `<option value="${o}" ${ambientPadConfig.octave === o ? 'selected' : ''}>Octave ${o}</option>`).join('');
+  padCard.innerHTML = `
+    <h3>Ambient Pad <button class="mute-btn ${ambientPadConfig.muted ? 'active' : ''}" data-mute-pad="${ambientPadConfig.id}">${ambientPadConfig.muted ? 'Unmute' : 'Mute'}</button></h3>
+    <div class="control-group"><label>Octave</label><select data-pad-param="octave">${padOctaveOptions}</select></div>
+    <div class="control-group"><label>Volume</label><input type="range" min="-30" max="6" step="1" value="${ambientPadConfig.volume}" data-pad-param="volume"></div>
   `;
-  panelGrid.appendChild(droneCard);
+  panelGrid.appendChild(padCard);
 
   LINES.forEach(line => {
     const card = document.createElement('div');
@@ -718,8 +707,7 @@ function randomizeVoices() {
 
 function randomizeOctaves() {
   LINES.forEach(line => { line.octave = OCTAVES[Math.floor(Math.random() * OCTAVES.length)]; });
-  droneVoiceConfig.octave = OCTAVES[Math.floor(Math.random() * OCTAVES.length)];
-  updateContinuousDronePitches();
+  ambientPadConfig.octave = OCTAVES[Math.floor(Math.random() * OCTAVES.length)];
   buildControlPanel();
 }
 
@@ -727,7 +715,6 @@ function setGlobalScale(scaleName) {
   if (MUSICAL_SCALES[scaleName]) {
     currentGlobalScale = scaleName;
     updateGlobalScaleSelectOptions();
-    updateContinuousDronePitches();
   }
 }
 
@@ -737,15 +724,15 @@ function randomizeGlobalScale() {
 
 let audioReady = false;
 document.getElementById('startBtn').addEventListener('click', async () => {
-  // CRITICAL: Synchronous activation call first
+  // Synchronous user-gesture unlock
   await Tone.start();
   
   initializeAllSynths();
-  createContinuousDroneRig();
+  initAmbientPad();
 
   audioReady = true;
   document.getElementById('startBtn').disabled = true;
-  document.getElementById('status').textContent = 'Listening — continuous drone bed active…';
+  document.getElementById('status').textContent = 'Listening — ambient soundscape active…';
   
   pollAllData();
   setInterval(pollAllData, 18000);
@@ -763,15 +750,6 @@ function initializeAllSynths() {
   });
 }
 
-function updateContinuousDronePitches() {
-  if (!audioReady || droneRig.oscillators.length === 0) return;
-  const scale = MUSICAL_SCALES[currentGlobalScale] || MUSICAL_SCALES["Major Pentatonic"];
-  const baseFreq = Tone.Frequency(`${scale[0]}${droneVoiceConfig.octave}`).toHz();
-  droneRig.oscillators.forEach((osc, i) => {
-    osc.frequency.rampTo(baseFreq, 3.0);
-  });
-}
-
 function attachControlListeners() {
   document.querySelectorAll('.synth-card input, .synth-card select').forEach(input => {
     input.addEventListener('input', (e) => {
@@ -784,6 +762,29 @@ function attachControlListeners() {
       if (param === 'type' && audioReady) initializeAllSynths();
     });
   });
+
+  document.querySelector('[data-mute-pad]')?.addEventListener('click', (e) => {
+    ambientPadConfig.muted = !ambientPadConfig.muted;
+    e.target.textContent = ambientPadConfig.muted ? 'Unmute' : 'Mute';
+    e.target.classList.toggle('active', ambientPadConfig.muted);
+    document.getElementById(`card-${ambientPadConfig.id}`).classList.toggle('muted', ambientPadConfig.muted);
+    if (audioReady && ambientPadVolume) {
+      ambientPadVolume.volume.rampTo(ambientPadConfig.muted ? -Infinity : ambientPadConfig.volume, 0.2);
+    }
+  });
+
+  document.querySelectorAll('#card-ambient-pad input, #card-ambient-pad select').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const param = e.target.getAttribute('data-pad-param');
+      const val = e.target.type === 'select-one' ? parseInt(e.target.value) : parseFloat(e.target.value);
+      ambientPadConfig[param] = val;
+      if (param === 'volume' && audioReady && ambientPadVolume) {
+        ambientPadVolume.volume.rampTo(ambientPadConfig.muted ? -Infinity : val, 0.2);
+      } else if (param === 'octave' && audioReady) {
+        initAmbientPad();
+      }
+    });
+  });
 }
 
 async function pollAllData() {
@@ -793,7 +794,14 @@ async function pollAllData() {
     if (res.ok) {
       const data = await res.json();
       latestArrivalsPool = data.filter(p => p.timeToStation != null && p.timeToStation > 5 && p.timeToStation < 300);
-      document.getElementById('status').textContent = `Listening — ${data.length} active trains tracked (Drone Bed Active)`;
+      
+      const normalizedDensity = Math.min(1.0, data.length / 350);
+      ambientReverb.wet.value = 0.35 + (normalizedDensity * 0.5);
+
+      // Trigger ambient chord wash dynamically based on data flow
+      triggerAmbientPadChord(normalizedDensity);
+
+      document.getElementById('status').textContent = `Listening — ${data.length} active trains tracked`;
     }
   } catch(err) {
     document.getElementById('status').textContent = 'Listening (Offline mode / API retrying...)';
