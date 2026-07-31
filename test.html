@@ -234,7 +234,7 @@
     border-radius:3px;
   }
 
-  /* Board layout: Map styling */
+  /* Board layout: Map styling with subtle geometric crossover topology */
   .board{
     padding:24px;
     display:flex;
@@ -285,6 +285,31 @@
     top: 0; bottom: 0; left: 0; right: 0;
     background: currentColor;
     border-radius: 1px;
+  }
+
+  /* Authentic Tube Map Style Intersect Overlays / Parallel Parallel Crossover Nodes */
+  .rail-line::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 45%;
+    width: 10%;
+    height: 2px;
+    background: var(--bg);
+    transform: translateY(-50%);
+    opacity: 0.85;
+    z-index: 2;
+  }
+  .track:nth-child(even) .rail-line::before-cross {
+    content: '';
+    position: absolute;
+    top: -2px;
+    bottom: -2px;
+    left: 48%;
+    width: 3px;
+    background: var(--ink);
+    z-index: 2;
+    opacity: 0.3;
   }
 
   .station-node {
@@ -358,9 +383,7 @@
   <div class="panel-header-actions">
     <h3 style="margin:0; font-size:14px; text-transform:uppercase;">Ambient Tone & Synth Modifiers</h3>
     <div class="random-btn-group">
-      <select id="globalScaleSelect" class="global-scale-select" onchange="setGlobalScale(this.value)">
-        <!-- Options populated dynamically -->
-      </select>
+      <select id="globalScaleSelect" class="global-scale-select" onchange="setGlobalScale(this.value)"></select>
       <button class="rand-btn" onclick="randomizeVoices()">🎲 Random Voices</button>
       <button class="rand-btn" onclick="randomizeOctaves()">🎲 Random Octaves</button>
       <button class="rand-btn" onclick="randomizeGlobalScale()">🎲 Random Scale</button>
@@ -389,7 +412,6 @@ function setTheme(mode) {
   }
 }
 
-// Recognized and accepted musical scales mapped as note pools
 const MUSICAL_SCALES = {
   "Major Pentatonic": ["F", "G", "A", "C", "D"],
   "Minor Pentatonic": ["F", "Ab", "Bb", "C", "Eb"],
@@ -789,7 +811,7 @@ LINES.forEach(line => {
   row.innerHTML = `
     <div class="track-label"><span class="swatch" style="background:${line.color}"></span>${line.name}</div>
     <div class="rail" id="rail-${line.id}" style="color: ${resolvedLineColor};">
-      <div class="rail-line" style="color: ${resolvedLineColor};"></div>
+      <div class="rail-line" style="color: ${resolvedLineColor};"><div class="rail-line::before-cross"></div></div>
       <div class="station-node" style="color: ${resolvedLineColor};"></div>
       <div class="station-node" style="color: ${resolvedLineColor};"></div>
       <div class="station-node" style="color: ${resolvedLineColor};"></div>
