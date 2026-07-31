@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TfL Jazz: Ambient Underground Soundscape</title>
+<title>TfL Jazz: Ambient Underground Soundscape & Announcements</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
 <style>
   :root {
@@ -323,7 +323,7 @@
 
 <header>
   <h1><span class="roundel"></span>TfL Jazz: Ambient Underground Soundscape</h1>
-  <p class="sub">Live London Underground arrivals from the TfL Unified API, transformed into lush ambient generative chords with ethereal reverb and delay.</p>
+  <p class="sub">Live London Underground arrivals from the TfL Unified API, transformed into lush ambient generative chords with ethereal reverb, delay, and authentic station announcements during quiet gaps.</p>
   <div class="actions">
     <button id="startBtn">Start listening</button>
     <button id="toggleConfig" class="btn-outline">Configure Tones</button>
@@ -355,6 +355,7 @@
 
 <footer>
   Data: <a href="https://api.tfl.gov.uk" target="_blank">api.tfl.gov.uk</a> Unified API, polled every 18s. 
+  Announcements courtesy of <a href="https://ilyabirman.net/meanwhile/all/london-underground-voice-announcements/" target="_blank">Ilya Birman</a>.
   Concept inspired by <a href="https://www.trainjazz.com" target="_blank">trainjazz.com</a>.
 </footer>
 
@@ -399,6 +400,57 @@ ambientReverb.generate().then(() => {
   ambientReverb.connect(limiter);
   limiter.toDestination();
 });
+
+// ---------- Announcement Audio Setup ----------
+// Audio samples hosted directly from Ilya Birman's public collection repository links
+const ANNOUNCEMENT_URLS = [
+  "https://ilyabirman.net/meanwhile/all/london-underground-voice-announcements/mind-the-gap.mp3",
+  "https://ilyabirman.net/meanwhile/all/london-underground-voice-announcements/change-for-jubilee-line.mp3",
+  "https://ilyabirman.net/meanwhile/all/london-underground-voice-announcements/this-train-terminates-here.mp3",
+  "https://ilyabirman.net/meanwhile/all/london-underground-voice-announcements/please-mind-the-gap-between-the-train-and-the-platform.mp3",
+  "https://ilyabirman.net/meanwhile/all/london-underground-voice-announcements/change-for-northern-line.mp3"
+];
+
+let announcementPlayers = [];
+let lastSoundTime = Date.now();
+let isAnnouncementPlaying = false;
+
+function initAnnouncements() {
+  ANNOUNCEMENT_URLS.forEach(url => {
+    const player = new Tone.Player({
+      url: url,
+      onload: () => { console.log('Loaded announcement:', url); },
+      volume: -4
+    }).connect(limiter);
+    announcementPlayers.push(player);
+  });
+}
+
+function checkAndTriggerAnnouncement() {
+  if (!audioReady || announcementPlayers.length === 0 || isAnnouncementPlaying) return;
+
+  const now = Date.now();
+  const gapDuration = (now - lastSoundTime) / 1000; // time in seconds since last sound
+
+  // If there's been a gap of more than 2 seconds, give it a random chance to fire
+  if (gapDuration > 2.0 && Math.random() < 0.4) {
+    const randomPlayer = announcementPlayers[Math.floor(Math.random() * announcementPlayers.length)];
+    if (randomPlayer.loaded) {
+      isAnnouncementPlaying = true;
+      randomPlayer.start();
+      document.getElementById('status').textContent = 'Playing station announcement…';
+      
+      // Reset tracker after playback completes
+      setTimeout(() => {
+        isAnnouncementPlaying = false;
+        lastSoundTime = Date.now();
+      }, (randomPlayer.buffer.duration * 1000) + 500);
+    }
+  }
+}
+
+// Check every second for potential gaps
+setInterval(checkAndTriggerAnnouncement, 1000);
 
 function createSynthInstance(cfg) {
   let s;
@@ -551,6 +603,7 @@ document.getElementById('startBtn').addEventListener('click', async () => {
     line.filter = nodeSet.filter;
     line.volumeNode = nodeSet.volumeNode;
   });
+  initAnnouncements();
   audioReady = true;
   document.getElementById('startBtn').disabled = true;
   document.getElementById('status').textContent = 'Listening — ambient soundscape active…';
@@ -705,6 +758,10 @@ function animateTrain(line, seconds){
 
 function playNote(line, prediction){
   if (!audioReady || !line.node || line.muted) return;
+  
+  // Record that a sound occurred so the announcement gap timer resets
+  lastSoundTime = Date.now();
+
   const noteName = SCALE[hashToIndex(prediction.stationName || prediction.towards || 'x', SCALE.length)];
   const note = `${noteName}${line.octave}`;
   
