@@ -49,12 +49,19 @@
     padding:32px 24px 16px;
     border-bottom:1px solid var(--border);
   }
+  .actions-wrapper{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 14px;
+  }
   .actions{
     display:flex;
     gap:10px;
     align-items:center;
     flex-wrap:wrap;
-    margin-top:14px;
   }
   .theme-btn {
     background: var(--card-bg);
@@ -134,14 +141,15 @@
 
   /* Live Announcement Display Banner */
   .announcement-banner {
-    margin-top: 14px;
     background: var(--card-bg);
     border: 1px solid var(--border);
     border-left: 4px solid var(--ink);
     padding: 10px 16px;
     border-radius: 6px;
     font-size: 13px;
-    max-width: 700px;
+    flex: 1;
+    min-width: 280px;
+    max-width: 500px;
     display: flex;
     align-items: center;
     gap: 12px;
@@ -279,7 +287,7 @@
     display:grid;
     grid-template-columns:190px 1fr 60px;
     align-items:center;
-    min-height:48px;
+    min-height:56px;
     border-bottom:1px solid var(--border);
     position:relative;
     padding: 6px 0;
@@ -297,9 +305,6 @@
     font-weight:700;
     letter-spacing:0.3px;
   }
-  .swatch{
-    width:10px;height:10px;border-radius:50%;flex:none;
-  }
   .status-badge {
     font-size: 9px;
     font-family: monospace;
@@ -307,6 +312,7 @@
     text-transform: uppercase;
     letter-spacing: 0.5px;
     padding-left: 18px;
+    line-height: 1.4;
   }
   .status-badge.alert {
     color: #E32017;
@@ -396,24 +402,28 @@
 <header>
   <h1><span class="roundel"></span>TfL Jazz: Ambient Underground Soundscape</h1>
   <p class="sub">Live London Underground arrivals, status updates & announcements. Click any line visualization to pluck its chord.</p>
-  <div class="actions">
-    <button id="startBtn">Start listening</button>
-    <button id="toggleConfig" class="btn-outline">Configure Tones</button>
-    <button class="theme-btn" id="dayTubeBtn" onclick="setTheme('light')">
-      <svg class="tfl-icon" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="12" cy="12" r="4"/></svg>
-      Day Tube
-    </button>
-    <button class="theme-btn active" id="nightTubeBtn" onclick="setTheme('dark')">
-      <svg class="tfl-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.38 5.38 0 0 1-4.24 2.16A5.38 5.38 0 0 1 11.3 7.56 5.38 5.38 0 0 1 13.46 3.3 9 9 0 0 0 12 3z"/></svg>
-      Night Tube
-    </button>
-  </div>
-  <div id="status">Audio is off. Click start (browsers require a user gesture before playing sound).</div>
   
-  <div id="announcementBanner" class="announcement-banner hidden" style="border-left-color: var(--ink);">
-    <div class="announcement-icon">Announcement</div>
-    <div id="announcementText" class="announcement-text"></div>
+  <div class="actions-wrapper">
+    <div class="actions">
+      <button id="startBtn">Start listening</button>
+      <button id="toggleConfig" class="btn-outline">Configure Tones</button>
+      <button class="theme-btn" id="dayTubeBtn" onclick="setTheme('light')">
+        <svg class="tfl-icon" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="12" cy="12" r="4"/></svg>
+        Day Tube
+      </button>
+      <button class="theme-btn active" id="nightTubeBtn" onclick="setTheme('dark')">
+        <svg class="tfl-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.38 5.38 0 0 1-4.24 2.16A5.38 5.38 0 0 1 11.3 7.56 5.38 5.38 0 0 1 13.46 3.3 9 9 0 0 0 12 3z"/></svg>
+        Night Tube
+      </button>
+    </div>
+    
+    <div id="announcementBanner" class="announcement-banner hidden" style="border-left-color: var(--ink);">
+      <div class="announcement-icon">Announcement</div>
+      <div id="announcementText" class="announcement-text"></div>
+    </div>
   </div>
+
+  <div id="status">Audio is off. Click start (browsers require a user gesture before playing sound).</div>
 </header>
 
 <!-- Configuration Drawer for Synths -->
@@ -467,17 +477,17 @@ const OCTAVES = [1, 2, 3, 4];
 const SYNTH_TYPES = ['FMSynth', 'AMSynth', 'MetalSynth', 'PluckSynth', 'MembraneSynth', 'DuoSynth', 'Synth', 'MonoSynth', 'NoiseSynth', 'PolySynth'];
 
 const LINES = [
-  { id:'bakerloo',        name:'Bakerloo',        color:'var(--line-bakerloo)',        type:'FMSynth',       octave:2, scale: 'Major Pentatonic', harmonicity:1.5, resonance:4, cutoff:1200, attack:0.4, decay:0.8, sustain:0.7, release:2.5, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0 },
-  { id:'central',         name:'Central',         color:'var(--line-central)',         type:'MetalSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:3.1, resonance:600, cutoff:1800, attack:0.2, decay:0.5, sustain:0.5, release:2.0, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0 },
-  { id:'circle',          name:'Circle',          color:'var(--line-circle)',          type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2500, cutoff:2200, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0 },
-  { id:'district',        name:'District',        color:'var(--line-district)',        type:'AMSynth',       octave:2, scale: 'Major Pentatonic', harmonicity:2.0, resonance:6, cutoff:1500, attack:0.5, decay:1.0, sustain:0.8, release:3.0, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0 },
-  { id:'hammersmith-city',name:'Ham. & City',     color:'var(--line-hammersmith)', type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:4000, cutoff:3000, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0 },
-  { id:'jubilee',         name:'Jubilee',         color:'var(--line-jubilee)',         type:'MetalSynth',    octave:2, scale: 'Major Pentatonic', harmonicity:2.2, resonance:300, cutoff:1000, attack:0.3, decay:0.4, sustain:0.4, release:1.8, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0 },
-  { id:'metropolitan',    name:'Metropolitan',    color:'var(--line-metropolitan)',type:'DuoSynth',      octave:3, scale: 'Major Pentatonic', harmonicity:1.5, resonance:5, cutoff:2000, attack:0.6, decay:1.2, sustain:0.8, release:3.5, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0 },
-  { id:'northern',        name:'Northern',        color:'var(--line-northern)',        type:'MembraneSynth', octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:3, cutoff:800, attack:0.2, decay:0.8, sustain:0.5, release:2.5, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0 },
-  { id:'piccadilly',      name:'Piccadilly',      color:'var(--line-piccadilly)',      type:'DuoSynth',      octave:3, scale: 'Major Pentatonic', harmonicity:2.0, resonance:7, cutoff:2500, attack:0.5, decay:1.0, sustain:0.8, release:3.2, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0 },
-  { id:'victoria',        name:'Victoria',        color:'var(--line-victoria)',        type:'Synth',         octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0 },
-  { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0 },
+  { id:'bakerloo',        name:'Bakerloo',        color:'var(--line-bakerloo)',        type:'FMSynth',       octave:2, scale: 'Major Pentatonic', harmonicity:1.5, resonance:4, cutoff:1200, attack:0.4, decay:0.8, sustain:0.7, release:2.5, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'central',         name:'Central',         color:'var(--line-central)',         type:'MetalSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:3.1, resonance:600, cutoff:1800, attack:0.2, decay:0.5, sustain:0.5, release:2.0, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'circle',          name:'Circle',          color:'var(--line-circle)',          type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2500, cutoff:2200, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'district',        name:'District',        color:'var(--line-district)',        type:'AMSynth',       octave:2, scale: 'Major Pentatonic', harmonicity:2.0, resonance:6, cutoff:1500, attack:0.5, decay:1.0, sustain:0.8, release:3.0, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'hammersmith-city',name:'Ham. & City',     color:'var(--line-hammersmith)', type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:4000, cutoff:3000, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'jubilee',         name:'Jubilee',         color:'var(--line-jubilee)',         type:'MetalSynth',    octave:2, scale: 'Major Pentatonic', harmonicity:2.2, resonance:300, cutoff:1000, attack:0.3, decay:0.4, sustain:0.4, release:1.8, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'metropolitan',    name:'Metropolitan',    color:'var(--line-metropolitan)',type:'DuoSynth',      octave:3, scale: 'Major Pentatonic', harmonicity:1.5, resonance:5, cutoff:2000, attack:0.6, decay:1.2, sustain:0.8, release:3.5, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'northern',        name:'Northern',        color:'var(--line-northern)',        type:'MembraneSynth', octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:3, cutoff:800, attack:0.2, decay:0.8, sustain:0.5, release:2.5, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'piccadilly',      name:'Piccadilly',      color:'var(--line-piccadilly)',      type:'DuoSynth',      octave:3, scale: 'Major Pentatonic', harmonicity:2.0, resonance:7, cutoff:2500, attack:0.5, decay:1.0, sustain:0.8, release:3.2, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'victoria',        name:'Victoria',        color:'var(--line-victoria)',        type:'Synth',         octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
 ];
 
 let announcementConfig = {
@@ -545,11 +555,8 @@ function displayAnnouncementBanner(text, lineObj) {
   if (!banner || !bannerText) return;
 
   bannerText.textContent = text;
-  
-  // Set left border color based on source line, or default ink if general announcement
   const borderColor = lineObj ? getResolvedColor(lineObj.color) : 'var(--ink)';
   banner.style.borderLeftColor = borderColor;
-
   banner.classList.remove('hidden');
 }
 
@@ -736,7 +743,7 @@ LINES.forEach(line => {
   row.innerHTML = `
     <div class="track-info">
       <div class="track-label"><span class="swatch" style="background:${line.color}"></span>${line.name}</div>
-      <div class="status-badge" id="status-${line.id}">0 trains active</div>
+      <div class="status-badge" id="status-${line.id}">Good Service<br>0 trains active</div>
     </div>
     <div class="rail" id="rail-${line.id}" style="color: ${resolvedLineColor};" title="Click to pluck line chord">
       <div class="rail-line" style="color: ${resolvedLineColor};"></div>
@@ -827,6 +834,20 @@ function recreateSynth(line) {
   line.node = nodeSet.synth;
   line.filter = nodeSet.filter;
   line.volumeNode = nodeSet.volumeNode;
+}
+
+function updateLineStatusDisplay(line) {
+  const badgeElem = document.getElementById(`status-${line.id}`);
+  if (!badgeElem) return;
+
+  let alertClass = 'status-badge';
+  if (line.statusText === 'Severe Delays' || line.statusText === 'Suspended') {
+    alertClass = 'status-badge alert';
+  } else if (line.statusText === 'Minor Delays') {
+    alertClass = 'status-badge alert';
+  }
+  badgeElem.className = alertClass;
+  badgeElem.innerHTML = `${line.statusText}<br>${line.activeCount} trains active`;
 }
 
 function attachControlListeners() {
@@ -982,35 +1003,25 @@ async function pollAllData() {
     if (statusRes.ok) {
       const statusData = await statusRes.json();
       statusData.forEach(lineStatus => {
-        const badgeElem = document.getElementById(`status-${lineStatus.id}`);
         const lineObj = LINES.find(l => l.id === lineStatus.id);
 
-        if (badgeElem && lineStatus.lineStatuses && lineStatus.lineStatuses.length > 0) {
+        if (lineObj && lineStatus.lineStatuses && lineStatus.lineStatuses.length > 0) {
           const statusObj = lineStatus.lineStatuses[0];
           const statusDesc = statusObj.statusSeverityDescription;
 
           let crowdingFactor = 1.0;
-          let alertClass = 'status-badge';
           if (statusDesc === 'Severe Delays' || statusDesc === 'Suspended') {
-            alertClass = 'status-badge alert';
-            badgeElem.title = statusObj.reason || '';
             crowdingFactor = 1.8;
           } else if (statusDesc === 'Minor Delays') {
-            alertClass = 'status-badge alert';
-            badgeElem.title = statusObj.reason || '';
             crowdingFactor = 1.3;
-          } else {
-            badgeElem.title = '';
-            crowdingFactor = 1.0;
           }
 
-          if (lineObj) {
-            lineObj.crowdingFactor = crowdingFactor;
-            badgeElem.className = alertClass;
-            badgeElem.textContent = `${lineObj.activeCount || 0} trains active (${statusDesc})`;
-            if (audioReady && lineObj.node && lineObj.node.envelope) {
-              lineObj.node.envelope.release = Math.max(0.4, 2.5 / crowdingFactor);
-            }
+          lineObj.statusText = statusDesc;
+          lineObj.crowdingFactor = crowdingFactor;
+          updateLineStatusDisplay(lineObj);
+
+          if (audioReady && lineObj.node && lineObj.node.envelope) {
+            lineObj.node.envelope.release = Math.max(0.4, 2.5 / crowdingFactor);
           }
         }
       });
@@ -1037,11 +1048,7 @@ async function pollAllData() {
     LINES.forEach(line => {
       const count = lineTrainSets[line.id] ? lineTrainSets[line.id].size : 0;
       line.activeCount = count;
-      const badgeElem = document.getElementById(`status-${line.id}`);
-      if (badgeElem) {
-        const currentText = badgeElem.textContent.split('(')[1] || 'Good Service';
-        badgeElem.textContent = `${count} trains active (${currentText.replace(')', '')})`;
-      }
+      updateLineStatusDisplay(line);
     });
 
     document.getElementById('status').textContent =
