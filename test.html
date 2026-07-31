@@ -152,6 +152,7 @@
   .random-btn-group {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
   }
   .rand-btn {
     background: var(--card-bg);
@@ -344,8 +345,9 @@
   <div class="panel-header-actions">
     <h3 style="margin:0; font-size:14px; text-transform:uppercase;">Ambient Tone & Synth Modifiers</h3>
     <div class="random-btn-group">
-      <button class="rand-btn" onclick="randomizeVoices()">🎲 Randomize Voices</button>
-      <button class="rand-btn" onclick="randomizeOctaves()">🎲 Randomize Octaves</button>
+      <button class="rand-btn" onclick="randomizeVoices()">🎲 Random Voices</button>
+      <button class="rand-btn" onclick="randomizeOctaves()">🎲 Random Octaves</button>
+      <button class="rand-btn" onclick="randomizeScales()">🎲 Random Scales</button>
     </div>
   </div>
   <div class="panel-grid" id="panelGrid"></div>
@@ -371,23 +373,33 @@ function setTheme(mode) {
   }
 }
 
-const SCALE = ['F', 'Bb', 'C', 'D', 'G'];
-const OCTAVES = [1, 2, 3, 4];
+// Recognized and accepted musical scales mapped as note pools relative to a root or direct note sets
+const MUSICAL_SCALES = {
+  "Major Pentatonic": ["F", "G", "A", "C", "D"],
+  "Minor Pentatonic": ["F", "Ab", "Bb", "C", "Eb"],
+  "Major Diatonic": ["F", "G", "A", "Bb", "C", "D", "E"],
+  "Natural Minor": ["F", "G", "Ab", "Bb", "C", "Db", "Eb"],
+  "Dorian Mode": ["F", "G", "Ab", "Bb", "C", "D", "Eb"],
+  "Mixolydian Mode": ["F", "G", "A", "Bb", "C", "D", "Eb"],
+  "Blues Scale": ["F", "Ab", "Bb", "B", "C", "Eb"]
+};
 
+const SCALE_NAMES = Object.keys(MUSICAL_SCALES);
+const OCTAVES = [1, 2, 3, 4];
 const SYNTH_TYPES = ['FMSynth', 'AMSynth', 'MetalSynth', 'PluckSynth', 'MembraneSynth', 'DuoSynth', 'Synth', 'MonoSynth', 'NoiseSynth', 'PolySynth'];
 
 const LINES = [
-  { id:'bakerloo',        name:'Bakerloo',        color:'var(--line-bakerloo)',        type:'FMSynth',       octave:2, harmonicity:1.5, resonance:4, cutoff:1200, attack:0.4, decay:0.8, sustain:0.7, release:2.5, volume:-6, muted:false },
-  { id:'central',         name:'Central',         color:'var(--line-central)',         type:'MetalSynth',    octave:3, harmonicity:3.1, resonance:600, cutoff:1800, attack:0.2, decay:0.5, sustain:0.5, release:2.0, volume:-8, muted:false },
-  { id:'circle',          name:'Circle',          color:'var(--line-circle)',          type:'PluckSynth',    octave:3, harmonicity:1.0, resonance:2500, cutoff:2200, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false },
-  { id:'district',        name:'District',        color:'var(--line-district)',        type:'AMSynth',       octave:2, harmonicity:2.0, resonance:6, cutoff:1500, attack:0.5, decay:1.0, sustain:0.8, release:3.0, volume:-6, muted:false },
-  { id:'hammersmith-city',name:'Ham. & City',     color:'var(--line-hammersmith)', type:'PluckSynth',    octave:3, harmonicity:1.0, resonance:4000, cutoff:3000, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false },
-  { id:'jubilee',         name:'Jubilee',         color:'var(--line-jubilee)',         type:'MetalSynth',    octave:2, harmonicity:2.2, resonance:300, cutoff:1000, attack:0.3, decay:0.4, sustain:0.4, release:1.8, volume:-8, muted:false },
-  { id:'metropolitan',    name:'Metropolitan',    color:'var(--line-metropolitan)',type:'DuoSynth',      octave:3, harmonicity:1.5, resonance:5, cutoff:2000, attack:0.6, decay:1.2, sustain:0.8, release:3.5, volume:-6, muted:false },
-  { id:'northern',        name:'Northern',        color:'var(--line-northern)',        type:'MembraneSynth', octave:2, harmonicity:1.0, resonance:3, cutoff:800, attack:0.2, decay:0.8, sustain:0.5, release:2.5, volume:-6, muted:false },
-  { id:'piccadilly',      name:'Piccadilly',      color:'var(--line-piccadilly)',      type:'DuoSynth',      octave:3, harmonicity:2.0, resonance:7, cutoff:2500, attack:0.5, decay:1.0, sustain:0.8, release:3.2, volume:-6, muted:false },
-  { id:'victoria',        name:'Victoria',        color:'var(--line-victoria)',        type:'Synth',         octave:3, harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false },
-  { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false },
+  { id:'bakerloo',        name:'Bakerloo',        color:'var(--line-bakerloo)',        type:'FMSynth',       octave:2, scale:'Major Pentatonic', harmonicity:1.5, resonance:4, cutoff:1200, attack:0.4, decay:0.8, sustain:0.7, release:2.5, volume:-6, muted:false },
+  { id:'central',         name:'Central',         color:'var(--line-central)',         type:'MetalSynth',    octave:3, scale:'Minor Pentatonic', harmonicity:3.1, resonance:600, cutoff:1800, attack:0.2, decay:0.5, sustain:0.5, release:2.0, volume:-8, muted:false },
+  { id:'circle',          name:'Circle',          color:'var(--line-circle)',          type:'PluckSynth',    octave:3, scale:'Mixolydian Mode',  harmonicity:1.0, resonance:2500, cutoff:2200, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false },
+  { id:'district',        name:'District',        color:'var(--line-district)',        type:'AMSynth',       octave:2, scale:'Major Diatonic',   harmonicity:2.0, resonance:6, cutoff:1500, attack:0.5, decay:1.0, sustain:0.8, release:3.0, volume:-6, muted:false },
+  { id:'hammersmith-city',name:'Ham. & City',     color:'var(--line-hammersmith)', type:'PluckSynth',    octave:3, scale:'Major Pentatonic', harmonicity:1.0, resonance:4000, cutoff:3000, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false },
+  { id:'jubilee',         name:'Jubilee',         color:'var(--line-jubilee)',         type:'MetalSynth',    octave:2, scale:'Blues Scale',      harmonicity:2.2, resonance:300, cutoff:1000, attack:0.3, decay:0.4, sustain:0.4, release:1.8, volume:-8, muted:false },
+  { id:'metropolitan',    name:'Metropolitan',    color:'var(--line-metropolitan)',type:'DuoSynth',      octave:3, scale:'Dorian Mode',      harmonicity:1.5, resonance:5, cutoff:2000, attack:0.6, decay:1.2, sustain:0.8, release:3.5, volume:-6, muted:false },
+  { id:'northern',        name:'Northern',        color:'var(--line-northern)',        type:'MembraneSynth', octave:2, scale:'Natural Minor',    harmonicity:1.0, resonance:3, cutoff:800, attack:0.2, decay:0.8, sustain:0.5, release:2.5, volume:-6, muted:false },
+  { id:'piccadilly',      name:'Piccadilly',      color:'var(--line-piccadilly)',      type:'DuoSynth',      octave:3, scale:'Mixolydian Mode',  harmonicity:2.0, resonance:7, cutoff:2500, attack:0.5, decay:1.0, sustain:0.8, release:3.2, volume:-6, muted:false },
+  { id:'victoria',        name:'Victoria',        color:'var(--line-victoria)',        type:'Synth',         octave:3, scale:'Major Diatonic',   harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false },
+  { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, scale:'Minor Pentatonic', harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false },
 ];
 
 let announcementConfig = {
@@ -414,7 +426,6 @@ const synthAnnouncementChime = new Tone.Synth({
   envelope: { attack: 0.1, decay: 0.5, sustain: 0.2, release: 1.5 }
 }).connect(delay);
 
-// ---------- Meticulously Audited & Corrected Underground Station Lists ----------
 const LINE_STATIONS = {
   bakerloo: [
     "Harrow & Wealdstone", "Kenton", "South Kenton", "North Wembley", "Wembley Central", 
@@ -456,7 +467,7 @@ const LINE_STATIONS = {
     "Chiswick Park", "Acton Town", "Ealing Common", "Ealing Broadway", "Gunnersbury", 
     "Kew Gardens", "Richmond"
   ],
-  hammersmithandcity: [
+  'hammersmith-city': [
     "Hammersmith", "Goldhawk Road", "Shepherd's Bush Market", "Wood Lane", "Latimer Road", 
     "Ladbroke Grove", "Westbourne Park", "Royal Oak", "Paddington", "Edgware Road", 
     "Baker Street", "Great Portland Street", "Euston Square", "King's Cross St. Pancras", 
@@ -488,7 +499,7 @@ const LINE_STATIONS = {
     "Morden", "Colliers Wood", "Tooting Broadway", "Tooting Bec", "Balham", "Clapham South", 
     "Clapham Common", "Clapham North", "Stockwell", "Oval", "Kennington", "Waterloo", 
     "Embankment", "Charing Cross", "Leicester Square", "Tottenham Court Road", "Goodge Street", 
-    "Warren Street", "Mill Hill East", "Battersea Power Station", "Nine Elms", "NW Branch (Charing Cross)", "Bank Branch"
+    "Warren Street", "Mill Hill East", "Battersea Power Station", "Nine Elms"
   ],
   piccadilly: [
     "Cockfosters", "Oakwood", "Southgate", "Arnos Grove", "Bounds Green", "Wood Green", 
@@ -509,24 +520,23 @@ const LINE_STATIONS = {
     "Warren Street", "Oxford Circus", "Green Park", "Victoria", "Pimlico", "Vauxhall", 
     "Stockwell", "Brixton"
   ],
-  waterlooandcity: [
+  'waterloo-city': [
     "Waterloo", "Bank"
   ]
 };
 
-// Verified true intersection mapping for cross-line connection announcements
 const LINE_INTERCHANGES = {
   bakerloo: ["Baker Street", "Oxford Circus", "Piccadilly Circus", "Charing Cross", "Embankment", "Waterloo", "Paddington", "Edgware Road", "Elephant & Castle", "Queen's Park", "Willesden Junction", "Kenton", "Wembley Central", "Harrow & Wealdstone", "Marylebone"],
   central: ["Bank", "Holborn", "Tottenham Court Road", "Oxford Circus", "Bond Street", "Notting Hill Gate", "Liverpool Street", "Mile End", "Stratford", "Ealing Broadway", "Shepherd's Bush", "White City", "Woodford", "Hainault"],
   circle: ["Baker Street", "King's Cross St. Pancras", "Farringdon", "Moorgate", "Liverpool Street", "Tower Hill", "Monument", "Blackfriars", "Embankment", "Westminster", "Victoria", "South Kensington", "Gloucester Road", "High Street Kensington", "Notting Hill Gate", "Paddington", "Edgware Road", "Hammersmith", "Euston Square", "Great Portland Street", "Barbican", "Cannon Street", "Mansion House", "Temple", "St. James's Park", "Sloane Square", "Bayswater"],
   district: ["Mile End", "Whitechapel", "Aldgate East", "Tower Hill", "Monument", "Cannon Street", "Mansion House", "Blackfriars", "Temple", "Embankment", "Westminster", "St. James's Park", "Victoria", "Sloane Square", "South Kensington", "Gloucester Road", "Earl's Court", "High Street Kensington", "Notting Hill Gate", "Bayswater", "Paddington", "Edgware Road", "West Brompton", "Fulham Broadway", "Putney Bridge", "Wimbledon", "Hammersmith", "Barons Court", "Acton Town", "Ealing Broadway", "Gunnersbury", "Richmond", "West Ham", "Barking"],
-  hammersmithandcity: ["Hammersmith", "Paddington", "Edgware Road", "Baker Street", "Great Portland Street", "Euston Square", "King's Cross St. Pancras", "Farringdon", "Barbican", "Moorgate", "Liverpool Street", "Aldgate East", "Whitechapel", "Stepney Green", "Mile End", "Bow Road", "West Ham", "Plaistow", "Upton Park", "East Ham", "Barking"],
+  'hammersmith-city': ["Hammersmith", "Paddington", "Edgware Road", "Baker Street", "Great Portland Street", "Euston Square", "King's Cross St. Pancras", "Farringdon", "Barbican", "Moorgate", "Liverpool Street", "Aldgate East", "Whitechapel", "Stepney Green", "Mile End", "Bow Road", "West Ham", "Plaistow", "Upton Park", "East Ham", "Barking"],
   jubilee: ["Baker Street", "Bond Street", "Green Park", "Westminster", "Waterloo", "Southwark", "London Bridge", "Bermondsey", "Canada Water", "Canary Wharf", "North Greenwich", "Canning Town", "West Ham", "Stratford", "Wembley Park", "Swiss Cottage"],
   metropolitan: ["Baker Street", "Great Portland Street", "Euston Square", "King's Cross St. Pancras", "Farringdon", "Barbican", "Moorgate", "Liverpool Street", "Aldgate", "Wembley Park", "Finchley Road", "Moor Park", "Harrow-on-the-Hill", "Rayners Lane", "Uxbridge"],
   northern: ["King's Cross St. Pancras", "Euston", "Warren Street", "Tottenham Court Road", "Leicester Square", "Charing Cross", "Embankment", "Waterloo", "Borough", "London Bridge", "Bank", "Moorgate", "Old Street", "Angel", "Camden Town", "Kennington", "Stockwell", "Clapham Common", "Tooting Broadway", "Morden", "Battersea Power Station", "Nine Elms", "Highbury & Islington"],
   piccadilly: ["King's Cross St. Pancras", "Russell Square", "Holborn", "Covent Garden", "Leicester Square", "Piccadilly Circus", "Green Park", "Hyde Park Corner", "Knightsbridge", "South Kensington", "Gloucester Road", "Earl's Court", "Barons Court", "Hammersmith", "Turnham Green", "Acton Town", "Ealing Common", "Rayners Lane", "Uxbridge", "Hatton Cross", "Heathrow Terminals 2 & 3", "Heathrow Terminal 4", "Heathrow Terminal 5", "Finsbury Park"],
   victoria: ["King's Cross St. Pancras", "Euston", "Warren Street", "Oxford Circus", "Green Park", "Victoria", "Pimlico", "Vauxhall", "Stockwell", "Brixton", "Finsbury Park", "Highbury & Islington", "Seven Sisters", "Tottenham Hale", "Blackhorse Road", "Walthamstow Central"],
-  waterlooandcity: ["Waterloo", "Bank"]
+  'waterloo-city': ["Waterloo", "Bank"]
 };
 
 const STATIC_ANNOUNCEMENTS = [
@@ -584,11 +594,9 @@ function triggerSpokenAnnouncement() {
     const roll = Math.random();
     
     if (roll < 0.45) {
-      // Station arrival/destination strictly verified to belong to that specific line
       const randomStation = stationsOnLine[Math.floor(Math.random() * stationsOnLine.length)];
       text = `This is a ${targetLineObj.name} line service to ${randomStation}. Please mind the gap between the train and the platform.`;
     } else if (roll < 0.8 && interchangeStations.length > 0) {
-      // Connection announcement strictly verified to be a real interchange station for that line
       const randomInterchange = interchangeStations[Math.floor(Math.random() * interchangeStations.length)];
       text = `Next station is ${randomInterchange}. Change here for connecting underground services.`;
     } else {
@@ -722,6 +730,7 @@ function buildControlPanel() {
     
     let typeOptions = SYNTH_TYPES.map(t => `<option value="${t}" ${line.type === t ? 'selected' : ''}>${t}</option>`).join('');
     let octaveOptions = OCTAVES.map(o => `<option value="${o}" ${line.octave === o ? 'selected' : ''}>Octave ${o}</option>`).join('');
+    let scaleOptions = SCALE_NAMES.map(s => `<option value="${s}" ${line.scale === s ? 'selected' : ''}>${s}</option>`).join('');
     
     card.innerHTML = `
       <h3>
@@ -735,6 +744,7 @@ function buildControlPanel() {
       </h3>
       <div class="control-group"><label>Synth Type</label><select data-line="${line.id}" data-param="type">${typeOptions}</select></div>
       <div class="control-group"><label>Octave</label><select data-line="${line.id}" data-param="octave">${octaveOptions}</select></div>
+      <div class="control-group"><label>Scale</label><select data-line="${line.id}" data-param="scale">${scaleOptions}</select></div>
       <div class="control-group"><label>Volume</label><input type="range" min="-30" max="6" step="1" value="${line.volume}" data-line="${line.id}" data-param="volume"></div>
       <div class="control-group"><label>Harmonic</label><input type="range" min="0.5" max="5" step="0.1" value="${line.harmonicity}" data-line="${line.id}" data-param="harmonicity"></div>
       <div class="control-group"><label>Resonance</label><input type="range" min="10" max="5000" step="10" value="${line.resonance}" data-line="${line.id}" data-param="resonance"></div>
@@ -788,6 +798,14 @@ function randomizeOctaves() {
   LINES.forEach(line => {
     const randomOctave = OCTAVES[Math.floor(Math.random() * OCTAVES.length)];
     line.octave = randomOctave;
+  });
+  buildControlPanel();
+}
+
+function randomizeScales() {
+  LINES.forEach(line => {
+    const randomScale = SCALE_NAMES[Math.floor(Math.random() * SCALE_NAMES.length)];
+    line.scale = randomScale;
   });
   buildControlPanel();
 }
@@ -876,7 +894,7 @@ function attachControlListeners() {
     input.addEventListener('input', (e) => {
       const lineId = e.target.getAttribute('data-line');
       const param = e.target.getAttribute('data-param');
-      const val = e.target.type === 'select-one' ? (e.target.value.includes('Octave') || e.target.getAttribute('data-param') === 'octave' ? parseInt(e.target.value) : e.target.value) : parseFloat(e.target.value);
+      const val = e.target.type === 'select-one' ? (param === 'octave' ? parseInt(e.target.value) : e.target.value) : parseFloat(e.target.value);
       
       const line = LINES.find(l => l.id === lineId);
       if (!line) return;
@@ -1008,7 +1026,8 @@ function playNote(line, prediction){
   
   lastSoundTime = Date.now();
 
-  const noteName = SCALE[hashToIndex(prediction.stationName || prediction.towards || 'x', SCALE.length)];
+  const currentScaleNotes = MUSICAL_SCALES[line.scale] || MUSICAL_SCALES["Major Pentatonic"];
+  const noteName = currentScaleNotes[hashToIndex(prediction.stationName || prediction.towards || 'x', currentScaleNotes.length)];
   const note = `${noteName}${line.octave}`;
   
   try{
