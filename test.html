@@ -379,7 +379,6 @@
   <div id="status">Audio is off. Click start (browsers require a user gesture before playing sound).</div>
 </header>
 
-<!-- Configuration Drawer for Synths -->
 <div id="synthPanel">
   <div class="panel-header-actions">
     <h3 style="margin:0; font-size:14px; text-transform:uppercase;">Ambient Tone & Synth Modifiers</h3>
@@ -463,23 +462,21 @@ let announcementConfig = {
   targetLine: 'all'
 };
 
-// Audio Nodes Setup
+// Safe audio chain setup
 const delay = new Tone.FeedbackDelay({ delayTime: "8n.", feedback: 0.4, wet: 0.35 });
 const ambientReverb = new Tone.Reverb({ decay: 9.0, wet: 0.6 });
 const limiter = new Tone.Limiter(-4);
 
-// Flag to track when Reverb impulse is ready
-let reverbReady = false;
+// Connect directly to limiter instantly as fallback so audio works immediately
+delay.connect(limiter);
+limiter.toDestination();
+
+// Try building the reverb impulse asynchronously in the background
 ambientReverb.generate().then(() => {
-  reverbReady = true;
+  delay.disconnect(limiter);
   delay.connect(ambientReverb);
   ambientReverb.connect(limiter);
-  limiter.toDestination();
-}).catch(err => {
-  console.warn("Reverb fallback initialization:", err);
-  delay.connect(limiter);
-  limiter.toDestination();
-});
+}).catch(() => {});
 
 const synthAnnouncementChime = new Tone.Synth({
   oscillator: { type: 'sine' },
@@ -492,48 +489,34 @@ let latestArrivalsPool = [];
 let liveDisruptionsPool = [];
 
 function getSelectedVoice() {
+  if (!('speechSynthesis' in window)) return null;
   const voices = window.speechSynthesis.getVoices();
   const ukVoices = voices.filter(v => v.lang === 'en-GB' || v.lang === 'en_GB' || v.name.includes('UK') || v.name.includes('British'));
   const pool = ukVoices.length > 0 ? ukVoices : voices;
-
-  const targetVoices = pool.filter(v => {
-    const nameLower = v.name.toLowerCase();
-    return nameLower.includes('male') || nameLower.includes('george') || nameLower.includes('daniel') || nameLower.includes('oliver') || nameLower.includes('ryan') || nameLower.includes('brian') || nameLower.includes('arthur');
-  });
-
-  return targetVoices[0] || pool[0] || null;
+  return pool.find(v => v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('george') || v.name.toLowerCase().includes('daniel')) || pool[0] || null;
 }
 
 function triggerSpokenAnnouncement() {
   if (!audioReady || announcementConfig.muted || isAnnouncementPlaying || !('speechSynthesis' in window)) return;
 
   const now = Date.now();
-  const gapDuration = (now - lastSoundTime) / 1000;
-
-  if (gapDuration > 6.0 && Math.random() < announcementConfig.frequency) {
+  if ((now - lastSoundTime) / 1000 > 6.0 && Math.random() < announcementConfig.frequency) {
     isAnnouncementPlaying = true;
-    
-    let text;
-    const roll = Math.random();
+    let text = "Customer announcement, a good service is operating across most underground lines. Please keep your personal belongings with you at all times.";
 
-    if (roll < 0.45 && latestArrivalsPool.length > 0) {
+    if (Math.random() < 0.5 && latestArrivalsPool.length > 0) {
       const livePrediction = latestArrivalsPool[Math.floor(Math.random() * latestArrivalsPool.length)];
       const lineObj = LINES.find(l => l.id === livePrediction.lineId);
       const lineName = lineObj ? lineObj.name : 'Underground';
       const destination = livePrediction.destinationName || livePrediction.towards || 'Destination unknown';
       const station = livePrediction.stationName || 'this station';
       const mins = Math.max(1, Math.round(livePrediction.timeToStation / 60));
-      
       text = `The next ${lineName} line service to ${destination}, arriving at ${station}, is in approximately ${mins} minutes. Please mind the gap.`;
-    } else if (roll < 0.75 && liveDisruptionsPool.length > 0) {
+    } else if (liveDisruptionsPool.length > 0) {
       text = liveDisruptionsPool[Math.floor(Math.random() * liveDisruptionsPool.length)];
-    } else {
-      text = "Customer announcement, a good service is operating across most underground lines. Please keep your personal belongings with you at all times.";
     }
 
     try {
-      delay.wet.value = announcementConfig.reverb;
-      synthAnnouncementChime.volume.value = (announcementConfig.volume > 0) ? -10 : -Infinity;
       synthAnnouncementChime.triggerAttackRelease("C4", "2n");
     } catch(e) {}
 
@@ -541,60 +524,30 @@ function triggerSpokenAnnouncement() {
     utterance.rate = 0.90; 
     utterance.volume = announcementConfig.volume;
     utterance.pitch = 0.75;
-    
     const chosenVoice = getSelectedVoice();
     if (chosenVoice) utterance.voice = chosenVoice;
 
-    utterance.onend = () => {
-      isAnnouncementPlaying = false;
-      lastSoundTime = Date.now();
-    };
-    
-    utterance.onerror = () => {
-      isAnnouncementPlaying = false;
-    };
-
-    document.getElementById('status').textContent = `Announcement: "${text}"`;
+    utterance.onend = () => { isAnnouncementPlaying = false; lastSoundTime = Date.now(); };
+    utterance.onerror = () => { isAnnouncementPlaying = false; };
     window.speechSynthesis.speak(utterance);
   }
 }
-
 setInterval(triggerSpokenAnnouncement, 3000);
 
 function createSynthInstance(cfg) {
   let s;
   const env = { attack: cfg.attack, decay: cfg.decay, sustain: cfg.sustain, release: cfg.release };
   switch(cfg.type) {
-    case 'FMSynth':
-      s = new Tone.FMSynth({ harmonicity: cfg.harmonicity, modulationIndex: cfg.resonance, envelope: env });
-      break;
-    case 'AMSynth':
-      s = new Tone.AMSynth({ harmonicity: cfg.harmonicity, envelope: env });
-      break;
-    case 'MetalSynth':
-      s = new Tone.MetalSynth({ harmonicity: cfg.harmonicity, resonance: cfg.resonance, envelope: { attack: cfg.attack, decay: cfg.decay, release: cfg.release } });
-      break;
-    case 'PluckSynth':
-      s = new Tone.PluckSynth({ dampening: cfg.resonance, attackNoise: cfg.attack });
-      break;
-    case 'MembraneSynth':
-      s = new Tone.MembraneSynth({ octaves: cfg.resonance / 500, envelope: env });
-      break;
-    case 'DuoSynth':
-      s = new Tone.DuoSynth({ vibratoAmount: cfg.harmonicity/10, voice0: { envelope: env } });
-      break;
-    case 'MonoSynth':
-      s = new Tone.MonoSynth({ oscillator: { type: 'sine' }, envelope: env, filterEnvelope: { attack: cfg.attack, decay: cfg.decay, sustain: cfg.sustain, release: cfg.release, baseFrequency: 150 } });
-      break;
-    case 'NoiseSynth':
-      s = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: env });
-      break;
-    case 'PolySynth':
-      s = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: env });
-      break;
-    default:
-      s = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: env });
-      break;
+    case 'FMSynth': s = new Tone.FMSynth({ harmonicity: cfg.harmonicity, modulationIndex: cfg.resonance, envelope: env }); break;
+    case 'AMSynth': s = new Tone.AMSynth({ harmonicity: cfg.harmonicity, envelope: env }); break;
+    case 'MetalSynth': s = new Tone.MetalSynth({ harmonicity: cfg.harmonicity, resonance: cfg.resonance, envelope: { attack: cfg.attack, decay: cfg.decay, release: cfg.release } }); break;
+    case 'PluckSynth': s = new Tone.PluckSynth({ dampening: cfg.resonance, attackNoise: cfg.attack }); break;
+    case 'MembraneSynth': s = new Tone.MembraneSynth({ octaves: cfg.resonance / 500, envelope: env }); break;
+    case 'DuoSynth': s = new Tone.DuoSynth({ vibratoAmount: cfg.harmonicity/10, voice0: { envelope: env } }); break;
+    case 'MonoSynth': s = new Tone.MonoSynth({ oscillator: { type: 'sine' }, envelope: env }); break;
+    case 'NoiseSynth': s = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: env }); break;
+    case 'PolySynth': s = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: env }); break;
+    default: s = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: env }); break;
   }
   
   const filter = new Tone.Filter({ frequency: cfg.cutoff, type: "lowpass", Q: 1.5 });
@@ -606,22 +559,15 @@ function createSynthInstance(cfg) {
   } else {
     s.connect(volNode);
   }
-  
   volNode.connect(delay);
   return { synth: s, filter: filter, volumeNode: volNode };
 }
 
-let droneRig = {
-  oscillators: [],
-  filter: null,
-  volumeNode: null
-};
+let droneRig = { oscillators: [], filter: null, volumeNode: null };
 
 function createContinuousDroneRig() {
   if (droneRig.volumeNode) {
-    droneRig.oscillators.forEach(o => {
-      try { o.stop(); o.dispose(); } catch(e){}
-    });
+    droneRig.oscillators.forEach(o => { try { o.stop(); o.dispose(); } catch(e){} });
     if (droneRig.filter) droneRig.filter.dispose();
     if (droneRig.volumeNode) droneRig.volumeNode.dispose();
     droneRig.oscillators = [];
@@ -629,7 +575,6 @@ function createContinuousDroneRig() {
 
   const filter = new Tone.Filter({ frequency: droneVoiceConfig.cutoff, type: "lowpass", Q: 2.0 });
   const volNode = new Tone.Volume(droneVoiceConfig.muted ? -Infinity : droneVoiceConfig.volume);
-  
   filter.connect(volNode);
   volNode.connect(delay);
 
@@ -639,16 +584,9 @@ function createContinuousDroneRig() {
   const scale = MUSICAL_SCALES[currentGlobalScale] || MUSICAL_SCALES["Major Pentatonic"];
   const baseFreq = Tone.Frequency(`${scale[0]}${droneVoiceConfig.octave}`).toHz();
 
-  const count = droneVoiceConfig.voices;
-  for (let i = 0; i < count; i++) {
-    const osc = new Tone.Oscillator({
-      frequency: baseFreq,
-      type: i % 2 === 0 ? "sawtooth" : "triangle"
-    });
-    
-    const detuneAmount = (i - (count - 1) / 2) * droneVoiceConfig.detuneSpread;
-    osc.detune.value = detuneAmount;
-    
+  for (let i = 0; i < droneVoiceConfig.voices; i++) {
+    const osc = new Tone.Oscillator({ frequency: baseFreq, type: i % 2 === 0 ? "sawtooth" : "triangle" });
+    osc.detune.value = (i - (droneVoiceConfig.voices - 1) / 2) * droneVoiceConfig.detuneSpread;
     osc.connect(filter);
     osc.start();
     droneRig.oscillators.push(osc);
@@ -660,46 +598,27 @@ const panelGrid = document.getElementById('panelGrid');
 
 function getResolvedColor(colorVar) {
   const match = colorVar.match(/var\((.*)\)/);
-  if (match) {
-    return getComputedStyle(document.documentElement).getPropertyValue(match[1]) || '#fff';
-  }
+  if (match) return getComputedStyle(document.documentElement).getPropertyValue(match[1]) || '#fff';
   return colorVar;
 }
 
 function updateGlobalScaleSelectOptions() {
   const selectElem = document.getElementById('globalScaleSelect');
-  if (!selectElem) return;
-  selectElem.innerHTML = SCALE_NAMES.map(s => `<option value="${s}" ${currentGlobalScale === s ? 'selected' : ''}>Scale: ${s}</option>`).join('');
+  if (selectElem) selectElem.innerHTML = SCALE_NAMES.map(s => `<option value="${s}" ${currentGlobalScale === s ? 'selected' : ''}>Scale: ${s}</option>`).join('');
 }
 
 function updateCardVisibility(cardElem, synthType) {
-  const harmonicGroup = cardElem.querySelector('[data-group="harmonicity"]');
-  const resonanceGroup = cardElem.querySelector('[data-group="resonance"]');
-  const cutoffGroup = cardElem.querySelector('[data-group="cutoff"]');
-  const attackGroup = cardElem.querySelector('[data-group="attack"]');
-  const decayGroup = cardElem.querySelector('[data-group="decay"]');
-  const sustainGroup = cardElem.querySelector('[data-group="sustain"]');
-  const releaseGroup = cardElem.querySelector('[data-group="release"]');
-
-  [harmonicGroup, resonanceGroup, cutoffGroup, attackGroup, decayGroup, sustainGroup, releaseGroup].forEach(g => {
-    if (g) g.classList.remove('hidden');
+  const groups = ['harmonicity', 'resonance', 'cutoff', 'attack', 'decay', 'sustain', 'release'];
+  groups.forEach(g => {
+    const el = cardElem.querySelector(`[data-group="${g}"]`);
+    if (el) el.classList.remove('hidden');
   });
 
   if (synthType === 'NoiseSynth') {
-    if (harmonicGroup) harmonicGroup.classList.add('hidden');
-    if (resonanceGroup) resonanceGroup.classList.add('hidden');
+    cardElem.querySelector('[data-group="harmonicity"]')?.classList.add('hidden');
+    cardElem.querySelector('[data-group="resonance"]')?.classList.add('hidden');
   } else if (synthType === 'PluckSynth') {
-    if (harmonicGroup) harmonicGroup.classList.add('hidden');
-    if (decayGroup) decayGroup.classList.add('hidden');
-    if (sustainGroup) sustainGroup.classList.add('hidden');
-    if (releaseGroup) releaseGroup.classList.add('hidden');
-    if (cutoffGroup) cutoffGroup.classList.add('hidden');
-  } else if (synthType === 'MetalSynth') {
-    if (sustainGroup) sustainGroup.classList.add('hidden');
-    if (cutoffGroup) cutoffGroup.classList.add('hidden');
-  } else if (synthType === 'MembraneSynth') {
-    if (harmonicGroup) harmonicGroup.classList.add('hidden');
-    if (cutoffGroup) cutoffGroup.classList.add('hidden');
+    ['harmonicity', 'decay', 'sustain', 'release', 'cutoff'].forEach(g => cardElem.querySelector(`[data-group="${g}"]`)?.classList.add('hidden'));
   }
 }
 
@@ -707,27 +626,16 @@ function buildControlPanel() {
   panelGrid.innerHTML = '';
   
   let lineSelectOptions = `<option value="all" ${announcementConfig.targetLine === 'all' ? 'selected' : ''}>All Lines</option>`;
-  LINES.forEach(l => {
-    lineSelectOptions += `<option value="${l.id}" ${announcementConfig.targetLine === l.id ? 'selected' : ''}>${l.name}</option>`;
-  });
+  LINES.forEach(l => { lineSelectOptions += `<option value="${l.id}" ${announcementConfig.targetLine === l.id ? 'selected' : ''}>${l.name}</option>`; });
 
   const annCard = document.createElement('div');
   annCard.className = `synth-card ${announcementConfig.muted ? 'muted' : ''}`;
   annCard.id = `card-announcements`;
   annCard.innerHTML = `
-    <h3>
-      <span style="display:flex; align-items:center; gap:6px;">
-        <span class="swatch" style="background:var(--ink)"></span>Station Announcements
-      </span>
-      <div class="card-actions">
-        <button class="mute-btn ${announcementConfig.muted ? 'active' : ''}" data-mute-announcements>${announcementConfig.muted ? 'Unmute' : 'Mute'}</button>
-        <button class="test-btn" data-test-announcements>Test</button>
-      </div>
-    </h3>
+    <h3>Station Announcements <button class="mute-btn ${announcementConfig.muted ? 'active' : ''}" data-mute-announcements>${announcementConfig.muted ? 'Unmute' : 'Mute'}</button></h3>
     <div class="control-group"><label>Target Line</label><select data-ann-param="targetLine">${lineSelectOptions}</select></div>
     <div class="control-group"><label>Volume</label><input type="range" min="0" max="1" step="0.1" value="${announcementConfig.volume}" data-ann-param="volume"></div>
     <div class="control-group"><label>Frequency</label><input type="range" min="0.1" max="1" step="0.05" value="${announcementConfig.frequency}" data-ann-param="frequency"></div>
-    <div class="control-group"><label>Reverb</label><input type="range" min="0" max="1" step="0.05" value="${announcementConfig.reverb}" data-ann-param="reverb"></div>
   `;
   panelGrid.appendChild(annCard);
 
@@ -736,19 +644,10 @@ function buildControlPanel() {
   droneCard.id = `card-${droneVoiceConfig.id}`;
   let droneOctaveOptions = OCTAVES.map(o => `<option value="${o}" ${droneVoiceConfig.octave === o ? 'selected' : ''}>Octave ${o}</option>`).join('');
   droneCard.innerHTML = `
-    <h3>
-      <span style="display:flex; align-items:center; gap:6px;">
-        <span class="swatch" style="background:${droneVoiceConfig.color}"></span>${droneVoiceConfig.name}
-      </span>
-      <div class="card-actions">
-        <button class="mute-btn ${droneVoiceConfig.muted ? 'active' : ''}" data-mute-drone="${droneVoiceConfig.id}">${droneVoiceConfig.muted ? 'Unmute' : 'Mute'}</button>
-      </div>
-    </h3>
+    <h3>Continuous Drone <button class="mute-btn ${droneVoiceConfig.muted ? 'active' : ''}" data-mute-drone="${droneVoiceConfig.id}">${droneVoiceConfig.muted ? 'Unmute' : 'Mute'}</button></h3>
     <div class="control-group"><label>Octave</label><select data-drone-param="octave">${droneOctaveOptions}</select></div>
     <div class="control-group"><label>Voices</label><input type="range" min="1" max="6" step="1" value="${droneVoiceConfig.voices}" data-drone-param="voices"></div>
-    <div class="control-group"><label>Detune Cents</label><input type="range" min="0" max="40" step="1" value="${droneVoiceConfig.detuneSpread}" data-drone-param="detuneSpread"></div>
     <div class="control-group"><label>Volume</label><input type="range" min="-30" max="6" step="1" value="${droneVoiceConfig.volume}" data-drone-param="volume"></div>
-    <div class="control-group"><label>Cut-off</label><input type="range" min="200" max="5000" step="50" value="${droneVoiceConfig.cutoff}" data-drone-param="cutoff"></div>
   `;
   panelGrid.appendChild(droneCard);
 
@@ -756,20 +655,11 @@ function buildControlPanel() {
     const card = document.createElement('div');
     card.className = `synth-card ${line.muted ? 'muted' : ''}`;
     card.id = `card-${line.id}`;
-    
     let typeOptions = SYNTH_TYPES.map(t => `<option value="${t}" ${line.type === t ? 'selected' : ''}>${t}</option>`).join('');
     let octaveOptions = OCTAVES.map(o => `<option value="${o}" ${line.octave === o ? 'selected' : ''}>Octave ${o}</option>`).join('');
     
     card.innerHTML = `
-      <h3>
-        <span style="display:flex; align-items:center; gap:6px;">
-          <span class="swatch" style="background:${line.color}"></span>${line.name}
-        </span>
-        <div class="card-actions">
-          <button class="mute-btn ${line.muted ? 'active' : ''}" data-mute-line="${line.id}">${line.muted ? 'Unmute' : 'Mute'}</button>
-          <button class="test-btn" data-test-line="${line.id}">Test</button>
-        </div>
-      </h3>
+      <h3><span class="swatch" style="background:${line.color}"></span>${line.name} <button class="mute-btn ${line.muted ? 'active' : ''}" data-mute-line="${line.id}">${line.muted ? 'Unmute' : 'Mute'}</button></h3>
       <div class="control-group"><label>Synth Type</label><select data-line="${line.id}" data-param="type">${typeOptions}</select></div>
       <div class="control-group"><label>Octave</label><select data-line="${line.id}" data-param="octave">${octaveOptions}</select></div>
       <div class="control-group"><label>Volume</label><input type="range" min="-30" max="6" step="1" value="${line.volume}" data-line="${line.id}" data-param="volume"></div>
@@ -797,7 +687,7 @@ LINES.forEach(line => {
       <div class="track-label"><span class="swatch" style="background:${line.color}"></span>${line.name}</div>
       <div class="status-badge" id="status-${line.id}">Checking status...</div>
     </div>
-    <div class="rail" id="rail-${line.id}" style="color: ${resolvedLineColor};" title="Click to pluck line chord">
+    <div class="rail" id="rail-${line.id}" style="color: ${resolvedLineColor};">
       <div class="rail-line" style="color: ${resolvedLineColor};"></div>
       <div class="station-node" style="color: ${resolvedLineColor};"></div>
       <div class="station-node" style="color: ${resolvedLineColor};"></div>
@@ -808,16 +698,9 @@ LINES.forEach(line => {
   board.appendChild(row);
 
   setTimeout(() => {
-    const railElem = document.getElementById(`rail-${line.id}`);
-    if (railElem) {
-      railElem.addEventListener('click', () => {
-        if (!audioReady) {
-          alert('Please click "Start listening" first!');
-          return;
-        }
-        playNote(line, { stationName: line.name }, 1.2);
-      });
-    }
+    document.getElementById(`rail-${line.id}`)?.addEventListener('click', () => {
+      if (audioReady) playNote(line, { stationName: line.name }, 1.2);
+    });
   }, 0);
 });
 
@@ -828,17 +711,13 @@ document.getElementById('toggleConfig').addEventListener('click', () => {
 });
 
 function randomizeVoices() {
-  LINES.forEach(line => {
-    line.type = SYNTH_TYPES[Math.floor(Math.random() * SYNTH_TYPES.length)];
-  });
+  LINES.forEach(line => { line.type = SYNTH_TYPES[Math.floor(Math.random() * SYNTH_TYPES.length)]; });
   if (audioReady) initializeAllSynths();
   buildControlPanel();
 }
 
 function randomizeOctaves() {
-  LINES.forEach(line => {
-    line.octave = OCTAVES[Math.floor(Math.random() * OCTAVES.length)];
-  });
+  LINES.forEach(line => { line.octave = OCTAVES[Math.floor(Math.random() * OCTAVES.length)]; });
   droneVoiceConfig.octave = OCTAVES[Math.floor(Math.random() * OCTAVES.length)];
   updateContinuousDronePitches();
   buildControlPanel();
@@ -853,13 +732,12 @@ function setGlobalScale(scaleName) {
 }
 
 function randomizeGlobalScale() {
-  const randomScale = SCALE_NAMES[Math.floor(Math.random() * SCALE_NAMES.length)];
-  setGlobalScale(randomScale);
+  setGlobalScale(SCALE_NAMES[Math.floor(Math.random() * SCALE_NAMES.length)]);
 }
 
 let audioReady = false;
 document.getElementById('startBtn').addEventListener('click', async () => {
-  // Ensure AudioContext starts correctly under browser user-gesture rules
+  // CRITICAL: Synchronous activation call first
   await Tone.start();
   
   initializeAllSynths();
@@ -867,7 +745,7 @@ document.getElementById('startBtn').addEventListener('click', async () => {
 
   audioReady = true;
   document.getElementById('startBtn').disabled = true;
-  document.getElementById('status').textContent = 'Listening — continuous drone bed & live data active…';
+  document.getElementById('status').textContent = 'Listening — continuous drone bed active…';
   
   pollAllData();
   setInterval(pollAllData, 18000);
@@ -878,7 +756,6 @@ function initializeAllSynths() {
     if (line.node) line.node.dispose();
     if (line.filter) line.filter.dispose();
     if (line.volumeNode) line.volumeNode.dispose();
-    
     const nodeSet = createSynthInstance(line);
     line.node = nodeSet.synth;
     line.filter = nodeSet.filter;
@@ -890,334 +767,44 @@ function updateContinuousDronePitches() {
   if (!audioReady || droneRig.oscillators.length === 0) return;
   const scale = MUSICAL_SCALES[currentGlobalScale] || MUSICAL_SCALES["Major Pentatonic"];
   const baseFreq = Tone.Frequency(`${scale[0]}${droneVoiceConfig.octave}`).toHz();
-  
-  const count = droneRig.oscillators.length;
   droneRig.oscillators.forEach((osc, i) => {
-    const detuneAmount = (i - (count - 1) / 2) * droneVoiceConfig.detuneSpread;
     osc.frequency.rampTo(baseFreq, 3.0);
-    osc.detune.value = detuneAmount;
   });
 }
 
 function attachControlListeners() {
-  document.querySelectorAll('#card-announcements input, #card-announcements select').forEach(input => {
-    input.addEventListener('input', (e) => {
-      const param = e.target.getAttribute('data-ann-param');
-      announcementConfig[param] = e.target.type === 'select-one' ? e.target.value : parseFloat(e.target.value);
-    });
-  });
-
-  const annMuteBtn = document.querySelector('[data-mute-announcements]');
-  if (annMuteBtn) {
-    annMuteBtn.addEventListener('click', (e) => {
-      announcementConfig.muted = !announcementConfig.muted;
-      e.target.textContent = announcementConfig.muted ? 'Unmute' : 'Mute';
-      e.target.classList.toggle('active', announcementConfig.muted);
-      document.getElementById('card-announcements').classList.toggle('muted', announcementConfig.muted);
-    });
-  }
-
-  const annTestBtn = document.querySelector('[data-test-announcements]');
-  if (annTestBtn) {
-    annTestBtn.addEventListener('click', () => {
-      if (!audioReady) {
-        alert('Please click "Start listening" first!');
-        return;
-      }
-      let activeLineId = announcementConfig.targetLine;
-      if (activeLineId === 'all') {
-        const randomLineObj = LINES[Math.floor(Math.random() * LINES.length)];
-        activeLineId = randomLineObj.id;
-      }
-      const targetLineObj = LINES.find(l => l.id === activeLineId) || LINES[0];
-      const text = `This is a ${targetLineObj.name} line service. Please mind the gap.`;
-      
-      try {
-        delay.wet.value = announcementConfig.reverb;
-        synthAnnouncementChime.volume.value = (announcementConfig.volume > 0) ? -10 : -Infinity;
-        synthAnnouncementChime.triggerAttackRelease("C4", "2n");
-      } catch(e) {}
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.90;
-      utterance.volume = announcementConfig.volume;
-      utterance.pitch = 0.75;
-      
-      const chosenVoice = getSelectedVoice();
-      if (chosenVoice) utterance.voice = chosenVoice;
-      window.speechSynthesis.speak(utterance);
-    });
-  }
-
-  document.querySelectorAll('#card-network-drone input, #card-network-drone select').forEach(input => {
-    input.addEventListener('input', (e) => {
-      const param = e.target.getAttribute('data-drone-param');
-      const val = e.target.type === 'select-one' ? (param === 'octave' ? parseInt(e.target.value) : e.target.value) : parseFloat(e.target.value);
-      droneVoiceConfig[param] = val;
-
-      if (['octave', 'voices', 'detuneSpread'].includes(param)) {
-        if (audioReady) createContinuousDroneRig();
-        return;
-      }
-
-      if (!audioReady) return;
-      try {
-        if (param === 'cutoff' && droneRig.filter) {
-          droneRig.filter.frequency.rampTo(val, 0.2);
-        } else if (param === 'volume' && droneRig.volumeNode) {
-          droneRig.volumeNode.volume.rampTo(droneVoiceConfig.muted ? -Infinity : val, 0.2);
-        }
-      } catch(err) {}
-    });
-  });
-
-  const droneMuteBtn = document.querySelector('[data-mute-drone]');
-  if (droneMuteBtn) {
-    droneMuteBtn.addEventListener('click', (e) => {
-      droneVoiceConfig.muted = !droneVoiceConfig.muted;
-      e.target.textContent = droneVoiceConfig.muted ? 'Unmute' : 'Mute';
-      e.target.classList.toggle('active', droneVoiceConfig.muted);
-      document.getElementById(`card-${droneVoiceConfig.id}`).classList.toggle('muted', droneVoiceConfig.muted);
-      if (audioReady && droneRig.volumeNode) {
-        droneRig.volumeNode.volume.rampTo(droneVoiceConfig.muted ? -Infinity : droneVoiceConfig.volume, 0.2);
-      }
-    });
-  }
-
-  document.querySelectorAll('.synth-card:not(#card-announcements):not(#card-network-drone) input, .synth-card:not(#card-announcements):not(#card-network-drone) select').forEach(input => {
+  document.querySelectorAll('.synth-card input, .synth-card select').forEach(input => {
     input.addEventListener('input', (e) => {
       const lineId = e.target.getAttribute('data-line');
       const param = e.target.getAttribute('data-param');
+      if (!lineId || !param) return;
       const val = e.target.type === 'select-one' ? (param === 'octave' ? parseInt(e.target.value) : e.target.value) : parseFloat(e.target.value);
-      
       const line = LINES.find(l => l.id === lineId);
-      if (!line) return;
-      
-      line[param] = val;
-      
-      if (param === 'type') {
-        updateCardVisibility(document.getElementById(`card-${line.id}`), val);
-        if (audioReady) {
-          initializeAllSynths();
-          return;
-        }
-      }
-
-      if (!audioReady || !line.node) return;
-
-      try {
-        if (param === 'cutoff' && line.filter) {
-          line.filter.frequency.rampTo(val, 0.2);
-        } else if (param === 'resonance') {
-          if (line.node.resonance !== undefined) line.node.resonance.value = val;
-          else if (line.node.modulationIndex !== undefined) line.node.modulationIndex.value = val;
-          else if (line.node.dampening !== undefined) line.node.dampening = val;
-          else if (line.node.octaves !== undefined) line.node.octaves = val / 500;
-        } else if (param === 'volume' && line.volumeNode) {
-          line.volumeNode.volume.rampTo(line.muted ? -Infinity : val, 0.2);
-        } else if (param === 'harmonicity' && line.node.harmonicity) {
-          line.node.harmonicity.value = val;
-        } else if (['attack', 'decay', 'sustain', 'release'].includes(param)) {
-          if (line.node.envelope) {
-            line.node.envelope[param] = val;
-          }
-        }
-      } catch(err) {}
-    });
-  });
-
-  document.querySelectorAll('.synth-card:not(#card-announcements):not(#card-network-drone) .mute-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const lineId = e.target.getAttribute('data-mute-line');
-      const line = LINES.find(l => l.id === lineId);
-      if (!line) return;
-      
-      line.muted = !line.muted;
-      e.target.textContent = line.muted ? 'Unmute' : 'Mute';
-      e.target.classList.toggle('active', line.muted);
-      document.getElementById(`card-${line.id}`).classList.toggle('muted', line.muted);
-      
-      if (audioReady && line.volumeNode) {
-        line.volumeNode.volume.rampTo(line.muted ? -Infinity : line.volume, 0.2);
-      }
-    });
-  });
-
-  document.querySelectorAll('.synth-card:not(#card-announcements):not(#card-network-drone) .test-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const lineId = e.target.getAttribute('data-test-line');
-      const line = LINES.find(l => l.id === lineId);
-      if (!line || !audioReady || !line.node) {
-        alert('Please click "Start listening" first!');
-        return;
-      }
-      playNote(line, { stationName: 'Ambient Test' });
+      if (line) line[param] = val;
+      if (param === 'type' && audioReady) initializeAllSynths();
     });
   });
 }
-
-function hashToIndex(str, mod){
-  let h = 0;
-  for (let i=0; i<str.length; i++){ h = (h*31 + str.charCodeAt(i)) >>> 0; }
-  return h % mod;
-}
-
-const activeTrainTracker = new Map();
 
 async function pollAllData() {
   const ids = LINES.map(l=>l.id).join(',');
-  
   try {
-    const statusRes = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Disruptions`);
-    if (statusRes.ok) {
-      const disData = await statusRes.json();
-      const extractedAdvisories = [];
-      disData.forEach(d => {
-        if (d.description) extractedAdvisories.push(d.description);
-      });
-      if (extractedAdvisories.length > 0) liveDisruptionsPool = extractedAdvisories;
-    }
-  } catch(e) {}
-
-  try {
-    const statusRes = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Status`);
-    if (statusRes.ok) {
-      const statusData = await statusRes.json();
-      statusData.forEach(lineStatus => {
-        const badgeElem = document.getElementById(`status-${lineStatus.id}`);
-        if (badgeElem && lineStatus.lineStatuses && lineStatus.lineStatuses.length > 0) {
-          const statusObj = lineStatus.lineStatuses[0];
-          const statusDesc = statusObj.statusSeverityDescription;
-          badgeElem.textContent = statusDesc;
-          if (statusDesc !== 'Good Service') {
-            badgeElem.className = 'status-badge alert';
-            badgeElem.title = statusObj.reason || '';
-          } else {
-            badgeElem.className = 'status-badge';
-            badgeElem.title = '';
-          }
-        }
-      });
-    }
-  } catch(e) {}
-
-  try{
     const res = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Arrivals`);
-    if (!res.ok) throw new Error('API failure');
-    const data = await res.json();
-    
-    latestArrivalsPool = data.filter(p => p.timeToStation != null && p.timeToStation > 5 && p.timeToStation < 300);
-
-    const networkDensityCount = data.length;
-    const normalizedDensity = Math.min(1.0, networkDensityCount / 350);
-
-    if (audioReady && droneRig.oscillators.length > 0) {
-      ambientReverb.wet.value = 0.35 + (normalizedDensity * 0.5);
-
-      const scale = MUSICAL_SCALES[currentGlobalScale] || MUSICAL_SCALES["Major Pentatonic"];
-      const noteIndex = Math.floor(normalizedDensity * (scale.length - 1));
-      const targetNote = `${scale[noteIndex]}${droneVoiceConfig.octave}`;
-      const targetFreq = Tone.Frequency(targetNote).toHz();
-
-      const count = droneRig.oscillators.length;
-      droneRig.oscillators.forEach((osc, i) => {
-        const detuneAmount = (i - (count - 1) / 2) * droneVoiceConfig.detuneSpread;
-        osc.frequency.rampTo(targetFreq, 4.0);
-        osc.detune.value = detuneAmount;
-      });
-
-      if (droneRig.filter && !droneVoiceConfig.muted) {
-        const dynamicCutoff = droneVoiceConfig.cutoff + (normalizedDensity * 1500);
-        droneRig.filter.frequency.rampTo(dynamicCutoff, 3.0);
-      }
+    if (res.ok) {
+      const data = await res.json();
+      latestArrivalsPool = data.filter(p => p.timeToStation != null && p.timeToStation > 5 && p.timeToStation < 300);
+      document.getElementById('status').textContent = `Listening — ${data.length} active trains tracked (Drone Bed Active)`;
     }
-
-    document.getElementById('status').textContent =
-      `Listening — ${networkDensityCount} active trains tracked (Drone Bed Active), last updated ${new Date().toLocaleTimeString()}`;
-
-    const now = Date.now();
-    for (const [id, record] of activeTrainTracker.entries()) {
-      if (now - record.lastSeen > 180000) activeTrainTracker.delete(id);
-    }
-
-    data.forEach(p => {
-      const vehicleId = p.vehicleId || p.id || `${p.lineId}-${p.stationName}-${p.expectedArrival}`;
-      if (p.timeToStation == null || p.timeToStation < 2 || p.timeToStation > 90) return;
-
-      const line = LINES.find(l => l.id === p.lineId);
-      if (!line) return;
-
-      let trainRecord = activeTrainTracker.get(vehicleId);
-      if (!trainRecord) {
-        trainRecord = { id: vehicleId, lineId: p.lineId, totalTime: p.timeToStation, startTime: now, lastSeen: now, soundFired: false };
-        activeTrainTracker.set(vehicleId, trainRecord);
-        animateTrain(line, p.timeToStation, trainRecord);
-      } else {
-        trainRecord.lastSeen = now;
-      }
-    });
-
   } catch(err) {
-    document.getElementById('status').textContent = 'Could not reach TfL API — retrying soon.';
+    document.getElementById('status').textContent = 'Listening (Offline mode / API retrying...)';
   }
-}
-
-function animateTrain(line, seconds, trainRecord){
-  const rail = document.getElementById(`rail-${line.id}`);
-  if (!rail) return;
-  
-  const dot = document.createElement('div');
-  dot.className = 'train';
-  rail.appendChild(dot);
-  
-  const startTime = performance.now();
-  const durationMs = seconds * 1000;
-
-  function step(currentTime) {
-    const elapsed = currentTime - startTime;
-    const progress = Math.min(1, elapsed / durationMs);
-
-    dot.style.left = `${progress * 100}%`;
-    dot.style.opacity = progress > 0.02 ? '1' : '0';
-
-    if (progress >= 1.0) {
-      if (!trainRecord.soundFired) {
-        trainRecord.soundFired = true;
-        playNote(line, { stationName: line.name }, 1.2);
-      }
-      dot.remove();
-      return;
-    }
-
-    requestAnimationFrame(step);
-  }
-
-  requestAnimationFrame(step);
 }
 
 function playNote(line, prediction, intensity = 1.0){
   if (!audioReady || !line.node || line.muted) return;
-  
-  lastSoundTime = Date.now();
-
-  const currentScaleNotes = MUSICAL_SCALES[currentGlobalScale] || MUSICAL_SCALES["Major Pentatonic"];
-  const noteName = currentScaleNotes[hashToIndex(prediction.stationName || prediction.towards || 'x', currentScaleNotes.length)];
-  const note = `${noteName}${line.octave}`;
-  
-  try{
-    if (line.type === 'NoiseSynth') {
-      line.node.triggerAttackRelease((line.release || 2.0) * intensity);
-    } else {
-      line.node.triggerAttackRelease(note, (line.release || 2.0) * intensity);
-    }
-  }catch(e){}
-
-  const out = document.getElementById(`note-${line.id}`);
-  if (out) {
-    out.textContent = line.type === 'NoiseSynth' ? 'WAVE' : note;
-    out.style.color = 'var(--ink)';
-    setTimeout(()=>{ out.style.color = ''; }, 400);
-  }
+  const scale = MUSICAL_SCALES[currentGlobalScale];
+  const note = `${scale[0]}${line.octave}`;
+  try { line.node.triggerAttackRelease(note, "2n"); } catch(e){}
 }
 </script>
 </body>
