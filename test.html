@@ -390,12 +390,11 @@ const LINES = [
   { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false },
 ];
 
-// Announcements Configuration Object including Reverb Mix
 let announcementConfig = {
   muted: false,
   volume: 1.0,     
   frequency: 0.45, 
-  reverb: 0.3,     // Reverb mix level for announcements
+  reverb: 0.3,     
   voiceType: 'male'
 };
 
@@ -409,7 +408,14 @@ ambientReverb.generate().then(() => {
   limiter.toDestination();
 });
 
-// ---------- Native Speech Synthesis Announcements (Web Audio Destination for Reverb Processing) ----------
+// ---------- Tone.js Synthesized Chime/Announcement Simulation for Reverb Channel ----------
+// Since browser native speechSynthesis can't be routed through Web Audio nodes,
+// we use a dual approach: Speech + a Tone.js ambient station chime tail that responds to the reverb slider.
+const synthAnnouncementChime = new Tone.Synth({
+  oscillator: { type: 'sine' },
+  envelope: { attack: 0.1, decay: 0.5, sustain: 0.2, release: 1.5 }
+}).connect(delay);
+
 const STATIC_ANNOUNCEMENTS = [
   "Mind the gap between the train and the platform.",
   "Please stand clear of the closing doors.",
@@ -435,57 +441,6 @@ const STATIONS = [
 
 let lastSoundTime = Date.now();
 let isAnnouncementPlaying = false;
-
-// Web Audio API routing nodes for Announcements Reverb Simulation
-let announcementAudioContext = null;
-let annGainNode = null;
-let annConvolverNode = null;
-let annDryGain = null;
-let annWetGain = null;
-
-function initAnnouncementAudioRouting() {
-  if (announcementAudioContext) return;
-  try {
-    announcementAudioContext = Tone.context.rawContext;
-    const ctx = announcementAudioContext;
-    
-    annGainNode = ctx.createGain();
-    annDryGain = ctx.createGain();
-    annWetGain = ctx.createGain();
-    annConvolverNode = ctx.createConvolver();
-    
-    // Generate an impulse response buffer for station reverb
-    const rate = ctx.sampleRate;
-    const length = rate * 2.5; // 2.5 seconds decay
-    const impulse = ctx.createBuffer(2, length, rate);
-    const left = impulse.getChannelData(0);
-    const right = impulse.getChannelData(1);
-    for (let i = 0; i < length; i++) {
-      const decay = Math.exp(-i / (rate * 0.6));
-      left[i] = (Math.random() * 2 - 1) * decay;
-      right[i] = (Math.random() * 2 - 1) * decay;
-    }
-    annConvolverNode.buffer = impulse;
-    
-    updateAnnouncementReverbRouting();
-
-    annGainNode.connect(annDryGain);
-    annGainNode.connect(annConvolverNode);
-    annConvolverNode.connect(annWetGain);
-    
-    annDryGain.connect(ctx.destination);
-    annWetGain.connect(ctx.destination);
-  } catch(e) {
-    console.warn('Web Audio routing warning:', e);
-  }
-}
-
-function updateAnnouncementReverbRouting() {
-  if (!annDryGain || !annWetGain) return;
-  const rev = announcementConfig.reverb;
-  annDryGain.gain.value = 1.0 - (rev * 0.5);
-  annWetGain.gain.value = rev;
-}
 
 function getSelectedVoice() {
   const voices = window.speechSynthesis.getVoices();
@@ -518,8 +473,14 @@ function triggerSpokenAnnouncement() {
       text = STATIC_ANNOUNCEMENTS[Math.floor(Math.random() * STATIC_ANNOUNCEMENTS.length)];
     }
 
+    // Play station chime tail through Tone.js reverb channel based on slider settings
+    try {
+      delay.wet.value = announcementConfig.reverb;
+      synthAnnouncementChime.volume.value = (announcementConfig.volume > 0) ? -10 : -Infinity;
+      synthAnnouncementChime.triggerAttackRelease("C4", "2n");
+    } catch(e) {}
+
     const utterance = new SpeechSynthesisUtterance(text);
-    
     utterance.rate = 0.90; 
     utterance.volume = announcementConfig.volume;
     utterance.pitch = 0.75;
@@ -527,8 +488,6 @@ function triggerSpokenAnnouncement() {
     const chosenVoice = getSelectedVoice();
     if (chosenVoice) utterance.voice = chosenVoice;
 
-    // Use Web Audio API MediaElement or direct synthesis if supported; Standard SpeechSynthesisUtterance plays natively to system audio.
-    // To route SpeechSynthesis through custom Web Audio nodes, we rely on setting volume and letting the browser handle system playback while updating status.
     utterance.onend = () => {
       isAnnouncementPlaying = false;
       lastSoundTime = Date.now();
@@ -600,7 +559,7 @@ const board = document.getElementById('board');
 const panelGrid = document.getElementById('panelGrid');
 
 function getResolvedColor(colorVar) {
-  const match = colorVar.match.match ? colorVar.match(/var\((.*)\)/) : null;
+  const match = colorVar.match(/var\((.*)\)/);
   if (match) {
     return getComputedStyle(document.documentElement).getPropertyValue(match[1]) || '#fff';
   }
@@ -710,7 +669,6 @@ function randomizeOctaves() {
 let audioReady = false;
 document.getElementById('startBtn').addEventListener('click', async () => {
   await Tone.start();
-  initAnnouncementAudioRouting();
   LINES.forEach(line => {
     const nodeSet = createSynthInstance(line);
     line.node = nodeSet.synth;
@@ -740,9 +698,6 @@ function attachControlListeners() {
     input.addEventListener('input', (e) => {
       const param = e.target.getAttribute('data-ann-param');
       announcementConfig[param] = parseFloat(e.target.value);
-      if (param === 'reverb') {
-        updateAnnouncementReverbRouting();
-      }
     });
   });
 
@@ -766,6 +721,12 @@ function attachControlListeners() {
       const randomStation = STATIONS[Math.floor(Math.random() * STATIONS.length)];
       const text = Math.random() < 0.5 ? `Change here for ${randomStation}.` : STATIC_ANNOUNCEMENTS[Math.floor(Math.random() * STATIC_ANNOUNCEMENTS.length)];
       
+      try {
+        delay.wet.value = announcementConfig.reverb;
+        synthAnnouncementChime.volume.value = (announcementConfig.volume > 0) ? -10 : -Infinity;
+        synthAnnouncementChime.triggerAttackRelease("C4", "2n");
+      } catch(e) {}
+
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 0.90;
       utterance.volume = announcementConfig.volume;
