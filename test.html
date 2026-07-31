@@ -442,7 +442,6 @@ const LINES = [
   { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false, crowdingFactor: 1.0 },
 ];
 
-// Dedicated Network Arrival Density Drone Bed configured fully with standard line options
 let droneVoiceConfig = {
   id: 'network-drone',
   name: 'Arrival Density Drone',
@@ -484,23 +483,10 @@ const synthAnnouncementChime = new Tone.Synth({
   envelope: { attack: 0.1, decay: 0.5, sustain: 0.2, release: 1.5 }
 }).connect(delay);
 
-const STATIC_ANNOUNCEMENTS = [
-  "Mind the gap between the train and the platform.",
-  "Please stand clear of the closing doors.",
-  "This train terminates here.",
-  "Customer announcement, a good service is operating on all lines.",
-  "Obstructing the doors or pulling the emergency alarm can cause delays and is a criminal offence.",
-  "See it. Say it. Sorted. Contact the British Transport Police or speak to a member of staff.",
-  "Please keep your personal belongings with you at all times. Unattended items may be removed or destroyed without warning.",
-  "Would Inspector Sands please report to the operations room.",
-  "Please stand on the right of the escalator and hold the handrail.",
-  "Smoking and the use of e-cigarettes is strictly prohibited anywhere on London Underground premises.",
-  "Please stand behind the yellow line."
-];
-
 let lastSoundTime = Date.now();
 let isAnnouncementPlaying = false;
 let latestArrivalsPool = [];
+let liveDisruptionsPool = []; // Pool populated from TfL Disruption & Advisory API
 
 function getSelectedVoice() {
   const voices = window.speechSynthesis.getVoices();
@@ -526,7 +512,10 @@ function triggerSpokenAnnouncement() {
     isAnnouncementPlaying = true;
     
     let text;
-    if (latestArrivalsPool.length > 0 && Math.random() < 0.6) {
+    const roll = Math.random();
+
+    // Blend live arrivals, live disruptions/advisories from TfL API
+    if (roll < 0.45 && latestArrivalsPool.length > 0) {
       const livePrediction = latestArrivalsPool[Math.floor(Math.random() * latestArrivalsPool.length)];
       const lineObj = LINES.find(l => l.id === livePrediction.lineId);
       const lineName = lineObj ? lineObj.name : 'Underground';
@@ -535,8 +524,10 @@ function triggerSpokenAnnouncement() {
       const mins = Math.max(1, Math.round(livePrediction.timeToStation / 60));
       
       text = `The next ${lineName} line service to ${destination}, arriving at ${station}, is in approximately ${mins} minutes. Please mind the gap.`;
+    } else if (roll < 0.75 && liveDisruptionsPool.length > 0) {
+      text = liveDisruptionsPool[Math.floor(Math.random() * liveDisruptionsPool.length)];
     } else {
-      text = STATIC_ANNOUNCEMENTS[Math.floor(Math.random() * STATIC_ANNOUNCEMENTS.length)];
+      text = "Customer announcement, a good service is operating across most underground lines. Please keep your personal belongings with you at all times.";
     }
 
     try {
@@ -665,7 +656,6 @@ function buildControlPanel() {
   `;
   panelGrid.appendChild(annCard);
 
-  // Add configuration card for the Arrival Density Drone Bed
   const droneCard = document.createElement('div');
   droneCard.className = `synth-card ${droneVoiceConfig.muted ? 'muted' : ''}`;
   droneCard.id = `card-${droneVoiceConfig.id}`;
@@ -816,7 +806,6 @@ document.getElementById('startBtn').addEventListener('click', async () => {
     line.volumeNode = nodeSet.volumeNode;
   });
 
-  // Initialize Network Arrival Density Drone Synth
   const droneNodeSet = createSynthInstance(droneVoiceConfig);
   droneVoiceConfig.node = droneNodeSet.synth;
   droneVoiceConfig.filter = droneNodeSet.filter;
@@ -824,7 +813,7 @@ document.getElementById('startBtn').addEventListener('click', async () => {
 
   audioReady = true;
   document.getElementById('startBtn').disabled = true;
-  document.getElementById('status').textContent = 'Listening — ambient soundscape & arrival density drone active…';
+  document.getElementById('status').textContent = 'Listening — ambient soundscape & live announcements active…';
   
   startEvolvingDrone();
   pollAllData();
@@ -1057,7 +1046,7 @@ function attachControlListeners() {
   });
 }
 
-// ---------- Live API Fetching (Arrivals & Arrival Density Mapping) ----------
+// ---------- Live API Fetching (Arrivals, Status & Disruption Advisories) ----------
 function hashToIndex(str, mod){
   let h = 0;
   for (let i=0; i<str.length; i++){ h = (h*31 + str.charCodeAt(i)) >>> 0; }
@@ -1069,7 +1058,25 @@ const activeTrainTracker = new Map();
 async function pollAllData() {
   const ids = LINES.map(l=>l.id).join(',');
   
-  // 1. Fetch Line Status (for UI badges)
+  // 1. Fetch Line Status & Disruption Advisories for Announcements
+  try {
+    const statusRes = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Disruptions`);
+    if (statusRes.ok) {
+      const disData = await statusRes.json();
+      const extractedAdvisories = [];
+      disData.forEach(d => {
+        if (d.description) {
+          extractedAdvisories.push(d.description);
+        }
+      });
+      if (extractedAdvisories.length > 0) {
+        liveDisruptionsPool = extractedAdvisories;
+      }
+    }
+  } catch(e) {
+    console.warn('Disruption fetch warning:', e);
+  }
+
   try {
     const statusRes = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Status`);
     if (statusRes.ok) {
@@ -1102,12 +1109,10 @@ async function pollAllData() {
     
     latestArrivalsPool = data.filter(p => p.timeToStation != null && p.timeToStation > 5 && p.timeToStation < 300);
 
-    // Map total network arrival density count directly to reverb wetness & filter brightness
     const networkDensityCount = data.length;
-    const normalizedDensity = Math.min(1.0, networkDensityCount / 350); // Scale factor for heavy traffic vs quiet hours
+    const normalizedDensity = Math.min(1.0, networkDensityCount / 350);
 
     if (audioReady) {
-      // Heavy traffic makes the drone feel cavernous and dense (higher reverb wetness), quiet thins out
       ambientReverb.wet.value = 0.35 + (normalizedDensity * 0.45);
       
       if (droneVoiceConfig.filter && !droneVoiceConfig.muted) {
