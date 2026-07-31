@@ -97,7 +97,7 @@
     background:var(--card-bg);
     border-bottom:1px solid var(--border);
     padding:20px 24px;
-    max-height:480px;
+    max-height:500px;
     overflow-y:auto;
   }
   #synthPanel.open{display:block;}
@@ -114,6 +114,7 @@
     padding:12px;
     font-size:11px;
   }
+  .synth-card.muted{opacity:0.5;}
   .synth-card h3{
     margin:0 0 8px 0;
     font-size:13px;
@@ -121,7 +122,11 @@
     align-items:center;
     justify-content:space-between;
   }
-  .test-btn{
+  .card-actions{
+    display:flex;
+    gap:6px;
+  }
+  .test-btn, .mute-btn{
     background:var(--card-bg);
     color:var(--ink);
     border:1px solid var(--border);
@@ -131,7 +136,9 @@
     border-radius:4px;
     cursor:pointer;
   }
-  .test-btn:hover{background:var(--border);}
+  .test-btn:hover, .mute-btn:hover{background:var(--border);}
+  .mute-btn.active{background:var(--ink); color:var(--bg);}
+  
   .control-group{
     margin-bottom:6px;
     display:flex;
@@ -176,7 +183,6 @@
     width:10px;height:10px;border-radius:50%;flex:none;
   }
   
-  /* Map-style line rails with terminal ticks */
   .rail{
     position:relative;
     height:6px;
@@ -184,7 +190,6 @@
     display:flex;
     align-items:center;
   }
-  /* Terminal ticks at start and end of the line */
   .rail::before, .rail::after {
     content:'';
     position:absolute;
@@ -204,7 +209,6 @@
     border-radius: 1px;
   }
 
-  /* Map style interchange station dots along the rail */
   .station-node {
     position: absolute;
     top: 50%;
@@ -279,17 +283,17 @@ const SCALE = ['F1', 'Bb1', 'F2', 'Bb2', 'C3', 'D3', 'F3', 'Bb3', 'D4', 'F4', 'B
 const SYNTH_TYPES = ['FMSynth', 'AMSynth', 'MetalSynth', 'PluckSynth', 'MembraneSynth', 'DuoSynth', 'Synth'];
 
 const LINES = [
-  { id:'bakerloo',        name:'Bakerloo',        color:'var(--line-bakerloo)',        type:'FMSynth',       harmonicity:1.5, resonance:3, cutoff:2000, attack:0.05, decay:0.2, sustain:0.5, release:0.6 },
-  { id:'central',         name:'Central',         color:'var(--line-central)',         type:'MetalSynth',    harmonicity:4.1, resonance:800, cutoff:3000, attack:0.01, decay:0.1, sustain:0.3, release:0.3 },
-  { id:'circle',          name:'Circle',          color:'var(--line-circle)',          type:'PluckSynth',    harmonicity:1.0, resonance:3000, cutoff:4000, attack:0.01, decay:0.2, sustain:0.2, release:0.4 },
-  { id:'district',        name:'District',        color:'var(--line-district)',        type:'AMSynth',       harmonicity:2.0, resonance:5, cutoff:2500, attack:0.1, decay:0.3, sustain:0.4, release:0.7 },
-  { id:'hammersmith-city',name:'Ham. & City',     color:'var(--line-hammersmith)', type:'PluckSynth',    harmonicity:1.0, resonance:5000, cutoff:5000, attack:0.01, decay:0.2, sustain:0.2, release:0.4 },
-  { id:'jubilee',         name:'Jubilee',         color:'var(--line-jubilee)',         type:'MetalSynth',    harmonicity:2.2, resonance:400, cutoff:1500, attack:0.01, decay:0.1, sustain:0.3, release:0.25 },
-  { id:'metropolitan',    name:'Metropolitan',    color:'var(--line-metropolitan)',type:'DuoSynth',      harmonicity:1.5, resonance:4, cutoff:3000, attack:0.1, decay:0.4, sustain:0.5, release:0.8 },
-  { id:'northern',        name:'Northern',        color:'var(--line-northern)',        type:'MembraneSynth', harmonicity:1.0, resonance:2, cutoff:1000, attack:0.01, decay:0.4, sustain:0.3, release:0.5 },
-  { id:'piccadilly',      name:'Piccadilly',      color:'var(--line-piccadilly)',      type:'DuoSynth',      harmonicity:2.0, resonance:6, cutoff:3500, attack:0.1, decay:0.3, sustain:0.5, release:0.9 },
-  { id:'victoria',        name:'Victoria',        color:'var(--line-victoria)',        type:'Synth',         harmonicity:1.0, resonance:1, cutoff:4000, attack:0.05, decay:0.2, sustain:0.4, release:0.3 },
-  { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         harmonicity:1.0, resonance:1, cutoff:2500, attack:0.1, decay:0.3, sustain:0.4, release:0.5 },
+  { id:'bakerloo',        name:'Bakerloo',        color:'var(--line-bakerloo)',        type:'FMSynth',       harmonicity:1.5, resonance:3, cutoff:2000, attack:0.05, decay:0.2, sustain:0.5, release:0.6, volume:-8, muted:false },
+  { id:'central',         name:'Central',         color:'var(--line-central)',         type:'MetalSynth',    harmonicity:4.1, resonance:800, cutoff:3000, attack:0.01, decay:0.1, sustain:0.3, release:0.3, volume:-8, muted:false },
+  { id:'circle',          name:'Circle',          color:'var(--line-circle)',          type:'PluckSynth',    harmonicity:1.0, resonance:3000, cutoff:4000, attack:0.01, decay:0.2, sustain:0.2, release:0.4, volume:-8, muted:false },
+  { id:'district',        name:'District',        color:'var(--line-district)',        type:'AMSynth',       harmonicity:2.0, resonance:5, cutoff:2500, attack:0.1, decay:0.3, sustain:0.4, release:0.7, volume:-8, muted:false },
+  { id:'hammersmith-city',name:'Ham. & City',     color:'var(--line-hammersmith)', type:'PluckSynth',    harmonicity:1.0, resonance:5000, cutoff:5000, attack:0.01, decay:0.2, sustain:0.2, release:0.4, volume:-8, muted:false },
+  { id:'jubilee',         name:'Jubilee',         color:'var(--line-jubilee)',         type:'MetalSynth',    harmonicity:2.2, resonance:400, cutoff:1500, attack:0.01, decay:0.1, sustain:0.3, release:0.25, volume:-8, muted:false },
+  { id:'metropolitan',    name:'Metropolitan',    color:'var(--line-metropolitan)',type:'DuoSynth',      harmonicity:1.5, resonance:4, cutoff:3000, attack:0.1, decay:0.4, sustain:0.5, release:0.8, volume:-8, muted:false },
+  { id:'northern',        name:'Northern',        color:'var(--line-northern)',        type:'MembraneSynth', harmonicity:1.0, resonance:2, cutoff:1000, attack:0.01, decay:0.4, sustain:0.3, release:0.5, volume:-8, muted:false },
+  { id:'piccadilly',      name:'Piccadilly',      color:'var(--line-piccadilly)',      type:'DuoSynth',      harmonicity:2.0, resonance:6, cutoff:3500, attack:0.1, decay:0.3, sustain:0.5, release:0.9, volume:-8, muted:false },
+  { id:'victoria',        name:'Victoria',        color:'var(--line-victoria)',        type:'Synth',         harmonicity:1.0, resonance:1, cutoff:4000, attack:0.05, decay:0.2, sustain:0.4, release:0.3, volume:-8, muted:false },
+  { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         harmonicity:1.0, resonance:1, cutoff:2500, attack:0.1, decay:0.3, sustain:0.4, release:0.5, volume:-8, muted:false },
 ];
 
 const reverb = new Tone.Reverb({decay:3, wet:0.25}).toDestination();
@@ -300,16 +304,16 @@ function createSynthInstance(cfg) {
   const env = { attack: cfg.attack, decay: cfg.decay, sustain: cfg.sustain, release: cfg.release };
   switch(cfg.type) {
     case 'FMSynth':
-      s = new Tone.FMSynth({ harmonicity: cfg.harmonicity, modulationIndex: cfg.resonance, envelope: env });
+      s = new Tone.FMSynth({ harmonicity: cfg.harmonicity, modulationIndex: cfg.resonance * 100, envelope: env });
       break;
     case 'AMSynth':
       s = new Tone.AMSynth({ harmonicity: cfg.harmonicity, envelope: env });
       break;
     case 'MetalSynth':
-      s = new Tone.MetalSynth({ harmonicity: cfg.harmonicity, resonance: cfg.resonance, envelope: { attack: cfg.attack, decay: cfg.decay, sustain: cfg.sustain, release: cfg.release } });
+      s = new Tone.MetalSynth({ harmonicity: cfg.harmonicity, resonance: cfg.resonance, envelope: { attack: cfg.attack, decay: cfg.decay, release: cfg.release } });
       break;
     case 'PluckSynth':
-      s = new Tone.PluckSynth({ dampening: cfg.resonance, attackNoise: cfg.attack });
+      s = new Tone.PluckSynth({ dampening: cfg.resonance * 10, attackNoise: cfg.attack });
       break;
     case 'MembraneSynth':
       s = new Tone.MembraneSynth({ octaves: cfg.resonance, envelope: env });
@@ -321,10 +325,20 @@ function createSynthInstance(cfg) {
       s = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: env });
       break;
   }
-  const filter = new Tone.Filter(cfg.cutoff, "lowpass");
+  
+  const filter = new Tone.Filter({
+    frequency: cfg.cutoff,
+    type: "lowpass",
+    Q: 2
+  });
+  
+  const volNode = new Tone.Volume(cfg.muted ? -Infinity : cfg.volume);
+
   s.connect(filter);
-  filter.connect(limiter);
-  return { synth: s, filter: filter };
+  filter.connect(volNode);
+  volNode.connect(limiter);
+  
+  return { synth: s, filter: filter, volumeNode: volNode };
 }
 
 // ---------- Build UI Board & Control Panel ----------
@@ -343,7 +357,7 @@ function buildControlPanel() {
   panelGrid.innerHTML = '';
   LINES.forEach(line => {
     const card = document.createElement('div');
-    card.className = 'synth-card';
+    card.className = `synth-card ${line.muted ? 'muted' : ''}`;
     card.id = `card-${line.id}`;
     
     let typeOptions = SYNTH_TYPES.map(t => `<option value="${t}" ${line.type === t ? 'selected' : ''}>${t}</option>`).join('');
@@ -353,12 +367,16 @@ function buildControlPanel() {
         <span style="display:flex; align-items:center; gap:6px;">
           <span class="swatch" style="background:${line.color}"></span>${line.name}
         </span>
-        <button class="test-btn" data-test-line="${line.id}">Test Note</button>
+        <div class="card-actions">
+          <button class="mute-btn ${line.muted ? 'active' : ''}" data-mute-line="${line.id}">${line.muted ? 'Unmute' : 'Mute'}</button>
+          <button class="test-btn" data-test-line="${line.id}">Test</button>
+        </div>
       </h3>
       <div class="control-group"><label>Synth Type</label><select data-line="${line.id}" data-param="type">${typeOptions}</select></div>
+      <div class="control-group"><label>Volume</label><input type="range" min="-30" max="6" step="1" value="${line.volume}" data-line="${line.id}" data-param="volume"></div>
       <div class="control-group"><label>Harmonic</label><input type="range" min="0.5" max="5" step="0.1" value="${line.harmonicity}" data-line="${line.id}" data-param="harmonicity"></div>
-      <div class="control-group"><label>Resonance</label><input type="range" min="10" max="5000" step="10" value="${line.resonance}" data-line="${line.id}" data-param="resonance"></div>
-      <div class="control-group"><label>Cut-off</label><input type="range" min="200" max="10000" step="100" value="${line.cutoff}" data-line="${line.id}" data-param="cutoff"></div>
+      <div class="control-group"><label>Resonance</label><input type="range" min="1" max="50" step="1" value="${line.resonance}" data-line="${line.id}" data-param="resonance"></div>
+      <div class="control-group"><label>Cut-off</label><input type="range" min="200" max="12000" step="100" value="${line.cutoff}" data-line="${line.id}" data-param="cutoff"></div>
       <div class="control-group"><label>Attack</label><input type="range" min="0.001" max="1" step="0.01" value="${line.attack}" data-line="${line.id}" data-param="attack"></div>
       <div class="control-group"><label>Decay</label><input type="range" min="0.05" max="2" step="0.05" value="${line.decay}" data-line="${line.id}" data-param="decay"></div>
       <div class="control-group"><label>Sustain</label><input type="range" min="0" max="1" step="0.05" value="${line.sustain}" data-line="${line.id}" data-param="sustain"></div>
@@ -400,7 +418,7 @@ document.getElementById('startBtn').addEventListener('click', async () => {
     const nodeSet = createSynthInstance(line);
     line.node = nodeSet.synth;
     line.filter = nodeSet.filter;
-    if (line.node.volume) line.node.volume.value = -8;
+    line.volumeNode = nodeSet.volumeNode;
   });
   audioReady = true;
   document.getElementById('startBtn').disabled = true;
@@ -408,6 +426,17 @@ document.getElementById('startBtn').addEventListener('click', async () => {
   pollArrivals();
   setInterval(pollArrivals, 18000);
 });
+
+function recreateSynth(line) {
+  if (line.node) line.node.dispose();
+  if (line.filter) line.filter.dispose();
+  if (line.volumeNode) line.volumeNode.dispose();
+  
+  const nodeSet = createSynthInstance(line);
+  line.node = nodeSet.synth;
+  line.filter = nodeSet.filter;
+  line.volumeNode = nodeSet.volumeNode;
+}
 
 function attachControlListeners() {
   document.querySelectorAll('.synth-card input, .synth-card select').forEach(input => {
@@ -422,12 +451,7 @@ function attachControlListeners() {
       line[param] = val;
       
       if (param === 'type' && audioReady) {
-        if (line.node) line.node.dispose();
-        if (line.filter) line.filter.dispose();
-        const nodeSet = createSynthInstance(line);
-        line.node = nodeSet.synth;
-        line.filter = nodeSet.filter;
-        if (line.node.volume) line.node.volume.value = -8;
+        recreateSynth(line);
         return;
       }
 
@@ -437,9 +461,17 @@ function attachControlListeners() {
         if (param === 'cutoff' && line.filter) {
           line.filter.frequency.rampTo(val, 0.1);
         } else if (param === 'resonance') {
-          if (line.node.resonance) line.node.resonance.value = val;
-          else if (line.node.modulationIndex) line.node.modulationIndex.value = val;
-          else if (line.node.dampening) line.node.dampening.value = val;
+          if (line.type === 'MetalSynth') {
+            line.node.resonance = val * 100;
+          } else if (line.type === 'PluckSynth') {
+            line.node.dampening = val * 100;
+          } else if (line.type === 'FMSynth') {
+            line.node.modulationIndex.value = val * 10;
+          } else if (line.filter) {
+            line.filter.Q.value = val / 2;
+          }
+        } else if (param === 'volume' && line.volumeNode) {
+          line.volumeNode.volume.rampTo(line.muted ? -Infinity : val, 0.1);
         } else if (param === 'harmonicity' && line.node.harmonicity) {
           line.node.harmonicity.value = val;
         } else if (['attack', 'decay', 'sustain', 'release'].includes(param)) {
@@ -451,6 +483,25 @@ function attachControlListeners() {
     });
   });
 
+  // Mute Button Handlers
+  document.querySelectorAll('.mute-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const lineId = e.target.getAttribute('data-mute-line');
+      const line = LINES.find(l => l.id === lineId);
+      if (!line) return;
+      
+      line.muted = !line.muted;
+      e.target.textContent = line.muted ? 'Unmute' : 'Mute';
+      e.target.classList.toggle('active', line.muted);
+      document.getElementById(`card-${line.id}`).classList.toggle('muted', line.muted);
+      
+      if (audioReady && line.volumeNode) {
+        line.volumeNode.volume.rampTo(line.muted ? -Infinity : line.volume, 0.1);
+      }
+    });
+  });
+
+  // Test Note Button Handlers
   document.querySelectorAll('.test-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const lineId = e.target.getAttribute('data-test-line');
@@ -523,7 +574,7 @@ function animateTrain(line, seconds){
 }
 
 function playNote(line, prediction){
-  if (!audioReady || !line.node) return;
+  if (!audioReady || !line.node || line.muted) return;
   const idx = hashToIndex(prediction.stationName || prediction.towards || 'x', SCALE.length);
   const note = SCALE[idx];
   
