@@ -239,15 +239,21 @@
     padding:24px;
     display:flex;
     flex-direction:column;
-    gap:6px;
+    gap:8px;
   }
   .track{
     display:grid;
-    grid-template-columns:170px 1fr 60px;
+    grid-template-columns:190px 1fr 60px;
     align-items:center;
-    height:42px;
+    min-height:48px;
     border-bottom:1px solid var(--border);
     position:relative;
+    padding: 6px 0;
+  }
+  .track-info{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
   }
   .track-label{
     display:flex;
@@ -260,20 +266,37 @@
   .swatch{
     width:10px;height:10px;border-radius:50%;flex:none;
   }
+  .status-badge {
+    font-size: 9px;
+    font-family: monospace;
+    color: var(--dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding-left: 18px;
+  }
+  .status-badge.alert {
+    color: #E32017;
+    font-weight: 700;
+  }
   
   .rail{
     position:relative;
-    height:6px;
+    height:8px;
     margin-right:12px;
     display:flex;
     align-items:center;
+    cursor: pointer;
+  }
+  .rail:hover .rail-line {
+    filter: brightness(1.3);
+    box-shadow: 0 0 8px currentColor;
   }
   .rail::before, .rail::after {
     content:'';
     position:absolute;
     top: -3px;
     width: 2px;
-    height: 12px;
+    height: 14px;
     background: inherit;
     z-index: 2;
   }
@@ -285,6 +308,7 @@
     top: 0; bottom: 0; left: 0; right: 0;
     background: currentColor;
     border-radius: 1px;
+    transition: filter 0.2s, box-shadow 0.2s;
   }
 
   .station-node {
@@ -337,7 +361,7 @@
 
 <header>
   <h1><span class="roundel"></span>TfL Jazz: Ambient Underground Soundscape</h1>
-  <p class="sub">Live London Underground arrivals from the TfL Unified API, transformed into lush ambient chords with ethereal reverb and spoken station announcements during quiet gaps.</p>
+  <p class="sub">Live London Underground arrivals & status updates from the TfL Unified API. Click any train line visualization to pluck its chord manually.</p>
   <div class="actions">
     <button id="startBtn">Start listening</button>
     <button id="toggleConfig" class="btn-outline">Configure Tones</button>
@@ -420,7 +444,7 @@ const LINES = [
 let announcementConfig = {
   muted: false,
   volume: 1.0,     
-  frequency: 0.65, 
+  frequency: 0.25, // Reduced frequency for fewer announcements
   reverb: 0.3,     
   targetLine: 'all', 
   voiceType: 'male'
@@ -592,7 +616,7 @@ function triggerSpokenAnnouncement() {
   const now = Date.now();
   const gapDuration = (now - lastSoundTime) / 1000;
 
-  if (gapDuration > 1.5 && Math.random() < announcementConfig.frequency) {
+  if (gapDuration > 4.0 && Math.random() < announcementConfig.frequency) {
     isAnnouncementPlaying = true;
     
     let activeLineId = announcementConfig.targetLine;
@@ -646,7 +670,7 @@ function triggerSpokenAnnouncement() {
   }
 }
 
-setInterval(triggerSpokenAnnouncement, 1000);
+setInterval(triggerSpokenAnnouncement, 2000);
 
 function createSynthInstance(cfg) {
   let s;
@@ -784,8 +808,11 @@ LINES.forEach(line => {
   row.className = 'track';
   const resolvedLineColor = getResolvedColor(line.color);
   row.innerHTML = `
-    <div class="track-label"><span class="swatch" style="background:${line.color}"></span>${line.name}</div>
-    <div class="rail" id="rail-${line.id}" style="color: ${resolvedLineColor};">
+    <div class="track-info">
+      <div class="track-label"><span class="swatch" style="background:${line.color}"></span>${line.name}</div>
+      <div class="status-badge" id="status-${line.id}">Checking status...</div>
+    </div>
+    <div class="rail" id="rail-${line.id}" style="color: ${resolvedLineColor};" title="Click to pluck line chord">
       <div class="rail-line" style="color: ${resolvedLineColor};"></div>
       <div class="station-node" style="color: ${resolvedLineColor};"></div>
       <div class="station-node" style="color: ${resolvedLineColor};"></div>
@@ -794,6 +821,20 @@ LINES.forEach(line => {
     <div class="note-out" id="note-${line.id}">–</div>
   `;
   board.appendChild(row);
+
+  // Allow clicking the rail visualization to manually pluck/trigger sound for that line
+  setTimeout(() => {
+    const railElem = document.getElementById(`rail-${line.id}`);
+    if (railElem) {
+      railElem.addEventListener('click', () => {
+        if (!audioReady) {
+          alert('Please click "Start listening" first!');
+          return;
+        }
+        playNote(line, { stationName: line.name }, 1.2);
+      });
+    }
+  }, 0);
 });
 
 buildControlPanel();
@@ -846,9 +887,9 @@ document.getElementById('startBtn').addEventListener('click', async () => {
   });
   audioReady = true;
   document.getElementById('startBtn').disabled = true;
-  document.getElementById('status').textContent = 'Listening — ambient soundscape active…';
-  pollArrivals();
-  setInterval(pollArrivals, 18000);
+  document.getElementById('status').textContent = 'Listening — ambient soundscape & status active…';
+  pollAllData();
+  setInterval(pollAllData, 20000);
 });
 
 function recreateSynth(line) {
@@ -990,7 +1031,7 @@ function attachControlListeners() {
   });
 }
 
-// ---------- Live API Fetching & Unique Train Deduplication ----------
+// ---------- Live API Fetching (Arrivals & Line Status / Delays) ----------
 function hashToIndex(str, mod){
   let h = 0;
   for (let i=0; i<str.length; i++){ h = (h*31 + str.charCodeAt(i)) >>> 0; }
@@ -999,8 +1040,35 @@ function hashToIndex(str, mod){
 
 const activeTrainTracker = new Map();
 
-async function pollArrivals(){
+async function pollAllData() {
   const ids = LINES.map(l=>l.id).join(',');
+  
+  // 1. Fetch Line Status (Delays / Disruptions) endpoint
+  try {
+    const statusRes = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Status`);
+    if (statusRes.ok) {
+      const statusData = await statusRes.json();
+      statusData.forEach(lineStatus => {
+        const badgeElem = document.getElementById(`status-${lineStatus.id}`);
+        if (badgeElem && lineStatus.lineStatuses && lineStatus.lineStatuses.length > 0) {
+          const statusObj = lineStatus.lineStatuses[0];
+          const statusDesc = statusObj.statusSeverityDescription;
+          badgeElem.textContent = statusDesc;
+          if (statusDesc !== 'Good Service') {
+            badgeElem.className = 'status-badge alert';
+            badgeElem.title = statusObj.reason || '';
+          } else {
+            badgeElem.className = 'status-badge';
+            badgeElem.title = '';
+          }
+        }
+      });
+    }
+  } catch(e) {
+    console.warn('Status fetch warning:', e);
+  }
+
+  // 2. Fetch Live Arrivals endpoint
   try{
     const res = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Arrivals`);
     if (!res.ok) throw new Error('API network failure');
