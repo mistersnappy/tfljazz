@@ -1009,18 +1009,35 @@ async function pollArrivals(){
     document.getElementById('status').textContent =
       `Listening — ${data.length} tracked trains, last updated ${new Date().toLocaleTimeString()}`;
 
-    data.forEach(p=>{
+    // Shuffle/sort slightly or group to stagger processing updates
+    data.sort((a, b) => a.timeToStation - b.timeToStation);
+
+    let trackingTimeOffset = 0;
+    let lastSeenTime = -1;
+
+    data.forEach((p, index)=>{
       const key = `${p.id || p.vehicleId}-${p.expectedArrival}`;
       if (scheduled.has(key)) return;
       if (p.timeToStation == null || p.timeToStation < 2 || p.timeToStation > 90) return; 
+
+      // Introduce subtle micro-jitter (0 to 1.8 seconds) for trains arriving at identical timestamps
+      if (p.timeToStation === lastSeenTime) {
+        trackingTimeOffset += 0.35;
+      } else {
+        trackingTimeOffset = 0;
+        lastSeenTime = p.timeToStation;
+      }
+
+      const adjustedArrivalSeconds = p.timeToStation + trackingTimeOffset;
+
       scheduled.add(key);
-      setTimeout(() => scheduled.delete(key), (p.timeToStation + 10) * 1000);
+      setTimeout(() => scheduled.delete(key), (adjustedArrivalSeconds + 10) * 1000);
 
       const line = LINES.find(l=>l.id === p.lineId);
       if (!line) return;
 
-      animateTrain(line, p.timeToStation);
-      setTimeout(()=> playNote(line, p), p.timeToStation * 1000);
+      animateTrain(line, adjustedArrivalSeconds);
+      setTimeout(() => playNote(line, p), adjustedArrivalSeconds * 1000);
     });
   }catch(err){
     document.getElementById('status').textContent = 'Could not reach TfL API — retrying soon.';
