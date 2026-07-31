@@ -443,14 +443,13 @@ const LINES = [
   { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false },
 ];
 
-// Upgraded Continuous Multi-Voice Drone Bed Config
 let droneVoiceConfig = {
   id: 'network-drone',
   name: 'Continuous Drone Bed',
   color: 'var(--line-drone)',
   octave: 1,
-  voices: 3,         // Number of detuned continuous oscillators
-  detuneSpread: 12,  // Cent spread between voices
+  voices: 3,
+  detuneSpread: 12,
   cutoff: 550,
   volume: -10,
   muted: false
@@ -464,13 +463,21 @@ let announcementConfig = {
   targetLine: 'all'
 };
 
+// Audio Nodes Setup
 const delay = new Tone.FeedbackDelay({ delayTime: "8n.", feedback: 0.4, wet: 0.35 });
 const ambientReverb = new Tone.Reverb({ decay: 9.0, wet: 0.6 });
 const limiter = new Tone.Limiter(-4);
 
+// Flag to track when Reverb impulse is ready
+let reverbReady = false;
 ambientReverb.generate().then(() => {
+  reverbReady = true;
   delay.connect(ambientReverb);
   ambientReverb.connect(limiter);
+  limiter.toDestination();
+}).catch(err => {
+  console.warn("Reverb fallback initialization:", err);
+  delay.connect(limiter);
   limiter.toDestination();
 });
 
@@ -604,7 +611,6 @@ function createSynthInstance(cfg) {
   return { synth: s, filter: filter, volumeNode: volNode };
 }
 
-// ---------- Build Continuous Multi-Voice Drone Rig ----------
 let droneRig = {
   oscillators: [],
   filter: null,
@@ -613,7 +619,9 @@ let droneRig = {
 
 function createContinuousDroneRig() {
   if (droneRig.volumeNode) {
-    droneRig.oscillators.forEach(o => o.stop().dispose());
+    droneRig.oscillators.forEach(o => {
+      try { o.stop(); o.dispose(); } catch(e){}
+    });
     if (droneRig.filter) droneRig.filter.dispose();
     if (droneRig.volumeNode) droneRig.volumeNode.dispose();
     droneRig.oscillators = [];
@@ -631,7 +639,6 @@ function createContinuousDroneRig() {
   const scale = MUSICAL_SCALES[currentGlobalScale] || MUSICAL_SCALES["Major Pentatonic"];
   const baseFreq = Tone.Frequency(`${scale[0]}${droneVoiceConfig.octave}`).toHz();
 
-  // Create multiple running oscillators for a massive detuned wall of sound
   const count = droneVoiceConfig.voices;
   for (let i = 0; i < count; i++) {
     const osc = new Tone.Oscillator({
@@ -639,7 +646,6 @@ function createContinuousDroneRig() {
       type: i % 2 === 0 ? "sawtooth" : "triangle"
     });
     
-    // Spread detune across voices
     const detuneAmount = (i - (count - 1) / 2) * droneVoiceConfig.detuneSpread;
     osc.detune.value = detuneAmount;
     
@@ -649,7 +655,6 @@ function createContinuousDroneRig() {
   }
 }
 
-// ---------- Build UI Board & Control Panel ----------
 const board = document.getElementById('board');
 const panelGrid = document.getElementById('panelGrid');
 
@@ -726,7 +731,6 @@ function buildControlPanel() {
   `;
   panelGrid.appendChild(annCard);
 
-  // Upgraded Continuous Drone Card with Voice & Detune controls
   const droneCard = document.createElement('div');
   droneCard.className = `synth-card ${droneVoiceConfig.muted ? 'muted' : ''}`;
   droneCard.id = `card-${droneVoiceConfig.id}`;
@@ -823,7 +827,6 @@ document.getElementById('toggleConfig').addEventListener('click', () => {
   document.getElementById('synthPanel').classList.toggle('open');
 });
 
-// ---------- Randomizer & Global Scale Functions ----------
 function randomizeVoices() {
   LINES.forEach(line => {
     line.type = SYNTH_TYPES[Math.floor(Math.random() * SYNTH_TYPES.length)];
@@ -854,10 +857,11 @@ function randomizeGlobalScale() {
   setGlobalScale(randomScale);
 }
 
-// ---------- Audio Setup & Runtime Control Bindings ----------
 let audioReady = false;
 document.getElementById('startBtn').addEventListener('click', async () => {
+  // Ensure AudioContext starts correctly under browser user-gesture rules
   await Tone.start();
+  
   initializeAllSynths();
   createContinuousDroneRig();
 
@@ -945,7 +949,6 @@ function attachControlListeners() {
     });
   }
 
-  // Continuous Drone Card Listeners
   document.querySelectorAll('#card-network-drone input, #card-network-drone select').forEach(input => {
     input.addEventListener('input', (e) => {
       const param = e.target.getAttribute('data-drone-param');
@@ -1015,7 +1018,9 @@ function attachControlListeners() {
         } else if (param === 'harmonicity' && line.node.harmonicity) {
           line.node.harmonicity.value = val;
         } else if (['attack', 'decay', 'sustain', 'release'].includes(param)) {
-          if (line.node.envelope) line.node.envelope[param] = val;
+          if (line.node.envelope) {
+            line.node.envelope[param] = val;
+          }
         }
       } catch(err) {}
     });
@@ -1051,7 +1056,6 @@ function attachControlListeners() {
   });
 }
 
-// ---------- Live API Fetching & Continuous Pitch Modulation ----------
 function hashToIndex(str, mod){
   let h = 0;
   for (let i=0; i<str.length; i++){ h = (h*31 + str.charCodeAt(i)) >>> 0; }
@@ -1107,12 +1111,10 @@ async function pollAllData() {
     const networkDensityCount = data.length;
     const normalizedDensity = Math.min(1.0, networkDensityCount / 350);
 
-    // DRIVE CONTINUOUS DRONE PITCH & REVERB WETNESS USING ARRIVAL DENSITY
     if (audioReady && droneRig.oscillators.length > 0) {
       ambientReverb.wet.value = 0.35 + (normalizedDensity * 0.5);
 
       const scale = MUSICAL_SCALES[currentGlobalScale] || MUSICAL_SCALES["Major Pentatonic"];
-      // Map density to scale degree index for continuous pitch gliding
       const noteIndex = Math.floor(normalizedDensity * (scale.length - 1));
       const targetNote = `${scale[noteIndex]}${droneVoiceConfig.octave}`;
       const targetFreq = Tone.Frequency(targetNote).toHz();
@@ -1120,7 +1122,6 @@ async function pollAllData() {
       const count = droneRig.oscillators.length;
       droneRig.oscillators.forEach((osc, i) => {
         const detuneAmount = (i - (count - 1) / 2) * droneVoiceConfig.detuneSpread;
-        // Smoothly glide pitch (porta/ramp) based on live traffic data
         osc.frequency.rampTo(targetFreq, 4.0);
         osc.detune.value = detuneAmount;
       });
