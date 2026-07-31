@@ -25,7 +25,6 @@
     --line-piccadilly: #003688;
     --line-victoria: #0098D4;
     --line-waterloo: #95CDBA;
-    --line-drone: #9370DB;
   }
 
   [data-theme="light"] {
@@ -362,7 +361,7 @@
 
 <header>
   <h1><span class="roundel"></span>TfL Jazz: Ambient Underground Soundscape</h1>
-  <p class="sub">Live London Underground arrivals, status updates & dynamic network drone bed. Click any line visualization to pluck its chord.</p>
+  <p class="sub">Live London Underground arrivals, status updates & announcements. Click any line visualization to pluck its chord.</p>
   <div class="actions">
     <button id="startBtn">Start listening</button>
     <button id="toggleConfig" class="btn-outline">Configure Tones</button>
@@ -442,24 +441,6 @@ const LINES = [
   { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false, crowdingFactor: 1.0 },
 ];
 
-// Dedicated ever-evolving Network Drone Voice configured identically to train lines
-let droneVoiceConfig = {
-  id: 'network-drone',
-  name: 'Network Drone Bed',
-  color: 'var(--line-drone)',
-  type: 'FMSynth',
-  octave: 1,
-  harmonicity: 2.0,
-  resonance: 2,
-  cutoff: 800,
-  attack: 2.0,
-  decay: 3.0,
-  sustain: 0.9,
-  release: 5.0,
-  volume: -10,
-  muted: false
-};
-
 let announcementConfig = {
   muted: false,
   volume: 1.0,     
@@ -476,6 +457,9 @@ const limiter = new Tone.Limiter(-4);
 ambientReverb.generate().then(() => {
   delay.connect(ambientReverb);
   ambientReverb.connect(limiter);
+  limiter.toDestination();
+}).catch(() => {
+  delay.connect(limiter);
   limiter.toDestination();
 });
 
@@ -503,14 +487,14 @@ let isAnnouncementPlaying = false;
 let latestArrivalsPool = [];
 
 function getSelectedVoice() {
+  if (!('speechSynthesis' in window)) return null;
   const voices = window.speechSynthesis.getVoices();
   const ukVoices = voices.filter(v => v.lang === 'en-GB' || v.lang === 'en_GB' || v.name.includes('UK') || v.name.includes('British'));
   const pool = ukVoices.length > 0 ? ukVoices : voices;
 
   const targetVoices = pool.filter(v => {
     const nameLower = v.name.toLowerCase();
-    const isMale = nameLower.includes('male') || nameLower.includes('george') || nameLower.includes('daniel') || nameLower.includes('oliver') || nameLower.includes('ryan') || nameLower.includes('brian') || nameLower.includes('arthur');
-    return isMale;
+    return nameLower.includes('male') || nameLower.includes('george') || nameLower.includes('daniel') || nameLower.includes('oliver') || nameLower.includes('ryan') || nameLower.includes('brian') || nameLower.includes('arthur');
   });
 
   return targetVoices[0] || pool[0] || null;
@@ -665,35 +649,6 @@ function buildControlPanel() {
   `;
   panelGrid.appendChild(annCard);
 
-  // Add configuration card for the Network Drone Bed
-  const droneCard = document.createElement('div');
-  droneCard.className = `synth-card ${droneVoiceConfig.muted ? 'muted' : ''}`;
-  droneCard.id = `card-${droneVoiceConfig.id}`;
-  let droneTypeOptions = SYNTH_TYPES.map(t => `<option value="${t}" ${droneVoiceConfig.type === t ? 'selected' : ''}>${t}</option>`).join('');
-  let droneOctaveOptions = OCTAVES.map(o => `<option value="${o}" ${droneVoiceConfig.octave === o ? 'selected' : ''}>Octave ${o}</option>`).join('');
-  droneCard.innerHTML = `
-    <h3>
-      <span style="display:flex; align-items:center; gap:6px;">
-        <span class="swatch" style="background:${droneVoiceConfig.color}"></span>${droneVoiceConfig.name}
-      </span>
-      <div class="card-actions">
-        <button class="mute-btn ${droneVoiceConfig.muted ? 'active' : ''}" data-mute-drone="${droneVoiceConfig.id}">${droneVoiceConfig.muted ? 'Unmute' : 'Mute'}</button>
-        <button class="test-btn" data-test-drone="${droneVoiceConfig.id}">Test</button>
-      </div>
-    </h3>
-    <div class="control-group"><label>Synth Type</label><select data-drone-param="type">${droneTypeOptions}</select></div>
-    <div class="control-group"><label>Octave</label><select data-drone-param="octave">${droneOctaveOptions}</select></div>
-    <div class="control-group"><label>Volume</label><input type="range" min="-30" max="6" step="1" value="${droneVoiceConfig.volume}" data-drone-param="volume"></div>
-    <div class="control-group"><label>Harmonic</label><input type="range" min="0.5" max="5" step="0.1" value="${droneVoiceConfig.harmonicity}" data-drone-param="harmonicity"></div>
-    <div class="control-group"><label>Resonance</label><input type="range" min="10" max="5000" step="10" value="${droneVoiceConfig.resonance}" data-drone-param="resonance"></div>
-    <div class="control-group"><label>Cut-off</label><input type="range" min="200" max="8000" step="100" value="${droneVoiceConfig.cutoff}" data-drone-param="cutoff"></div>
-    <div class="control-group"><label>Attack</label><input type="range" min="0.01" max="5" step="0.1" value="${droneVoiceConfig.attack}" data-drone-param="attack"></div>
-    <div class="control-group"><label>Decay</label><input type="range" min="0.1" max="5" step="0.1" value="${droneVoiceConfig.decay}" data-drone-param="decay"></div>
-    <div class="control-group"><label>Sustain</label><input type="range" min="0" max="1" step="0.05" value="${droneVoiceConfig.sustain}" data-drone-param="sustain"></div>
-    <div class="control-group"><label>Release</label><input type="range" min="0.5" max="8" step="0.2" value="${droneVoiceConfig.release}" data-drone-param="release"></div>
-  `;
-  panelGrid.appendChild(droneCard);
-
   LINES.forEach(line => {
     const card = document.createElement('div');
     card.className = `synth-card ${line.muted ? 'muted' : ''}`;
@@ -771,24 +726,16 @@ document.getElementById('toggleConfig').addEventListener('click', () => {
 // ---------- Randomizer & Global Scale Functions ----------
 function randomizeVoices() {
   LINES.forEach(line => {
-    const randomType = SYNTH_TYPES[Math.floor(Math.random() * SYNTH_TYPES.length)];
-    line.type = randomType;
-    if (audioReady) {
-      recreateSynth(line);
-    }
+    line.type = SYNTH_TYPES[Math.floor(Math.random() * SYNTH_TYPES.length)];
+    if (audioReady) recreateSynth(line);
   });
-  const randomDroneType = SYNTH_TYPES[Math.floor(Math.random() * SYNTH_TYPES.length)];
-  droneVoiceConfig.type = randomDroneType;
-  if (audioReady) recreateDroneSynth();
   buildControlPanel();
 }
 
 function randomizeOctaves() {
   LINES.forEach(line => {
-    const randomOctave = OCTAVES[Math.floor(Math.random() * OCTAVES.length)];
-    line.octave = randomOctave;
+    line.octave = OCTAVES[Math.floor(Math.random() * OCTAVES.length)];
   });
-  droneVoiceConfig.octave = OCTAVES[Math.floor(Math.random() * 2)]; // Keep drone in lower octaves (1-2)
   buildControlPanel();
 }
 
@@ -796,13 +743,11 @@ function setGlobalScale(scaleName) {
   if (MUSICAL_SCALES[scaleName]) {
     currentGlobalScale = scaleName;
     updateGlobalScaleSelectOptions();
-    updateDroneNote();
   }
 }
 
 function randomizeGlobalScale() {
-  const randomScale = SCALE_NAMES[Math.floor(Math.random() * SCALE_NAMES.length)];
-  setGlobalScale(randomScale);
+  setGlobalScale(SCALE_NAMES[Math.floor(Math.random() * SCALE_NAMES.length)]);
 }
 
 // ---------- Audio Setup & Runtime Control Bindings ----------
@@ -816,17 +761,10 @@ document.getElementById('startBtn').addEventListener('click', async () => {
     line.volumeNode = nodeSet.volumeNode;
   });
 
-  // Initialize Network Drone Synth
-  const droneNodeSet = createSynthInstance(droneVoiceConfig);
-  droneVoiceConfig.node = droneNodeSet.synth;
-  droneVoiceConfig.filter = droneNodeSet.filter;
-  droneVoiceConfig.volumeNode = droneNodeSet.volumeNode;
-
   audioReady = true;
   document.getElementById('startBtn').disabled = true;
-  document.getElementById('status').textContent = 'Listening — ambient soundscape & evolving drone active…';
+  document.getElementById('status').textContent = 'Listening — ambient soundscape & announcements active…';
   
-  startEvolvingDrone();
   pollAllData();
   setInterval(pollAllData, 18000);
 });
@@ -840,40 +778,6 @@ function recreateSynth(line) {
   line.node = nodeSet.synth;
   line.filter = nodeSet.filter;
   line.volumeNode = nodeSet.volumeNode;
-}
-
-function recreateDroneSynth() {
-  if (droneVoiceConfig.node) droneVoiceConfig.node.dispose();
-  if (droneVoiceConfig.filter) droneVoiceConfig.filter.dispose();
-  if (droneVoiceConfig.volumeNode) droneVoiceConfig.volumeNode.dispose();
-
-  const nodeSet = createSynthInstance(droneVoiceConfig);
-  droneVoiceConfig.node = nodeSet.synth;
-  droneVoiceConfig.filter = nodeSet.filter;
-  droneVoiceConfig.volumeNode = nodeSet.volumeNode;
-}
-
-let activeDroneLoop = null;
-function updateDroneNote() {
-  if (!audioReady || droneVoiceConfig.muted || !droneVoiceConfig.node) return;
-  const scale = MUSICAL_SCALES[currentGlobalScale] || MUSICAL_SCALES["Major Pentatonic"];
-  const rootNote = `${scale[0]}${droneVoiceConfig.octave}`;
-  try {
-    if (droneVoiceConfig.type === 'NoiseSynth') {
-      droneVoiceConfig.node.triggerAttackRelease(droneVoiceConfig.release);
-    } else {
-      droneVoiceConfig.node.triggerAttackRelease(rootNote, droneVoiceConfig.release);
-    }
-  } catch(e) {}
-}
-
-function startEvolvingDrone() {
-  if (activeDroneLoop) clearInterval(activeDroneLoop);
-  updateDroneNote();
-  // Continuously sustain and morph the drone bed every 8 seconds organically
-  activeDroneLoop = setInterval(() => {
-    updateDroneNote();
-  }, 8000);
 }
 
 function attachControlListeners() {
@@ -926,63 +830,7 @@ function attachControlListeners() {
     });
   }
 
-  // Drone Card Listeners
-  document.querySelectorAll('#card-network-drone input, #card-network-drone select').forEach(input => {
-    input.addEventListener('input', (e) => {
-      const param = e.target.getAttribute('data-drone-param');
-      const val = e.target.type === 'select-one' ? (param === 'octave' ? parseInt(e.target.value) : e.target.value) : parseFloat(e.target.value);
-      droneVoiceConfig[param] = val;
-
-      if (param === 'type' && audioReady) {
-        recreateDroneSynth();
-        return;
-      }
-
-      if (!audioReady || !droneVoiceConfig.node) return;
-      try {
-        if (param === 'cutoff' && droneVoiceConfig.filter) {
-          droneVoiceConfig.filter.frequency.rampTo(val, 0.2);
-        } else if (param === 'resonance') {
-          if (droneVoiceConfig.node.resonance !== undefined) droneVoiceConfig.node.resonance.value = val;
-          else if (droneVoiceConfig.node.modulationIndex !== undefined) droneVoiceConfig.node.modulationIndex.value = val;
-          else if (droneVoiceConfig.node.dampening !== undefined) droneVoiceConfig.node.dampening = val;
-          else if (droneVoiceConfig.node.octaves !== undefined) droneVoiceConfig.node.octaves = val / 500;
-        } else if (param === 'volume' && droneVoiceConfig.volumeNode) {
-          droneVoiceConfig.volumeNode.volume.rampTo(droneVoiceConfig.muted ? -Infinity : val, 0.2);
-        } else if (param === 'harmonicity' && droneVoiceConfig.node.harmonicity) {
-          droneVoiceConfig.node.harmonicity.value = val;
-        } else if (['attack', 'decay', 'sustain', 'release'].includes(param)) {
-          if (droneVoiceConfig.node.envelope) droneVoiceConfig.node.envelope[param] = val;
-        }
-      } catch(err) {}
-    });
-  });
-
-  const droneMuteBtn = document.querySelector('[data-mute-drone]');
-  if (droneMuteBtn) {
-    droneMuteBtn.addEventListener('click', (e) => {
-      droneVoiceConfig.muted = !droneVoiceConfig.muted;
-      e.target.textContent = droneVoiceConfig.muted ? 'Unmute' : 'Mute';
-      e.target.classList.toggle('active', droneVoiceConfig.muted);
-      document.getElementById(`card-${droneVoiceConfig.id}`).classList.toggle('muted', droneVoiceConfig.muted);
-      if (audioReady && droneVoiceConfig.volumeNode) {
-        droneVoiceConfig.volumeNode.volume.rampTo(droneVoiceConfig.muted ? -Infinity : droneVoiceConfig.volume, 0.2);
-      }
-    });
-  }
-
-  const droneTestBtn = document.querySelector('[data-test-drone]');
-  if (droneTestBtn) {
-    droneTestBtn.addEventListener('click', () => {
-      if (!audioReady || !droneVoiceConfig.node) {
-        alert('Please click "Start listening" first!');
-        return;
-      }
-      updateDroneNote();
-    });
-  }
-
-  document.querySelectorAll('.synth-card:not(#card-announcements):not(#card-network-drone) input, .synth-card:not(#card-announcements):not(#card-network-drone) select').forEach(input => {
+  document.querySelectorAll('.synth-card:not(#card-announcements) input, .synth-card:not(#card-announcements) select').forEach(input => {
     input.addEventListener('input', (e) => {
       const lineId = e.target.getAttribute('data-line');
       const param = e.target.getAttribute('data-param');
@@ -1004,31 +852,22 @@ function attachControlListeners() {
         if (param === 'cutoff' && line.filter) {
           line.filter.frequency.rampTo(val, 0.2);
         } else if (param === 'resonance') {
-          if (line.node.resonance !== undefined) {
-            line.node.resonance.value = val;
-          } else if (line.node.modulationIndex !== undefined) {
-            line.node.modulationIndex.value = val;
-          } else if (line.node.dampening !== undefined) {
-            line.node.dampening = val;
-          } else if (line.node.octaves !== undefined) {
-            line.node.octaves = val / 500;
-          }
+          if (line.node.resonance !== undefined) line.node.resonance.value = val;
+          else if (line.node.modulationIndex !== undefined) line.node.modulationIndex.value = val;
+          else if (line.node.dampening !== undefined) line.node.dampening = val;
+          else if (line.node.octaves !== undefined) line.node.octaves = val / 500;
         } else if (param === 'volume' && line.volumeNode) {
           line.volumeNode.volume.rampTo(line.muted ? -Infinity : val, 0.2);
         } else if (param === 'harmonicity' && line.node.harmonicity) {
           line.node.harmonicity.value = val;
         } else if (['attack', 'decay', 'sustain', 'release'].includes(param)) {
-          if (line.node.envelope) {
-            line.node.envelope[param] = val;
-          }
+          if (line.node.envelope) line.node.envelope[param] = val;
         }
-      } catch(err) {
-        console.warn('Parameter update error:', err);
-      }
+      } catch(err) {}
     });
   });
 
-  document.querySelectorAll('.synth-card:not(#card-announcements):not(#card-network-drone) .mute-btn').forEach(btn => {
+  document.querySelectorAll('.synth-card:not(#card-announcements) .mute-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const lineId = e.target.getAttribute('data-mute-line');
       const line = LINES.find(l => l.id === lineId);
@@ -1045,7 +884,7 @@ function attachControlListeners() {
     });
   });
 
-  document.querySelectorAll('.synth-card:not(#card-announcements):not(#card-network-drone) .test-btn').forEach(btn => {
+  document.querySelectorAll('.synth-card:not(#card-announcements) .test-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const lineId = e.target.getAttribute('data-test-line');
       const line = LINES.find(l => l.id === lineId);
@@ -1058,7 +897,7 @@ function attachControlListeners() {
   });
 }
 
-// ---------- Live API Fetching (Arrivals & Line Status / Congestion) ----------
+// ---------- Live API Fetching (Arrivals & Line Status) ----------
 function hashToIndex(str, mod){
   let h = 0;
   for (let i=0; i<str.length; i++){ h = (h*31 + str.charCodeAt(i)) >>> 0; }
@@ -1070,13 +909,20 @@ const activeTrainTracker = new Map();
 async function pollAllData() {
   const ids = LINES.map(l=>l.id).join(',');
   
-  // 1. Fetch Line Status & Congestion metrics to modulate drone filter and line pacing
+  try {
+    const statusRes = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Disruptions`);
+    if (statusRes.ok) {
+      const disData = await statusRes.json();
+      const extractedAdvisories = [];
+      disData.forEach(d => { if (d.description) extractedAdvisories.push(d.description); });
+      if (extractedAdvisories.length > 0) liveDisruptionsPool = extractedAdvisories;
+    }
+  } catch(e) {}
+
   try {
     const statusRes = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Status`);
     if (statusRes.ok) {
       const statusData = await statusRes.json();
-      let disruptionCount = 0;
-
       statusData.forEach(lineStatus => {
         const badgeElem = document.getElementById(`status-${lineStatus.id}`);
         const lineObj = LINES.find(l => l.id === lineStatus.id);
@@ -1091,12 +937,10 @@ async function pollAllData() {
             badgeElem.className = 'status-badge alert';
             badgeElem.title = statusObj.reason || '';
             crowdingFactor = 1.8;
-            disruptionCount += 2;
           } else if (statusDesc === 'Minor Delays') {
             badgeElem.className = 'status-badge alert';
             badgeElem.title = statusObj.reason || '';
             crowdingFactor = 1.3;
-            disruptionCount += 1;
           } else {
             badgeElem.className = 'status-badge';
             badgeElem.title = '';
@@ -1111,18 +955,9 @@ async function pollAllData() {
           }
         }
       });
-
-      // Drive network-wide drone evolution based on overall network friction/disruptions
-      if (audioReady && droneVoiceConfig.filter && !droneVoiceConfig.muted) {
-        const dynamicCutoff = Math.max(300, droneVoiceConfig.cutoff + (disruptionCount * 250));
-        droneVoiceConfig.filter.frequency.rampTo(dynamicCutoff, 2.0);
-      }
     }
-  } catch(e) {
-    console.warn('Status fetch warning:', e);
-  }
+  } catch(e) {}
 
-  // 2. Fetch Live Arrivals
   try{
     const res = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Arrivals`);
     if (!res.ok) throw new Error('API network failure');
@@ -1134,11 +969,8 @@ async function pollAllData() {
       `Listening — ${data.length} tracked records, last updated ${new Date().toLocaleTimeString()}`;
 
     const now = Date.now();
-
     for (const [id, record] of activeTrainTracker.entries()) {
-      if (now - record.lastSeen > 180000) {
-        activeTrainTracker.delete(id);
-      }
+      if (now - record.lastSeen > 180000) activeTrainTracker.delete(id);
     }
 
     data.forEach(p => {
@@ -1149,16 +981,8 @@ async function pollAllData() {
       if (!line) return;
 
       let trainRecord = activeTrainTracker.get(vehicleId);
-
       if (!trainRecord) {
-        trainRecord = {
-          id: vehicleId,
-          lineId: p.lineId,
-          totalTime: p.timeToStation,
-          startTime: now,
-          lastSeen: now,
-          soundFired: false
-        };
+        trainRecord = { id: vehicleId, lineId: p.lineId, totalTime: p.timeToStation, startTime: now, lastSeen: now, soundFired: false };
         activeTrainTracker.set(vehicleId, trainRecord);
         animateTrain(line, p.timeToStation, trainRecord);
       } else {
@@ -1168,7 +992,6 @@ async function pollAllData() {
 
   } catch(err) {
     document.getElementById('status').textContent = 'Could not reach TfL API — retrying soon.';
-    console.error(err);
   }
 }
 
@@ -1221,7 +1044,7 @@ function playNote(line, prediction, intensity = 1.0){
     } else {
       line.node.triggerAttackRelease(note, (line.release || 2.0) * intensity);
     }
-  }catch(e){ console.warn('note failed', e); }
+  }catch(e){}
 
   const out = document.getElementById(`note-${line.id}`);
   if (out) {
