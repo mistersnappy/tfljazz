@@ -224,7 +224,7 @@
     align-items:center;
   }
   .control-group.hidden { display: none !important; }
-  .control-group label{color:var(--dim); width:80px;}
+  .control-group label{color:var(--dim); width:90px;}
   .control-group input, .control-group select{
     background:var(--card-bg);
     color:var(--ink);
@@ -232,7 +232,7 @@
     padding:2px 4px;
     font-family:inherit;
     font-size:10px;
-    width:150px;
+    width:140px;
     border-radius:3px;
   }
 
@@ -363,7 +363,7 @@
 
 <header>
   <h1><span class="roundel"></span>TfL Jazz: Ambient Underground Soundscape</h1>
-  <p class="sub">Live London Underground arrivals, status updates & dynamic arrival density drone. Click any line visualization to pluck its chord.</p>
+  <p class="sub">Live London Underground arrivals, status updates & continuous data-driven drone bed. Click any line visualization to pluck its chord.</p>
   <div class="actions">
     <button id="startBtn">Start listening</button>
     <button id="toggleConfig" class="btn-outline">Configure Tones</button>
@@ -426,7 +426,7 @@ const MUSICAL_SCALES = {
 const SCALE_NAMES = Object.keys(MUSICAL_SCALES);
 let currentGlobalScale = "Major Pentatonic";
 
-const OCTAVES = [1, 2, 3, 4];
+const OCTAVES = [1, 2, 3];
 const SYNTH_TYPES = ['FMSynth', 'AMSynth', 'MetalSynth', 'PluckSynth', 'MembraneSynth', 'DuoSynth', 'Synth', 'MonoSynth', 'NoiseSynth', 'PolySynth'];
 
 const LINES = [
@@ -443,20 +443,16 @@ const LINES = [
   { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false },
 ];
 
+// Upgraded Continuous Multi-Voice Drone Bed Config
 let droneVoiceConfig = {
   id: 'network-drone',
-  name: 'Arrival Density Drone',
+  name: 'Continuous Drone Bed',
   color: 'var(--line-drone)',
-  type: 'FMSynth',
   octave: 1,
-  harmonicity: 1.5,
-  resonance: 2,
-  cutoff: 600,
-  attack: 3.0,
-  decay: 4.0,
-  sustain: 0.9,
-  release: 6.0,
-  volume: -12,
+  voices: 3,         // Number of detuned continuous oscillators
+  detuneSpread: 12,  // Cent spread between voices
+  cutoff: 550,
+  volume: -10,
   muted: false
 };
 
@@ -465,12 +461,11 @@ let announcementConfig = {
   volume: 1.0,     
   frequency: 0.15,
   reverb: 0.3,     
-  targetLine: 'all', 
-  voiceType: 'male'
+  targetLine: 'all'
 };
 
-const delay = new Tone.FeedbackDelay({ delayTime: "8n.", feedback: 0.35, wet: 0.3 });
-const ambientReverb = new Tone.Reverb({ decay: 8.5, wet: 0.55 });
+const delay = new Tone.FeedbackDelay({ delayTime: "8n.", feedback: 0.4, wet: 0.35 });
+const ambientReverb = new Tone.Reverb({ decay: 9.0, wet: 0.6 });
 const limiter = new Tone.Limiter(-4);
 
 ambientReverb.generate().then(() => {
@@ -609,6 +604,51 @@ function createSynthInstance(cfg) {
   return { synth: s, filter: filter, volumeNode: volNode };
 }
 
+// ---------- Build Continuous Multi-Voice Drone Rig ----------
+let droneRig = {
+  oscillators: [],
+  filter: null,
+  volumeNode: null
+};
+
+function createContinuousDroneRig() {
+  if (droneRig.volumeNode) {
+    droneRig.oscillators.forEach(o => o.stop().dispose());
+    if (droneRig.filter) droneRig.filter.dispose();
+    if (droneRig.volumeNode) droneRig.volumeNode.dispose();
+    droneRig.oscillators = [];
+  }
+
+  const filter = new Tone.Filter({ frequency: droneVoiceConfig.cutoff, type: "lowpass", Q: 2.0 });
+  const volNode = new Tone.Volume(droneVoiceConfig.muted ? -Infinity : droneVoiceConfig.volume);
+  
+  filter.connect(volNode);
+  volNode.connect(delay);
+
+  droneRig.filter = filter;
+  droneRig.volumeNode = volNode;
+
+  const scale = MUSICAL_SCALES[currentGlobalScale] || MUSICAL_SCALES["Major Pentatonic"];
+  const baseFreq = Tone.Frequency(`${scale[0]}${droneVoiceConfig.octave}`).toHz();
+
+  // Create multiple running oscillators for a massive detuned wall of sound
+  const count = droneVoiceConfig.voices;
+  for (let i = 0; i < count; i++) {
+    const osc = new Tone.Oscillator({
+      frequency: baseFreq,
+      type: i % 2 === 0 ? "sawtooth" : "triangle"
+    });
+    
+    // Spread detune across voices
+    const detuneAmount = (i - (count - 1) / 2) * droneVoiceConfig.detuneSpread;
+    osc.detune.value = detuneAmount;
+    
+    osc.connect(filter);
+    osc.start();
+    droneRig.oscillators.push(osc);
+  }
+}
+
 // ---------- Build UI Board & Control Panel ----------
 const board = document.getElementById('board');
 const panelGrid = document.getElementById('panelGrid');
@@ -636,7 +676,6 @@ function updateCardVisibility(cardElem, synthType) {
   const sustainGroup = cardElem.querySelector('[data-group="sustain"]');
   const releaseGroup = cardElem.querySelector('[data-group="release"]');
 
-  // Reset visibility
   [harmonicGroup, resonanceGroup, cutoffGroup, attackGroup, decayGroup, sustainGroup, releaseGroup].forEach(g => {
     if (g) g.classList.remove('hidden');
   });
@@ -687,10 +726,10 @@ function buildControlPanel() {
   `;
   panelGrid.appendChild(annCard);
 
+  // Upgraded Continuous Drone Card with Voice & Detune controls
   const droneCard = document.createElement('div');
   droneCard.className = `synth-card ${droneVoiceConfig.muted ? 'muted' : ''}`;
   droneCard.id = `card-${droneVoiceConfig.id}`;
-  let droneTypeOptions = SYNTH_TYPES.map(t => `<option value="${t}" ${droneVoiceConfig.type === t ? 'selected' : ''}>${t}</option>`).join('');
   let droneOctaveOptions = OCTAVES.map(o => `<option value="${o}" ${droneVoiceConfig.octave === o ? 'selected' : ''}>Octave ${o}</option>`).join('');
   droneCard.innerHTML = `
     <h3>
@@ -699,22 +738,15 @@ function buildControlPanel() {
       </span>
       <div class="card-actions">
         <button class="mute-btn ${droneVoiceConfig.muted ? 'active' : ''}" data-mute-drone="${droneVoiceConfig.id}">${droneVoiceConfig.muted ? 'Unmute' : 'Mute'}</button>
-        <button class="test-btn" data-test-drone="${droneVoiceConfig.id}">Test</button>
       </div>
     </h3>
-    <div class="control-group"><label>Synth Type</label><select data-drone-param="type">${droneTypeOptions}</select></div>
     <div class="control-group"><label>Octave</label><select data-drone-param="octave">${droneOctaveOptions}</select></div>
+    <div class="control-group"><label>Voices</label><input type="range" min="1" max="6" step="1" value="${droneVoiceConfig.voices}" data-drone-param="voices"></div>
+    <div class="control-group"><label>Detune Cents</label><input type="range" min="0" max="40" step="1" value="${droneVoiceConfig.detuneSpread}" data-drone-param="detuneSpread"></div>
     <div class="control-group"><label>Volume</label><input type="range" min="-30" max="6" step="1" value="${droneVoiceConfig.volume}" data-drone-param="volume"></div>
-    <div class="control-group" data-group="harmonicity"><label>Harmonic</label><input type="range" min="0.5" max="5" step="0.1" value="${droneVoiceConfig.harmonicity}" data-drone-param="harmonicity"></div>
-    <div class="control-group" data-group="resonance"><label>Resonance</label><input type="range" min="10" max="5000" step="10" value="${droneVoiceConfig.resonance}" data-drone-param="resonance"></div>
-    <div class="control-group" data-group="cutoff"><label>Cut-off</label><input type="range" min="200" max="8000" step="100" value="${droneVoiceConfig.cutoff}" data-drone-param="cutoff"></div>
-    <div class="control-group" data-group="attack"><label>Attack</label><input type="range" min="0.01" max="5" step="0.1" value="${droneVoiceConfig.attack}" data-drone-param="attack"></div>
-    <div class="control-group" data-group="decay"><label>Decay</label><input type="range" min="0.1" max="5" step="0.1" value="${droneVoiceConfig.decay}" data-drone-param="decay"></div>
-    <div class="control-group" data-group="sustain"><label>Sustain</label><input type="range" min="0" max="1" step="0.05" value="${droneVoiceConfig.sustain}" data-drone-param="sustain"></div>
-    <div class="control-group" data-group="release"><label>Release</label><input type="range" min="0.5" max="8" step="0.2" value="${droneVoiceConfig.release}" data-drone-param="release"></div>
+    <div class="control-group"><label>Cut-off</label><input type="range" min="200" max="5000" step="50" value="${droneVoiceConfig.cutoff}" data-drone-param="cutoff"></div>
   `;
   panelGrid.appendChild(droneCard);
-  updateCardVisibility(droneCard, droneVoiceConfig.type);
 
   LINES.forEach(line => {
     const card = document.createElement('div');
@@ -796,8 +828,7 @@ function randomizeVoices() {
   LINES.forEach(line => {
     line.type = SYNTH_TYPES[Math.floor(Math.random() * SYNTH_TYPES.length)];
   });
-  droneVoiceConfig.type = SYNTH_TYPES[Math.floor(Math.random() * SYNTH_TYPES.length)];
-  if (audioReady) initializeAllVoices();
+  if (audioReady) initializeAllSynths();
   buildControlPanel();
 }
 
@@ -805,7 +836,8 @@ function randomizeOctaves() {
   LINES.forEach(line => {
     line.octave = OCTAVES[Math.floor(Math.random() * OCTAVES.length)];
   });
-  droneVoiceConfig.octave = OCTAVES[Math.floor(Math.random() * 2)];
+  droneVoiceConfig.octave = OCTAVES[Math.floor(Math.random() * OCTAVES.length)];
+  updateContinuousDronePitches();
   buildControlPanel();
 }
 
@@ -813,7 +845,7 @@ function setGlobalScale(scaleName) {
   if (MUSICAL_SCALES[scaleName]) {
     currentGlobalScale = scaleName;
     updateGlobalScaleSelectOptions();
-    updateDroneNote();
+    updateContinuousDronePitches();
   }
 }
 
@@ -826,18 +858,18 @@ function randomizeGlobalScale() {
 let audioReady = false;
 document.getElementById('startBtn').addEventListener('click', async () => {
   await Tone.start();
-  initializeAllVoices();
+  initializeAllSynths();
+  createContinuousDroneRig();
 
   audioReady = true;
   document.getElementById('startBtn').disabled = true;
-  document.getElementById('status').textContent = 'Listening — ambient soundscape & live announcements active…';
+  document.getElementById('status').textContent = 'Listening — continuous drone bed & live data active…';
   
-  startEvolvingDrone();
   pollAllData();
   setInterval(pollAllData, 18000);
 });
 
-function initializeAllVoices() {
+function initializeAllSynths() {
   LINES.forEach(line => {
     if (line.node) line.node.dispose();
     if (line.filter) line.filter.dispose();
@@ -848,37 +880,19 @@ function initializeAllVoices() {
     line.filter = nodeSet.filter;
     line.volumeNode = nodeSet.volumeNode;
   });
-
-  if (droneVoiceConfig.node) droneVoiceConfig.node.dispose();
-  if (droneVoiceConfig.filter) droneVoiceConfig.filter.dispose();
-  if (droneVoiceConfig.volumeNode) droneVoiceConfig.volumeNode.dispose();
-
-  const droneNodeSet = createSynthInstance(droneVoiceConfig);
-  droneVoiceConfig.node = droneNodeSet.synth;
-  droneVoiceConfig.filter = droneNodeSet.filter;
-  droneVoiceConfig.volumeNode = droneNodeSet.volumeNode;
 }
 
-let activeDroneLoop = null;
-function updateDroneNote() {
-  if (!audioReady || droneVoiceConfig.muted || !droneVoiceConfig.node) return;
+function updateContinuousDronePitches() {
+  if (!audioReady || droneRig.oscillators.length === 0) return;
   const scale = MUSICAL_SCALES[currentGlobalScale] || MUSICAL_SCALES["Major Pentatonic"];
-  const rootNote = `${scale[0]}${droneVoiceConfig.octave}`;
-  try {
-    if (droneVoiceConfig.type === 'NoiseSynth') {
-      droneVoiceConfig.node.triggerAttackRelease(droneVoiceConfig.release);
-    } else {
-      droneVoiceConfig.node.triggerAttackRelease(rootNote, droneVoiceConfig.release);
-    }
-  } catch(e) {}
-}
-
-function startEvolvingDrone() {
-  if (activeDroneLoop) clearInterval(activeDroneLoop);
-  updateDroneNote();
-  activeDroneLoop = setInterval(() => {
-    updateDroneNote();
-  }, 9000);
+  const baseFreq = Tone.Frequency(`${scale[0]}${droneVoiceConfig.octave}`).toHz();
+  
+  const count = droneRig.oscillators.length;
+  droneRig.oscillators.forEach((osc, i) => {
+    const detuneAmount = (i - (count - 1) / 2) * droneVoiceConfig.detuneSpread;
+    osc.frequency.rampTo(baseFreq, 3.0);
+    osc.detune.value = detuneAmount;
+  });
 }
 
 function attachControlListeners() {
@@ -931,36 +945,24 @@ function attachControlListeners() {
     });
   }
 
-  // Drone Card Listeners
+  // Continuous Drone Card Listeners
   document.querySelectorAll('#card-network-drone input, #card-network-drone select').forEach(input => {
     input.addEventListener('input', (e) => {
       const param = e.target.getAttribute('data-drone-param');
       const val = e.target.type === 'select-one' ? (param === 'octave' ? parseInt(e.target.value) : e.target.value) : parseFloat(e.target.value);
       droneVoiceConfig[param] = val;
 
-      if (param === 'type') {
-        updateCardVisibility(document.getElementById(`card-${droneVoiceConfig.id}`), val);
-        if (audioReady) {
-          initializeAllVoices();
-          return;
-        }
+      if (['octave', 'voices', 'detuneSpread'].includes(param)) {
+        if (audioReady) createContinuousDroneRig();
+        return;
       }
 
-      if (!audioReady || !droneVoiceConfig.node) return;
+      if (!audioReady) return;
       try {
-        if (param === 'cutoff' && droneVoiceConfig.filter) {
-          droneVoiceConfig.filter.frequency.rampTo(val, 0.2);
-        } else if (param === 'resonance') {
-          if (droneVoiceConfig.node.resonance !== undefined) droneVoiceConfig.node.resonance.value = val;
-          else if (droneVoiceConfig.node.modulationIndex !== undefined) droneVoiceConfig.node.modulationIndex.value = val;
-          else if (droneVoiceConfig.node.dampening !== undefined) droneVoiceConfig.node.dampening = val;
-          else if (droneVoiceConfig.node.octaves !== undefined) droneVoiceConfig.node.octaves = val / 500;
-        } else if (param === 'volume' && droneVoiceConfig.volumeNode) {
-          droneVoiceConfig.volumeNode.volume.rampTo(droneVoiceConfig.muted ? -Infinity : val, 0.2);
-        } else if (param === 'harmonicity' && droneVoiceConfig.node.harmonicity) {
-          droneVoiceConfig.node.harmonicity.value = val;
-        } else if (['attack', 'decay', 'sustain', 'release'].includes(param)) {
-          if (droneVoiceConfig.node.envelope) droneVoiceConfig.node.envelope[param] = val;
+        if (param === 'cutoff' && droneRig.filter) {
+          droneRig.filter.frequency.rampTo(val, 0.2);
+        } else if (param === 'volume' && droneRig.volumeNode) {
+          droneRig.volumeNode.volume.rampTo(droneVoiceConfig.muted ? -Infinity : val, 0.2);
         }
       } catch(err) {}
     });
@@ -973,20 +975,9 @@ function attachControlListeners() {
       e.target.textContent = droneVoiceConfig.muted ? 'Unmute' : 'Mute';
       e.target.classList.toggle('active', droneVoiceConfig.muted);
       document.getElementById(`card-${droneVoiceConfig.id}`).classList.toggle('muted', droneVoiceConfig.muted);
-      if (audioReady && droneVoiceConfig.volumeNode) {
-        droneVoiceConfig.volumeNode.volume.rampTo(droneVoiceConfig.muted ? -Infinity : droneVoiceConfig.volume, 0.2);
+      if (audioReady && droneRig.volumeNode) {
+        droneRig.volumeNode.volume.rampTo(droneVoiceConfig.muted ? -Infinity : droneVoiceConfig.volume, 0.2);
       }
-    });
-  }
-
-  const droneTestBtn = document.querySelector('[data-test-drone]');
-  if (droneTestBtn) {
-    droneTestBtn.addEventListener('click', () => {
-      if (!audioReady || !droneVoiceConfig.node) {
-        alert('Please click "Start listening" first!');
-        return;
-      }
-      updateDroneNote();
     });
   }
 
@@ -1004,7 +995,7 @@ function attachControlListeners() {
       if (param === 'type') {
         updateCardVisibility(document.getElementById(`card-${line.id}`), val);
         if (audioReady) {
-          initializeAllVoices();
+          initializeAllSynths();
           return;
         }
       }
@@ -1015,27 +1006,18 @@ function attachControlListeners() {
         if (param === 'cutoff' && line.filter) {
           line.filter.frequency.rampTo(val, 0.2);
         } else if (param === 'resonance') {
-          if (line.node.resonance !== undefined) {
-            line.node.resonance.value = val;
-          } else if (line.node.modulationIndex !== undefined) {
-            line.node.modulationIndex.value = val;
-          } else if (line.node.dampening !== undefined) {
-            line.node.dampening = val;
-          } else if (line.node.octaves !== undefined) {
-            line.node.octaves = val / 500;
-          }
+          if (line.node.resonance !== undefined) line.node.resonance.value = val;
+          else if (line.node.modulationIndex !== undefined) line.node.modulationIndex.value = val;
+          else if (line.node.dampening !== undefined) line.node.dampening = val;
+          else if (line.node.octaves !== undefined) line.node.octaves = val / 500;
         } else if (param === 'volume' && line.volumeNode) {
           line.volumeNode.volume.rampTo(line.muted ? -Infinity : val, 0.2);
         } else if (param === 'harmonicity' && line.node.harmonicity) {
           line.node.harmonicity.value = val;
         } else if (['attack', 'decay', 'sustain', 'release'].includes(param)) {
-          if (line.node.envelope) {
-            line.node.envelope[param] = val;
-          }
+          if (line.node.envelope) line.node.envelope[param] = val;
         }
-      } catch(err) {
-        console.warn('Parameter update error:', err);
-      }
+      } catch(err) {}
     });
   });
 
@@ -1069,7 +1051,7 @@ function attachControlListeners() {
   });
 }
 
-// ---------- Live API Fetching (Arrivals, Status & Disruption Advisories) ----------
+// ---------- Live API Fetching & Continuous Pitch Modulation ----------
 function hashToIndex(str, mod){
   let h = 0;
   for (let i=0; i<str.length; i++){ h = (h*31 + str.charCodeAt(i)) >>> 0; }
@@ -1087,17 +1069,11 @@ async function pollAllData() {
       const disData = await statusRes.json();
       const extractedAdvisories = [];
       disData.forEach(d => {
-        if (d.description) {
-          extractedAdvisories.push(d.description);
-        }
+        if (d.description) extractedAdvisories.push(d.description);
       });
-      if (extractedAdvisories.length > 0) {
-        liveDisruptionsPool = extractedAdvisories;
-      }
+      if (extractedAdvisories.length > 0) liveDisruptionsPool = extractedAdvisories;
     }
-  } catch(e) {
-    console.warn('Disruption fetch warning:', e);
-  }
+  } catch(e) {}
 
   try {
     const statusRes = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Status`);
@@ -1119,13 +1095,11 @@ async function pollAllData() {
         }
       });
     }
-  } catch(e) {
-    console.warn('Status fetch warning:', e);
-  }
+  } catch(e) {}
 
   try{
     const res = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Arrivals`);
-    if (!res.ok) throw new Error('API network failure');
+    if (!res.ok) throw new Error('API failure');
     const data = await res.json();
     
     latestArrivalsPool = data.filter(p => p.timeToStation != null && p.timeToStation > 5 && p.timeToStation < 300);
@@ -1133,24 +1107,36 @@ async function pollAllData() {
     const networkDensityCount = data.length;
     const normalizedDensity = Math.min(1.0, networkDensityCount / 350);
 
-    if (audioReady) {
-      ambientReverb.wet.value = 0.35 + (normalizedDensity * 0.45);
-      
-      if (droneVoiceConfig.filter && !droneVoiceConfig.muted) {
-        const dynamicCutoff = droneVoiceConfig.cutoff + (normalizedDensity * 1200);
-        droneVoiceConfig.filter.frequency.rampTo(dynamicCutoff, 3.0);
+    // DRIVE CONTINUOUS DRONE PITCH & REVERB WETNESS USING ARRIVAL DENSITY
+    if (audioReady && droneRig.oscillators.length > 0) {
+      ambientReverb.wet.value = 0.35 + (normalizedDensity * 0.5);
+
+      const scale = MUSICAL_SCALES[currentGlobalScale] || MUSICAL_SCALES["Major Pentatonic"];
+      // Map density to scale degree index for continuous pitch gliding
+      const noteIndex = Math.floor(normalizedDensity * (scale.length - 1));
+      const targetNote = `${scale[noteIndex]}${droneVoiceConfig.octave}`;
+      const targetFreq = Tone.Frequency(targetNote).toHz();
+
+      const count = droneRig.oscillators.length;
+      droneRig.oscillators.forEach((osc, i) => {
+        const detuneAmount = (i - (count - 1) / 2) * droneVoiceConfig.detuneSpread;
+        // Smoothly glide pitch (porta/ramp) based on live traffic data
+        osc.frequency.rampTo(targetFreq, 4.0);
+        osc.detune.value = detuneAmount;
+      });
+
+      if (droneRig.filter && !droneVoiceConfig.muted) {
+        const dynamicCutoff = droneVoiceConfig.cutoff + (normalizedDensity * 1500);
+        droneRig.filter.frequency.rampTo(dynamicCutoff, 3.0);
       }
     }
 
     document.getElementById('status').textContent =
-      `Listening — ${networkDensityCount} active trains tracked, last updated ${new Date().toLocaleTimeString()}`;
+      `Listening — ${networkDensityCount} active trains tracked (Drone Bed Active), last updated ${new Date().toLocaleTimeString()}`;
 
     const now = Date.now();
-
     for (const [id, record] of activeTrainTracker.entries()) {
-      if (now - record.lastSeen > 180000) {
-        activeTrainTracker.delete(id);
-      }
+      if (now - record.lastSeen > 180000) activeTrainTracker.delete(id);
     }
 
     data.forEach(p => {
@@ -1161,16 +1147,8 @@ async function pollAllData() {
       if (!line) return;
 
       let trainRecord = activeTrainTracker.get(vehicleId);
-
       if (!trainRecord) {
-        trainRecord = {
-          id: vehicleId,
-          lineId: p.lineId,
-          totalTime: p.timeToStation,
-          startTime: now,
-          lastSeen: now,
-          soundFired: false
-        };
+        trainRecord = { id: vehicleId, lineId: p.lineId, totalTime: p.timeToStation, startTime: now, lastSeen: now, soundFired: false };
         activeTrainTracker.set(vehicleId, trainRecord);
         animateTrain(line, p.timeToStation, trainRecord);
       } else {
@@ -1180,7 +1158,6 @@ async function pollAllData() {
 
   } catch(err) {
     document.getElementById('status').textContent = 'Could not reach TfL API — retrying soon.';
-    console.error(err);
   }
 }
 
@@ -1232,7 +1209,7 @@ function playNote(line, prediction, intensity = 1.0){
     } else {
       line.node.triggerAttackRelease(note, (line.release || 2.0) * intensity);
     }
-  }catch(e){ console.warn('note failed', e); }
+  }catch(e){}
 
   const out = document.getElementById(`note-${line.id}`);
   if (out) {
