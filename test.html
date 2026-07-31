@@ -6,24 +6,37 @@
 <title>TfL Jazz: Every Train, Every Delay, Every Cancellation, a Note</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
 <style>
-  :root{
-    --bg:#0b0b0c;
-    --card-bg:#141416;
-    --ink:#f2f0eb;
-    --dim:#8a8a8e;
-    --border:#26262a;
-    --line-bakerloo:#B36305;
-    --line-central:#E32017;
-    --line-circle:#FFD300;
-    --line-district:#00782A;
-    --line-hammersmith:#F3A9BB;
-    --line-jubilee:#8b9195;
-    --line-metropolitan:#9B0056;
-    --line-northern:#6E6E6E;
-    --line-piccadilly:#003688;
-    --line-victoria:#0098D4;
-    --line-waterloo:#95CDBA;
+  :root {
+    --bg: #0b0b0c;
+    --card-bg: #141416;
+    --ink: #f2f0eb;
+    --dim: #8a8a8e;
+    --border: #26262a;
+    --rail-bg: #1e1e20;
+    --station-bg: #0b0b0c;
+    --line-bakerloo: #B36305;
+    --line-central: #E32017;
+    --line-circle: #FFD300;
+    --line-district: #00782A;
+    --line-hammersmith: #F3A9BB;
+    --line-jubilee: #8b9195;
+    --line-metropolitan: #9B0056;
+    --line-northern: #6E6E6E;
+    --line-piccadilly: #003688;
+    --line-victoria: #0098D4;
+    --line-waterloo: #95CDBA;
   }
+
+  [data-theme="light"] {
+    --bg: #f4f4f6;
+    --card-bg: #ffffff;
+    --ink: #111113;
+    --dim: #5c5c62;
+    --border: #d0d0d6;
+    --rail-bg: #d0d0d6;
+    --station-bg: #f4f4f6;
+  }
+
   *{box-sizing:border-box;}
   body{
     margin:0;
@@ -31,11 +44,46 @@
     color:var(--ink);
     font-family:"P22 Underground", "Johnston100", Arial, Helvetica, sans-serif;
     min-height:100vh;
+    transition: background 0.3s ease, color 0.3s ease;
   }
   header{
     padding:32px 24px 16px;
     border-bottom:1px solid var(--border);
+    position: relative;
   }
+  .theme-switcher {
+    position: absolute;
+    top: 32px;
+    right: 24px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  .theme-btn {
+    background: var(--card-bg);
+    color: var(--ink);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 16px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+  }
+  .theme-btn.active {
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+  }
+  .tfl-icon {
+    width: 14px;
+    height: 14px;
+    display: inline-block;
+  }
+
   h1{
     font-weight:700;
     letter-spacing:-0.5px;
@@ -147,7 +195,7 @@
   }
   .control-group label{color:var(--dim); width:80px;}
   .control-group input, .control-group select{
-    background:#1c1c1e;
+    background:var(--card-bg);
     color:var(--ink);
     border:1px solid var(--border);
     padding:2px 4px;
@@ -168,7 +216,7 @@
     grid-template-columns:170px 1fr 60px;
     align-items:center;
     height:42px;
-    border-bottom:1px solid #1c1c1e;
+    border-bottom:1px solid var(--border);
     position:relative;
   }
   .track-label{
@@ -213,7 +261,7 @@
     position: absolute;
     top: 50%;
     width: 6px; height: 6px;
-    background: var(--bg);
+    background: var(--station-bg);
     border: 2px solid currentColor;
     border-radius: 50%;
     transform: translate(-50%, -50%);
@@ -228,7 +276,7 @@
     top:50%;
     left:0;
     width:10px;height:10px;
-    background:#ffffff;
+    background:var(--card-bg);
     border:2px solid currentColor;
     border-radius:50%;
     transform:translate(-50%,-50%);
@@ -255,6 +303,16 @@
 <body>
 
 <header>
+  <div class="theme-switcher">
+    <button class="theme-btn" id="dayTubeBtn" onclick="setTheme('light')">
+      <svg class="tfl-icon" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="12" cy="12" r="4"/></svg>
+      Day Tube
+    </button>
+    <button class="theme-btn active" id="nightTubeBtn" onclick="setTheme('dark')">
+      <svg class="tfl-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.38 5.38 0 0 1-4.24 2.16A5.38 5.38 0 0 1 11.3 7.56 5.38 5.38 0 0 1 13.46 3.3 9 9 0 0 0 12 3z"/></svg>
+      Night Tube
+    </button>
+  </div>
   <h1><span class="roundel"></span>TfL Jazz: Every Train, Every Delay, Every Cancellation, a Note.</h1>
   <p class="sub">Live London Underground arrivals from the TfL Unified API, sonified in real time. Customize synth types and parameters dynamically below.</p>
   <div class="actions">
@@ -278,9 +336,20 @@
 </footer>
 
 <script>
+function setTheme(mode) {
+  if (mode === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light');
+    document.getElementById('dayTubeBtn').classList.add('active');
+    document.getElementById('nightTubeBtn').classList.remove('active');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    document.getElementById('nightTubeBtn').classList.add('active');
+    document.getElementById('dayTubeBtn').classList.remove('active');
+  }
+}
+
 const SCALE = ['F1', 'Bb1', 'F2', 'Bb2', 'C3', 'D3', 'F3', 'Bb3', 'D4', 'F4', 'Bb4'];
 
-// Extended synth options including MonoSynth, NoiseSynth, and PolySynth
 const SYNTH_TYPES = ['FMSynth', 'AMSynth', 'MetalSynth', 'PluckSynth', 'MembraneSynth', 'DuoSynth', 'Synth', 'MonoSynth', 'NoiseSynth', 'PolySynth'];
 
 const LINES = [
@@ -348,7 +417,6 @@ function createSynthInstance(cfg) {
     s.connect(filter);
     filter.connect(volNode);
   } else {
-    // NoiseSynth doesn't take pitch frequencies, bypass standard filter routing for safety
     s.connect(volNode);
   }
   
@@ -607,7 +675,7 @@ function playNote(line, prediction){
   const out = document.getElementById(`note-${line.id}`);
   if (out) {
     out.textContent = line.type === 'NoiseSynth' ? 'NOISE' : note;
-    out.style.color = '#fff';
+    out.style.color = 'var(--ink)';
     setTimeout(()=>{ out.style.color = ''; }, 400);
   }
 }
