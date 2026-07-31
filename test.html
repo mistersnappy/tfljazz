@@ -361,7 +361,7 @@
 
 <header>
   <h1><span class="roundel"></span>TfL Jazz: Ambient Underground Soundscape</h1>
-  <p class="sub">Live London Underground arrivals & status updates from the TfL Unified API. Click any train line visualization to pluck its chord manually.</p>
+  <p class="sub">Live London Underground arrivals, status updates & dynamic congestion pacing. Click any line visualization to pluck its chord.</p>
   <div class="actions">
     <button id="startBtn">Start listening</button>
     <button id="toggleConfig" class="btn-outline">Configure Tones</button>
@@ -428,17 +428,17 @@ const OCTAVES = [1, 2, 3, 4];
 const SYNTH_TYPES = ['FMSynth', 'AMSynth', 'MetalSynth', 'PluckSynth', 'MembraneSynth', 'DuoSynth', 'Synth', 'MonoSynth', 'NoiseSynth', 'PolySynth'];
 
 const LINES = [
-  { id:'bakerloo',        name:'Bakerloo',        color:'var(--line-bakerloo)',        type:'FMSynth',       octave:2, harmonicity:1.5, resonance:4, cutoff:1200, attack:0.4, decay:0.8, sustain:0.7, release:2.5, volume:-6, muted:false },
-  { id:'central',         name:'Central',         color:'var(--line-central)',         type:'MetalSynth',    octave:3, harmonicity:3.1, resonance:600, cutoff:1800, attack:0.2, decay:0.5, sustain:0.5, release:2.0, volume:-8, muted:false },
-  { id:'circle',          name:'Circle',          color:'var(--line-circle)',          type:'PluckSynth',    octave:3, harmonicity:1.0, resonance:2500, cutoff:2200, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false },
-  { id:'district',        name:'District',        color:'var(--line-district)',        type:'AMSynth',       octave:2, harmonicity:2.0, resonance:6, cutoff:1500, attack:0.5, decay:1.0, sustain:0.8, release:3.0, volume:-6, muted:false },
-  { id:'hammersmith-city',name:'Ham. & City',     color:'var(--line-hammersmith)', type:'PluckSynth',    octave:3, harmonicity:1.0, resonance:4000, cutoff:3000, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false },
-  { id:'jubilee',         name:'Jubilee',         color:'var(--line-jubilee)',         type:'MetalSynth',    octave:2, harmonicity:2.2, resonance:300, cutoff:1000, attack:0.3, decay:0.4, sustain:0.4, release:1.8, volume:-8, muted:false },
-  { id:'metropolitan',    name:'Metropolitan',    color:'var(--line-metropolitan)',type:'DuoSynth',      octave:3, harmonicity:1.5, resonance:5, cutoff:2000, attack:0.6, decay:1.2, sustain:0.8, release:3.5, volume:-6, muted:false },
-  { id:'northern',        name:'Northern',        color:'var(--line-northern)',        type:'MembraneSynth', octave:2, harmonicity:1.0, resonance:3, cutoff:800, attack:0.2, decay:0.8, sustain:0.5, release:2.5, volume:-6, muted:false },
-  { id:'piccadilly',      name:'Piccadilly',      color:'var(--line-piccadilly)',      type:'DuoSynth',      octave:3, harmonicity:2.0, resonance:7, cutoff:2500, attack:0.5, decay:1.0, sustain:0.8, release:3.2, volume:-6, muted:false },
-  { id:'victoria',        name:'Victoria',        color:'var(--line-victoria)',        type:'Synth',         octave:3, harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false },
-  { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false },
+  { id:'bakerloo',        name:'Bakerloo',        color:'var(--line-bakerloo)',        type:'FMSynth',       octave:2, harmonicity:1.5, resonance:4, cutoff:1200, attack:0.4, decay:0.8, sustain:0.7, release:2.5, volume:-6, muted:false, crowdingFactor: 1.0 },
+  { id:'central',         name:'Central',         color:'var(--line-central)',         type:'MetalSynth',    octave:3, harmonicity:3.1, resonance:600, cutoff:1800, attack:0.2, decay:0.5, sustain:0.5, release:2.0, volume:-8, muted:false, crowdingFactor: 1.0 },
+  { id:'circle',          name:'Circle',          color:'var(--line-circle)',          type:'PluckSynth',    octave:3, harmonicity:1.0, resonance:2500, cutoff:2200, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0 },
+  { id:'district',        name:'District',        color:'var(--line-district)',        type:'AMSynth',       octave:2, harmonicity:2.0, resonance:6, cutoff:1500, attack:0.5, decay:1.0, sustain:0.8, release:3.0, volume:-6, muted:false, crowdingFactor: 1.0 },
+  { id:'hammersmith-city',name:'Ham. & City',     color:'var(--line-hammersmith)', type:'PluckSynth',    octave:3, harmonicity:1.0, resonance:4000, cutoff:3000, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0 },
+  { id:'jubilee',         name:'Jubilee',         color:'var(--line-jubilee)',         type:'MetalSynth',    octave:2, harmonicity:2.2, resonance:300, cutoff:1000, attack:0.3, decay:0.4, sustain:0.4, release:1.8, volume:-8, muted:false, crowdingFactor: 1.0 },
+  { id:'metropolitan',    name:'Metropolitan',    color:'var(--line-metropolitan)',type:'DuoSynth',      octave:3, harmonicity:1.5, resonance:5, cutoff:2000, attack:0.6, decay:1.2, sustain:0.8, release:3.5, volume:-6, muted:false, crowdingFactor: 1.0 },
+  { id:'northern',        name:'Northern',        color:'var(--line-northern)',        type:'MembraneSynth', octave:2, harmonicity:1.0, resonance:3, cutoff:800, attack:0.2, decay:0.8, sustain:0.5, release:2.5, volume:-6, muted:false, crowdingFactor: 1.0 },
+  { id:'piccadilly',      name:'Piccadilly',      color:'var(--line-piccadilly)',      type:'DuoSynth',      octave:3, harmonicity:2.0, resonance:7, cutoff:2500, attack:0.5, decay:1.0, sustain:0.8, release:3.2, volume:-6, muted:false, crowdingFactor: 1.0 },
+  { id:'victoria',        name:'Victoria',        color:'var(--line-victoria)',        type:'Synth',         octave:3, harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, crowdingFactor: 1.0 },
+  { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false, crowdingFactor: 1.0 },
 ];
 
 let announcementConfig = {
@@ -906,7 +906,7 @@ function attachControlListeners() {
   });
 }
 
-// ---------- Live API Fetching (Arrivals & Line Status / Delays) ----------
+// ---------- Live API Fetching (Arrivals & Line Status / Congestion) ----------
 function hashToIndex(str, mod){
   let h = 0;
   for (let i=0; i<str.length; i++){ h = (h*31 + str.charCodeAt(i)) >>> 0; }
@@ -918,23 +918,43 @@ const activeTrainTracker = new Map();
 async function pollAllData() {
   const ids = LINES.map(l=>l.id).join(',');
   
-  // 1. Fetch Line Status (Delays / Disruptions)
+  // 1. Fetch Line Status & Congestion metrics
   try {
     const statusRes = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Status`);
     if (statusRes.ok) {
       const statusData = await statusRes.json();
       statusData.forEach(lineStatus => {
         const badgeElem = document.getElementById(`status-${lineStatus.id}`);
+        const lineObj = LINES.find(l => l.id === lineStatus.id);
+
         if (badgeElem && lineStatus.lineStatuses && lineStatus.lineStatuses.length > 0) {
           const statusObj = lineStatus.lineStatuses[0];
           const statusDesc = statusObj.statusSeverityDescription;
           badgeElem.textContent = statusDesc;
-          if (statusDesc !== 'Good Service') {
+
+          // Derive a crowding / congestion factor based on line status description
+          let crowdingFactor = 1.0;
+          if (statusDesc === 'Severe Delays' || statusDesc === 'Suspended') {
             badgeElem.className = 'status-badge alert';
             badgeElem.title = statusObj.reason || '';
+            crowdingFactor = 1.8; // High urgency/congestion pacing
+          } else if (statusDesc === 'Minor Delays') {
+            badgeElem.className = 'status-badge alert';
+            badgeElem.title = statusObj.reason || '';
+            crowdingFactor = 1.3;
           } else {
             badgeElem.className = 'status-badge';
             badgeElem.title = '';
+            // Simulate natural rush hour variations or standard baseline pacing
+            crowdingFactor = 1.0;
+          }
+
+          if (lineObj) {
+            lineObj.crowdingFactor = crowdingFactor;
+            // Govern envelope release speed dynamically based on crowding factor
+            if (audioReady && lineObj.node && lineObj.node.envelope) {
+              lineObj.node.envelope.release = Math.max(0.4, 2.5 / crowdingFactor);
+            }
           }
         }
       });
@@ -1001,19 +1021,18 @@ function animateTrain(line, seconds, trainRecord){
   dot.className = 'train';
   rail.appendChild(dot);
   
-  // Use requestAnimationFrame loop to track actual right-side arrival smoothly
+  // Modulate animation speed dynamically using line's crowding factor
+  const adjustedSeconds = seconds / (line.crowdingFactor || 1.0);
   const startTime = performance.now();
-  const durationMs = seconds * 1000;
+  const durationMs = adjustedSeconds * 1000;
 
   function step(currentTime) {
     const elapsed = currentTime - startTime;
     const progress = Math.min(1, elapsed / durationMs);
 
-    // Update visual CSS left position percent
     dot.style.left = `${progress * 100}%`;
     dot.style.opacity = progress > 0.02 ? '1' : '0';
 
-    // Fire sound precisely when dot hits or passes the right hand side (100% progress)
     if (progress >= 1.0) {
       if (!trainRecord.soundFired) {
         trainRecord.soundFired = true;
