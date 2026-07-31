@@ -145,7 +145,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    transition: opacity 0.3s ease;
+    transition: all 0.3s ease;
   }
   .announcement-banner.hidden {
     display: none;
@@ -410,7 +410,7 @@
   </div>
   <div id="status">Audio is off. Click start (browsers require a user gesture before playing sound).</div>
   
-  <div id="announcementBanner" class="announcement-banner hidden">
+  <div id="announcementBanner" class="announcement-banner hidden" style="border-left-color: var(--ink);">
     <div class="announcement-icon">Announcement</div>
     <div id="announcementText" class="announcement-text"></div>
   </div>
@@ -539,11 +539,17 @@ function getSelectedVoice() {
   return targetVoices[0] || pool[0] || null;
 }
 
-function displayAnnouncementBanner(text) {
+function displayAnnouncementBanner(text, lineObj) {
   const banner = document.getElementById('announcementBanner');
   const bannerText = document.getElementById('announcementText');
   if (!banner || !bannerText) return;
+
   bannerText.textContent = text;
+  
+  // Set left border color based on source line, or default ink if general announcement
+  const borderColor = lineObj ? getResolvedColor(lineObj.color) : 'var(--ink)';
+  banner.style.borderLeftColor = borderColor;
+
   banner.classList.remove('hidden');
 }
 
@@ -562,9 +568,11 @@ function triggerSpokenAnnouncement() {
     isAnnouncementPlaying = true;
     
     let text;
+    let lineObj = null;
+
     if (latestArrivalsPool.length > 0 && Math.random() < 0.6) {
       const livePrediction = latestArrivalsPool[Math.floor(Math.random() * latestArrivalsPool.length)];
-      const lineObj = LINES.find(l => l.id === livePrediction.lineId);
+      lineObj = LINES.find(l => l.id === livePrediction.lineId);
       const lineName = lineObj ? lineObj.name : 'Underground';
       const destination = livePrediction.destinationName || livePrediction.towards || 'Destination unknown';
       const station = livePrediction.stationName || 'this station';
@@ -581,7 +589,7 @@ function triggerSpokenAnnouncement() {
       synthAnnouncementChime.triggerAttackRelease("C4", "2n");
     } catch(e) {}
 
-    displayAnnouncementBanner(text);
+    displayAnnouncementBanner(text, lineObj);
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.rate = 0.90; 
@@ -847,11 +855,13 @@ function attachControlListeners() {
         return;
       }
       let activeLineId = announcementConfig.targetLine;
+      let targetLineObj = null;
       if (activeLineId === 'all') {
-        const randomLineObj = LINES[Math.floor(Math.random() * LINES.length)];
-        activeLineId = randomLineObj.id;
+        targetLineObj = LINES[Math.floor(Math.random() * LINES.length)];
+        activeLineId = targetLineObj.id;
+      } else {
+        targetLineObj = LINES.find(l => l.id === activeLineId) || LINES[0];
       }
-      const targetLineObj = LINES.find(l => l.id === activeLineId) || LINES[0];
       const text = `This is a ${targetLineObj.name} line service. Please mind the gap.`;
       
       try {
@@ -860,7 +870,7 @@ function attachControlListeners() {
         synthAnnouncementChime.triggerAttackRelease("C4", "2n");
       } catch(e) {}
 
-      displayAnnouncementBanner(text);
+      displayAnnouncementBanner(text, targetLineObj);
 
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 0.90;
@@ -1014,7 +1024,6 @@ async function pollAllData() {
     
     latestArrivalsPool = data.filter(p => p.timeToStation != null && p.timeToStation > 5 && p.timeToStation < 300);
 
-    // Count unique physical trains currently active per line using vehicleId or id
     const lineTrainSets = {};
     LINES.forEach(l => { lineTrainSets[l.id] = new Set(); });
 
