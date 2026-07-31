@@ -91,7 +91,7 @@
     margin-top:10px;
   }
 
-  /* Control Panel Modal / Drawer */
+  /* Control Panel Drawer */
   #synthPanel{
     display:none;
     background:var(--card-bg);
@@ -304,7 +304,7 @@ function createSynthInstance(cfg) {
   const env = { attack: cfg.attack, decay: cfg.decay, sustain: cfg.sustain, release: cfg.release };
   switch(cfg.type) {
     case 'FMSynth':
-      s = new Tone.FMSynth({ harmonicity: cfg.harmonicity, modulationIndex: cfg.resonance * 100, envelope: env });
+      s = new Tone.FMSynth({ harmonicity: cfg.harmonicity, modulationIndex: cfg.resonance, envelope: env });
       break;
     case 'AMSynth':
       s = new Tone.AMSynth({ harmonicity: cfg.harmonicity, envelope: env });
@@ -313,7 +313,7 @@ function createSynthInstance(cfg) {
       s = new Tone.MetalSynth({ harmonicity: cfg.harmonicity, resonance: cfg.resonance, envelope: { attack: cfg.attack, decay: cfg.decay, release: cfg.release } });
       break;
     case 'PluckSynth':
-      s = new Tone.PluckSynth({ dampening: cfg.resonance * 10, attackNoise: cfg.attack });
+      s = new Tone.PluckSynth({ dampening: cfg.resonance, attackNoise: cfg.attack });
       break;
     case 'MembraneSynth':
       s = new Tone.MembraneSynth({ octaves: cfg.resonance, envelope: env });
@@ -329,7 +329,7 @@ function createSynthInstance(cfg) {
   const filter = new Tone.Filter({
     frequency: cfg.cutoff,
     type: "lowpass",
-    Q: 2
+    Q: 1
   });
   
   const volNode = new Tone.Volume(cfg.muted ? -Infinity : cfg.volume);
@@ -375,7 +375,7 @@ function buildControlPanel() {
       <div class="control-group"><label>Synth Type</label><select data-line="${line.id}" data-param="type">${typeOptions}</select></div>
       <div class="control-group"><label>Volume</label><input type="range" min="-30" max="6" step="1" value="${line.volume}" data-line="${line.id}" data-param="volume"></div>
       <div class="control-group"><label>Harmonic</label><input type="range" min="0.5" max="5" step="0.1" value="${line.harmonicity}" data-line="${line.id}" data-param="harmonicity"></div>
-      <div class="control-group"><label>Resonance</label><input type="range" min="1" max="50" step="1" value="${line.resonance}" data-line="${line.id}" data-param="resonance"></div>
+      <div class="control-group"><label>Resonance</label><input type="range" min="10" max="5000" step="10" value="${line.resonance}" data-line="${line.id}" data-param="resonance"></div>
       <div class="control-group"><label>Cut-off</label><input type="range" min="200" max="12000" step="100" value="${line.cutoff}" data-line="${line.id}" data-param="cutoff"></div>
       <div class="control-group"><label>Attack</label><input type="range" min="0.001" max="1" step="0.01" value="${line.attack}" data-line="${line.id}" data-param="attack"></div>
       <div class="control-group"><label>Decay</label><input type="range" min="0.05" max="2" step="0.05" value="${line.decay}" data-line="${line.id}" data-param="decay"></div>
@@ -461,21 +461,23 @@ function attachControlListeners() {
         if (param === 'cutoff' && line.filter) {
           line.filter.frequency.rampTo(val, 0.1);
         } else if (param === 'resonance') {
-          if (line.type === 'MetalSynth') {
-            line.node.resonance = val * 100;
-          } else if (line.type === 'PluckSynth') {
-            line.node.dampening = val * 100;
-          } else if (line.type === 'FMSynth') {
-            line.node.modulationIndex.value = val * 10;
-          } else if (line.filter) {
-            line.filter.Q.value = val / 2;
+          if (line.node.resonance !== undefined) {
+            line.node.resonance.value = val;
+          } else if (line.node.modulationIndex !== undefined) {
+            line.node.modulationIndex.value = val;
+          } else if (line.node.dampening !== undefined) {
+            line.node.dampening = val;
+          } else if (line.node.octaves !== undefined) {
+            line.node.octaves = val / 500;
           }
         } else if (param === 'volume' && line.volumeNode) {
           line.volumeNode.volume.rampTo(line.muted ? -Infinity : val, 0.1);
         } else if (param === 'harmonicity' && line.node.harmonicity) {
           line.node.harmonicity.value = val;
         } else if (['attack', 'decay', 'sustain', 'release'].includes(param)) {
-          if (line.node.envelope) line.node.envelope[param] = val;
+          if (line.node.envelope) {
+            line.node.envelope[param] = val;
+          }
         }
       } catch(err) {
         console.warn('Parameter update error:', err);
