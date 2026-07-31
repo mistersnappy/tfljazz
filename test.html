@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TfL Jazz: Ambient Underground Soundscape & Announcements</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
 <style>
   :root {
     --bg: #070709;
@@ -182,30 +180,6 @@
     font-family: inherit;
   }
 
-  .engine-toggle-group {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    background: var(--bg);
-    padding: 4px;
-    border-radius: 14px;
-    border: 1px solid var(--border);
-  }
-  .engine-btn {
-    background: transparent;
-    color: var(--dim);
-    border: none;
-    font-size: 11px;
-    padding: 6px 12px;
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: 700;
-  }
-  .engine-btn.active {
-    background: var(--ink);
-    color: var(--bg);
-  }
-
   .panel-grid{
     display:grid;
     grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));
@@ -249,6 +223,7 @@
     justify-content:space-between;
     align-items:center;
   }
+  .control-group.hidden { display: none !important; }
   .control-group label{color:var(--dim); width:80px;}
   .control-group input, .control-group select{
     background:var(--card-bg);
@@ -388,7 +363,7 @@
 
 <header>
   <h1><span class="roundel"></span>TfL Jazz: Ambient Underground Soundscape</h1>
-  <p class="sub">Live London Underground arrivals, status updates & dynamic audio synthesis. Click any line visualization to pluck its chord.</p>
+  <p class="sub">Live London Underground arrivals, status updates & dynamic arrival density drone. Click any line visualization to pluck its chord.</p>
   <div class="actions">
     <button id="startBtn">Start listening</button>
     <button id="toggleConfig" class="btn-outline">Configure Tones</button>
@@ -409,10 +384,6 @@
   <div class="panel-header-actions">
     <h3 style="margin:0; font-size:14px; text-transform:uppercase;">Ambient Tone & Synth Modifiers</h3>
     <div class="random-btn-group">
-      <div class="engine-toggle-group">
-        <button class="engine-btn active" id="engineTone" onclick="setAudioEngine('tone')">Tone.js</button>
-        <button class="engine-btn" id="engineP5" onclick="setAudioEngine('p5')">p5.sound</button>
-      </div>
       <select id="globalScaleSelect" class="global-scale-select" onchange="setGlobalScale(this.value)"></select>
       <button class="rand-btn" onclick="randomizeVoices()">🎲 Random Voices</button>
       <button class="rand-btn" onclick="randomizeOctaves()">🎲 Random Octaves</button>
@@ -456,23 +427,20 @@ const SCALE_NAMES = Object.keys(MUSICAL_SCALES);
 let currentGlobalScale = "Major Pentatonic";
 
 const OCTAVES = [1, 2, 3, 4];
-const TONE_SYNTH_TYPES = ['FMSynth', 'AMSynth', 'MetalSynth', 'PluckSynth', 'MembraneSynth', 'DuoSynth', 'Synth', 'MonoSynth', 'NoiseSynth', 'PolySynth'];
-const P5_WAVE_TYPES = ['sine', 'triangle', 'sawtooth', 'square'];
-
-let currentEngine = 'tone'; // 'tone' or 'p5'
+const SYNTH_TYPES = ['FMSynth', 'AMSynth', 'MetalSynth', 'PluckSynth', 'MembraneSynth', 'DuoSynth', 'Synth', 'MonoSynth', 'NoiseSynth', 'PolySynth'];
 
 const LINES = [
-  { id:'bakerloo',        name:'Bakerloo',        color:'var(--line-bakerloo)',        type:'FMSynth',       octave:2, harmonicity:1.5, resonance:4, cutoff:1200, attack:0.4, decay:0.8, sustain:0.7, release:2.5, volume:-6, muted:false, crowdingFactor: 1.0 },
-  { id:'central',         name:'Central',         color:'var(--line-central)',         type:'MetalSynth',    octave:3, harmonicity:3.1, resonance:600, cutoff:1800, attack:0.2, decay:0.5, sustain:0.5, release:2.0, volume:-8, muted:false, crowdingFactor: 1.0 },
-  { id:'circle',          name:'Circle',          color:'var(--line-circle)',          type:'PluckSynth',    octave:3, harmonicity:1.0, resonance:2500, cutoff:2200, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0 },
-  { id:'district',        name:'District',        color:'var(--line-district)',        type:'AMSynth',       octave:2, harmonicity:2.0, resonance:6, cutoff:1500, attack:0.5, decay:1.0, sustain:0.8, release:3.0, volume:-6, muted:false, crowdingFactor: 1.0 },
-  { id:'hammersmith-city',name:'Ham. & City',     color:'var(--line-hammersmith)', type:'PluckSynth',    octave:3, harmonicity:1.0, resonance:4000, cutoff:3000, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0 },
-  { id:'jubilee',         name:'Jubilee',         color:'var(--line-jubilee)',         type:'MetalSynth',    octave:2, harmonicity:2.2, resonance:300, cutoff:1000, attack:0.3, decay:0.4, sustain:0.4, release:1.8, volume:-8, muted:false, crowdingFactor: 1.0 },
-  { id:'metropolitan',    name:'Metropolitan',    color:'var(--line-metropolitan)',type:'DuoSynth',      octave:3, harmonicity:1.5, resonance:5, cutoff:2000, attack:0.6, decay:1.2, sustain:0.8, release:3.5, volume:-6, muted:false, crowdingFactor: 1.0 },
-  { id:'northern',        name:'Northern',        color:'var(--line-northern)',        type:'MembraneSynth', octave:2, harmonicity:1.0, resonance:3, cutoff:800, attack:0.2, decay:0.8, sustain:0.5, release:2.5, volume:-6, muted:false, crowdingFactor: 1.0 },
-  { id:'piccadilly',      name:'Piccadilly',      color:'var(--line-piccadilly)',      type:'DuoSynth',      octave:3, harmonicity:2.0, resonance:7, cutoff:2500, attack:0.5, decay:1.0, sustain:0.8, release:3.2, volume:-6, muted:false, crowdingFactor: 1.0 },
-  { id:'victoria',        name:'Victoria',        color:'var(--line-victoria)',        type:'Synth',         octave:3, harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, crowdingFactor: 1.0 },
-  { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false, crowdingFactor: 1.0 },
+  { id:'bakerloo',        name:'Bakerloo',        color:'var(--line-bakerloo)',        type:'FMSynth',       octave:2, harmonicity:1.5, resonance:4, cutoff:1200, attack:0.4, decay:0.8, sustain:0.7, release:2.5, volume:-6, muted:false },
+  { id:'central',         name:'Central',         color:'var(--line-central)',         type:'MetalSynth',    octave:3, harmonicity:3.1, resonance:600, cutoff:1800, attack:0.2, decay:0.5, sustain:0.5, release:2.0, volume:-8, muted:false },
+  { id:'circle',          name:'Circle',          color:'var(--line-circle)',          type:'PluckSynth',    octave:3, harmonicity:1.0, resonance:2500, cutoff:2200, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false },
+  { id:'district',        name:'District',        color:'var(--line-district)',        type:'AMSynth',       octave:2, harmonicity:2.0, resonance:6, cutoff:1500, attack:0.5, decay:1.0, sustain:0.8, release:3.0, volume:-6, muted:false },
+  { id:'hammersmith-city',name:'Ham. & City',     color:'var(--line-hammersmith)', type:'PluckSynth',    octave:3, harmonicity:1.0, resonance:4000, cutoff:3000, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false },
+  { id:'jubilee',         name:'Jubilee',         color:'var(--line-jubilee)',         type:'MetalSynth',    octave:2, harmonicity:2.2, resonance:300, cutoff:1000, attack:0.3, decay:0.4, sustain:0.4, release:1.8, volume:-8, muted:false },
+  { id:'metropolitan',    name:'Metropolitan',    color:'var(--line-metropolitan)',type:'DuoSynth',      octave:3, harmonicity:1.5, resonance:5, cutoff:2000, attack:0.6, decay:1.2, sustain:0.8, release:3.5, volume:-6, muted:false },
+  { id:'northern',        name:'Northern',        color:'var(--line-northern)',        type:'MembraneSynth', octave:2, harmonicity:1.0, resonance:3, cutoff:800, attack:0.2, decay:0.8, sustain:0.5, release:2.5, volume:-6, muted:false },
+  { id:'piccadilly',      name:'Piccadilly',      color:'var(--line-piccadilly)',      type:'DuoSynth',      octave:3, harmonicity:2.0, resonance:7, cutoff:2500, attack:0.5, decay:1.0, sustain:0.8, release:3.2, volume:-6, muted:false },
+  { id:'victoria',        name:'Victoria',        color:'var(--line-victoria)',        type:'Synth',         octave:3, harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false },
+  { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false },
 ];
 
 let droneVoiceConfig = {
@@ -520,28 +488,6 @@ let lastSoundTime = Date.now();
 let isAnnouncementPlaying = false;
 let latestArrivalsPool = [];
 let liveDisruptionsPool = [];
-
-function setAudioEngine(engine) {
-  currentEngine = engine;
-  document.getElementById('engineTone').classList.toggle('active', engine === 'tone');
-  document.getElementById('engineP5').classList.toggle('active', engine === 'p5');
-  
-  // Adjust config types appropriately when switching engines
-  const availableTypes = engine === 'p5' ? P5_WAVE_TYPES : TONE_SYNTH_TYPES;
-  LINES.forEach(l => {
-    if (!availableTypes.includes(l.type)) {
-      l.type = availableTypes[0];
-    }
-  });
-  if (!availableTypes.includes(droneVoiceConfig.type)) {
-    droneVoiceConfig.type = availableTypes[0];
-  }
-
-  buildControlPanel();
-  if (audioReady) {
-    initializeAllVoices();
-  }
-}
 
 function getSelectedVoice() {
   const voices = window.speechSynthesis.getVoices();
@@ -613,7 +559,7 @@ function triggerSpokenAnnouncement() {
 
 setInterval(triggerSpokenAnnouncement, 3000);
 
-function createToneSynthInstance(cfg) {
+function createSynthInstance(cfg) {
   let s;
   const env = { attack: cfg.attack, decay: cfg.decay, sustain: cfg.sustain, release: cfg.release };
   switch(cfg.type) {
@@ -663,29 +609,6 @@ function createToneSynthInstance(cfg) {
   return { synth: s, filter: filter, volumeNode: volNode };
 }
 
-function createP5SynthInstance(cfg) {
-  // p5.sound uses p5.Oscillator and p5.Env
-  const oscType = P5_WAVE_TYPES.includes(cfg.type) ? cfg.type : 'sine';
-  const osc = new p5.Oscillator(oscType);
-  const env = new p5.Env();
-  
-  // Setup ADSR envelope based on config variables
-  env.setADSR(cfg.attack, cfg.decay, cfg.sustain, cfg.release);
-  env.setRange(1.0, 0);
-  
-  osc.amp(env);
-  osc.start();
-  // Mute initially if needed by setting amplitude to 0
-  if (cfg.muted || cfg.volume <= -30) {
-    osc.amp(0);
-  } else {
-    const linearGain = Math.pow(10, cfg.volume / 20); // convert dB to gain scalar
-    osc.amp(linearGain * 0.3);
-  }
-
-  return { synth: osc, env: env };
-}
-
 // ---------- Build UI Board & Control Panel ----------
 const board = document.getElementById('board');
 const panelGrid = document.getElementById('panelGrid');
@@ -702,6 +625,38 @@ function updateGlobalScaleSelectOptions() {
   const selectElem = document.getElementById('globalScaleSelect');
   if (!selectElem) return;
   selectElem.innerHTML = SCALE_NAMES.map(s => `<option value="${s}" ${currentGlobalScale === s ? 'selected' : ''}>Scale: ${s}</option>`).join('');
+}
+
+function updateCardVisibility(cardElem, synthType) {
+  const harmonicGroup = cardElem.querySelector('[data-group="harmonicity"]');
+  const resonanceGroup = cardElem.querySelector('[data-group="resonance"]');
+  const cutoffGroup = cardElem.querySelector('[data-group="cutoff"]');
+  const attackGroup = cardElem.querySelector('[data-group="attack"]');
+  const decayGroup = cardElem.querySelector('[data-group="decay"]');
+  const sustainGroup = cardElem.querySelector('[data-group="sustain"]');
+  const releaseGroup = cardElem.querySelector('[data-group="release"]');
+
+  // Reset visibility
+  [harmonicGroup, resonanceGroup, cutoffGroup, attackGroup, decayGroup, sustainGroup, releaseGroup].forEach(g => {
+    if (g) g.classList.remove('hidden');
+  });
+
+  if (synthType === 'NoiseSynth') {
+    if (harmonicGroup) harmonicGroup.classList.add('hidden');
+    if (resonanceGroup) resonanceGroup.classList.add('hidden');
+  } else if (synthType === 'PluckSynth') {
+    if (harmonicGroup) harmonicGroup.classList.add('hidden');
+    if (decayGroup) decayGroup.classList.add('hidden');
+    if (sustainGroup) sustainGroup.classList.add('hidden');
+    if (releaseGroup) releaseGroup.classList.add('hidden');
+    if (cutoffGroup) cutoffGroup.classList.add('hidden');
+  } else if (synthType === 'MetalSynth') {
+    if (sustainGroup) sustainGroup.classList.add('hidden');
+    if (cutoffGroup) cutoffGroup.classList.add('hidden');
+  } else if (synthType === 'MembraneSynth') {
+    if (harmonicGroup) harmonicGroup.classList.add('hidden');
+    if (cutoffGroup) cutoffGroup.classList.add('hidden');
+  }
 }
 
 function buildControlPanel() {
@@ -735,11 +690,8 @@ function buildControlPanel() {
   const droneCard = document.createElement('div');
   droneCard.className = `synth-card ${droneVoiceConfig.muted ? 'muted' : ''}`;
   droneCard.id = `card-${droneVoiceConfig.id}`;
-  
-  const availableTypes = currentEngine === 'p5' ? P5_WAVE_TYPES : TONE_SYNTH_TYPES;
-  let droneTypeOptions = availableTypes.map(t => `<option value="${t}" ${droneVoiceConfig.type === t ? 'selected' : ''}>${t}</option>`).join('');
+  let droneTypeOptions = SYNTH_TYPES.map(t => `<option value="${t}" ${droneVoiceConfig.type === t ? 'selected' : ''}>${t}</option>`).join('');
   let droneOctaveOptions = OCTAVES.map(o => `<option value="${o}" ${droneVoiceConfig.octave === o ? 'selected' : ''}>Octave ${o}</option>`).join('');
-  
   droneCard.innerHTML = `
     <h3>
       <span style="display:flex; align-items:center; gap:6px;">
@@ -753,22 +705,23 @@ function buildControlPanel() {
     <div class="control-group"><label>Synth Type</label><select data-drone-param="type">${droneTypeOptions}</select></div>
     <div class="control-group"><label>Octave</label><select data-drone-param="octave">${droneOctaveOptions}</select></div>
     <div class="control-group"><label>Volume</label><input type="range" min="-30" max="6" step="1" value="${droneVoiceConfig.volume}" data-drone-param="volume"></div>
-    <div class="control-group"><label>Harmonic</label><input type="range" min="0.5" max="5" step="0.1" value="${droneVoiceConfig.harmonicity}" data-drone-param="harmonicity"></div>
-    <div class="control-group"><label>Resonance</label><input type="range" min="10" max="5000" step="10" value="${droneVoiceConfig.resonance}" data-drone-param="resonance"></div>
-    <div class="control-group"><label>Cut-off</label><input type="range" min="200" max="8000" step="100" value="${droneVoiceConfig.cutoff}" data-drone-param="cutoff"></div>
-    <div class="control-group"><label>Attack</label><input type="range" min="0.01" max="5" step="0.1" value="${droneVoiceConfig.attack}" data-drone-param="attack"></div>
-    <div class="control-group"><label>Decay</label><input type="range" min="0.1" max="5" step="0.1" value="${droneVoiceConfig.decay}" data-drone-param="decay"></div>
-    <div class="control-group"><label>Sustain</label><input type="range" min="0" max="1" step="0.05" value="${droneVoiceConfig.sustain}" data-drone-param="sustain"></div>
-    <div class="control-group"><label>Release</label><input type="range" min="0.5" max="8" step="0.2" value="${droneVoiceConfig.release}" data-drone-param="release"></div>
+    <div class="control-group" data-group="harmonicity"><label>Harmonic</label><input type="range" min="0.5" max="5" step="0.1" value="${droneVoiceConfig.harmonicity}" data-drone-param="harmonicity"></div>
+    <div class="control-group" data-group="resonance"><label>Resonance</label><input type="range" min="10" max="5000" step="10" value="${droneVoiceConfig.resonance}" data-drone-param="resonance"></div>
+    <div class="control-group" data-group="cutoff"><label>Cut-off</label><input type="range" min="200" max="8000" step="100" value="${droneVoiceConfig.cutoff}" data-drone-param="cutoff"></div>
+    <div class="control-group" data-group="attack"><label>Attack</label><input type="range" min="0.01" max="5" step="0.1" value="${droneVoiceConfig.attack}" data-drone-param="attack"></div>
+    <div class="control-group" data-group="decay"><label>Decay</label><input type="range" min="0.1" max="5" step="0.1" value="${droneVoiceConfig.decay}" data-drone-param="decay"></div>
+    <div class="control-group" data-group="sustain"><label>Sustain</label><input type="range" min="0" max="1" step="0.05" value="${droneVoiceConfig.sustain}" data-drone-param="sustain"></div>
+    <div class="control-group" data-group="release"><label>Release</label><input type="range" min="0.5" max="8" step="0.2" value="${droneVoiceConfig.release}" data-drone-param="release"></div>
   `;
   panelGrid.appendChild(droneCard);
+  updateCardVisibility(droneCard, droneVoiceConfig.type);
 
   LINES.forEach(line => {
     const card = document.createElement('div');
     card.className = `synth-card ${line.muted ? 'muted' : ''}`;
     card.id = `card-${line.id}`;
     
-    let typeOptions = availableTypes.map(t => `<option value="${t}" ${line.type === t ? 'selected' : ''}>${t}</option>`).join('');
+    let typeOptions = SYNTH_TYPES.map(t => `<option value="${t}" ${line.type === t ? 'selected' : ''}>${t}</option>`).join('');
     let octaveOptions = OCTAVES.map(o => `<option value="${o}" ${line.octave === o ? 'selected' : ''}>Octave ${o}</option>`).join('');
     
     card.innerHTML = `
@@ -784,15 +737,16 @@ function buildControlPanel() {
       <div class="control-group"><label>Synth Type</label><select data-line="${line.id}" data-param="type">${typeOptions}</select></div>
       <div class="control-group"><label>Octave</label><select data-line="${line.id}" data-param="octave">${octaveOptions}</select></div>
       <div class="control-group"><label>Volume</label><input type="range" min="-30" max="6" step="1" value="${line.volume}" data-line="${line.id}" data-param="volume"></div>
-      <div class="control-group"><label>Harmonic</label><input type="range" min="0.5" max="5" step="0.1" value="${line.harmonicity}" data-line="${line.id}" data-param="harmonicity"></div>
-      <div class="control-group"><label>Resonance</label><input type="range" min="10" max="5000" step="10" value="${line.resonance}" data-line="${line.id}" data-param="resonance"></div>
-      <div class="control-group"><label>Cut-off</label><input type="range" min="200" max="8000" step="100" value="${line.cutoff}" data-line="${line.id}" data-param="cutoff"></div>
-      <div class="control-group"><label>Attack</label><input type="range" min="0.01" max="1.5" step="0.05" value="${line.attack}" data-line="${line.id}" data-param="attack"></div>
-      <div class="control-group"><label>Decay</label><input type="range" min="0.1" max="3" step="0.1" value="${line.decay}" data-line="${line.id}" data-param="decay"></div>
-      <div class="control-group"><label>Sustain</label><input type="range" min="0" max="1" step="0.05" value="${line.sustain}" data-line="${line.id}" data-param="sustain"></div>
-      <div class="control-group"><label>Release</label><input type="range" min="0.5" max="5" step="0.1" value="${line.release}" data-line="${line.id}" data-param="release"></div>
+      <div class="control-group" data-group="harmonicity"><label>Harmonic</label><input type="range" min="0.5" max="5" step="0.1" value="${line.harmonicity}" data-line="${line.id}" data-param="harmonicity"></div>
+      <div class="control-group" data-group="resonance"><label>Resonance</label><input type="range" min="10" max="5000" step="10" value="${line.resonance}" data-line="${line.id}" data-param="resonance"></div>
+      <div class="control-group" data-group="cutoff"><label>Cut-off</label><input type="range" min="200" max="8000" step="100" value="${line.cutoff}" data-line="${line.id}" data-param="cutoff"></div>
+      <div class="control-group" data-group="attack"><label>Attack</label><input type="range" min="0.01" max="1.5" step="0.05" value="${line.attack}" data-line="${line.id}" data-param="attack"></div>
+      <div class="control-group" data-group="decay"><label>Decay</label><input type="range" min="0.1" max="3" step="0.1" value="${line.decay}" data-line="${line.id}" data-param="decay"></div>
+      <div class="control-group" data-group="sustain"><label>Sustain</label><input type="range" min="0" max="1" step="0.05" value="${line.sustain}" data-line="${line.id}" data-param="sustain"></div>
+      <div class="control-group" data-group="release"><label>Release</label><input type="range" min="0.5" max="5" step="0.1" value="${line.release}" data-line="${line.id}" data-param="release"></div>
     `;
     panelGrid.appendChild(card);
+    updateCardVisibility(card, line.type);
   });
   updateGlobalScaleSelectOptions();
   attachControlListeners();
@@ -839,14 +793,11 @@ document.getElementById('toggleConfig').addEventListener('click', () => {
 
 // ---------- Randomizer & Global Scale Functions ----------
 function randomizeVoices() {
-  const availableTypes = currentEngine === 'p5' ? P5_WAVE_TYPES : TONE_SYNTH_TYPES;
   LINES.forEach(line => {
-    line.type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+    line.type = SYNTH_TYPES[Math.floor(Math.random() * SYNTH_TYPES.length)];
   });
-  droneVoiceConfig.type = availableTypes[Math.floor(Math.random() * availableTypes.length)];
-  if (audioReady) {
-    initializeAllVoices();
-  }
+  droneVoiceConfig.type = SYNTH_TYPES[Math.floor(Math.random() * SYNTH_TYPES.length)];
+  if (audioReady) initializeAllVoices();
   buildControlPanel();
 }
 
@@ -875,15 +826,11 @@ function randomizeGlobalScale() {
 let audioReady = false;
 document.getElementById('startBtn').addEventListener('click', async () => {
   await Tone.start();
-  if (typeof userStartAudio === 'function') {
-    userStartAudio(); // p5.sound requirement for browser gestures
-  }
-
   initializeAllVoices();
 
   audioReady = true;
   document.getElementById('startBtn').disabled = true;
-  document.getElementById('status').textContent = `Listening — ambient soundscape active (${currentEngine.toUpperCase()} engine)…`;
+  document.getElementById('status').textContent = 'Listening — ambient soundscape & live announcements active…';
   
   startEvolvingDrone();
   pollAllData();
@@ -892,65 +839,38 @@ document.getElementById('startBtn').addEventListener('click', async () => {
 
 function initializeAllVoices() {
   LINES.forEach(line => {
-    if (line.node && typeof line.node.dispose === 'function') line.node.dispose();
-    if (line.filter && typeof line.filter.dispose === 'function') line.filter.dispose();
-    if (line.volumeNode && typeof line.volumeNode.dispose === 'function') line.volumeNode.dispose();
-    if (line.p5Osc && typeof line.p5Osc.stop === 'function') line.p5Osc.stop();
-
-    if (currentEngine === 'tone') {
-      const nodeSet = createToneSynthInstance(line);
-      line.node = nodeSet.synth;
-      line.filter = nodeSet.filter;
-      line.volumeNode = nodeSet.volumeNode;
-    } else {
-      const p5Set = createP5SynthInstance(line);
-      line.p5Osc = p5Set.synth;
-      line.p5Env = p5Set.env;
-    }
+    if (line.node) line.node.dispose();
+    if (line.filter) line.filter.dispose();
+    if (line.volumeNode) line.volumeNode.dispose();
+    
+    const nodeSet = createSynthInstance(line);
+    line.node = nodeSet.synth;
+    line.filter = nodeSet.filter;
+    line.volumeNode = nodeSet.volumeNode;
   });
 
-  if (droneVoiceConfig.node && typeof droneVoiceConfig.node.dispose === 'function') droneVoiceConfig.node.dispose();
-  if (droneVoiceConfig.filter && typeof droneVoiceConfig.filter.dispose === 'function') droneVoiceConfig.filter.dispose();
-  if (droneVoiceConfig.volumeNode && typeof droneVoiceConfig.volumeNode.dispose === 'function') droneVoiceConfig.volumeNode.dispose();
-  if (droneVoiceConfig.p5Osc && typeof droneVoiceConfig.p5Osc.stop === 'function') droneVoiceConfig.p5Osc.stop();
+  if (droneVoiceConfig.node) droneVoiceConfig.node.dispose();
+  if (droneVoiceConfig.filter) droneVoiceConfig.filter.dispose();
+  if (droneVoiceConfig.volumeNode) droneVoiceConfig.volumeNode.dispose();
 
-  if (currentEngine === 'tone') {
-    const droneNodeSet = createToneSynthInstance(droneVoiceConfig);
-    droneVoiceConfig.node = droneNodeSet.synth;
-    droneVoiceConfig.filter = droneNodeSet.filter;
-    droneVoiceConfig.volumeNode = droneNodeSet.volumeNode;
-  } else {
-    const p5DroneSet = createP5SynthInstance(droneVoiceConfig);
-    droneVoiceConfig.p5Osc = p5DroneSet.synth;
-    droneVoiceConfig.p5Env = p5DroneSet.env;
-  }
+  const droneNodeSet = createSynthInstance(droneVoiceConfig);
+  droneVoiceConfig.node = droneNodeSet.synth;
+  droneVoiceConfig.filter = droneNodeSet.filter;
+  droneVoiceConfig.volumeNode = droneNodeSet.volumeNode;
 }
 
 let activeDroneLoop = null;
 function updateDroneNote() {
-  if (!audioReady) return;
+  if (!audioReady || droneVoiceConfig.muted || !droneVoiceConfig.node) return;
   const scale = MUSICAL_SCALES[currentGlobalScale] || MUSICAL_SCALES["Major Pentatonic"];
   const rootNote = `${scale[0]}${droneVoiceConfig.octave}`;
-  
-  if (currentEngine === 'tone') {
-    if (droneVoiceConfig.muted || !droneVoiceConfig.node) return;
-    try {
-      if (droneVoiceConfig.type === 'NoiseSynth') {
-        droneVoiceConfig.node.triggerAttackRelease(droneVoiceConfig.release);
-      } else {
-        droneVoiceConfig.node.triggerAttackRelease(rootNote, droneVoiceConfig.release);
-      }
-    } catch(e) {}
-  } else {
-    if (droneVoiceConfig.muted || !droneVoiceConfig.p5Osc) return;
-    try {
-      const freq = Tone.Frequency(rootNote).toHz();
-      droneVoiceConfig.p5Osc.setType(P5_WAVE_TYPES.includes(droneVoiceConfig.type) ? droneVoiceConfig.type : 'sine');
-      droneVoiceConfig.p5Osc.freq(freq);
-      droneVoiceConfig.p5Env.setADSR(droneVoiceConfig.attack, droneVoiceConfig.decay, droneVoiceConfig.sustain, droneVoiceConfig.release);
-      droneVoiceConfig.p5Env.play(droneVoiceConfig.p5Osc);
-    } catch(e) {}
-  }
+  try {
+    if (droneVoiceConfig.type === 'NoiseSynth') {
+      droneVoiceConfig.node.triggerAttackRelease(droneVoiceConfig.release);
+    } else {
+      droneVoiceConfig.node.triggerAttackRelease(rootNote, droneVoiceConfig.release);
+    }
+  } catch(e) {}
 }
 
 function startEvolvingDrone() {
@@ -1018,28 +938,31 @@ function attachControlListeners() {
       const val = e.target.type === 'select-one' ? (param === 'octave' ? parseInt(e.target.value) : e.target.value) : parseFloat(e.target.value);
       droneVoiceConfig[param] = val;
 
-      if (param === 'type' && audioReady && currentEngine === 'tone') {
-        initializeAllVoices();
-        return;
-      }
-
-      if (!audioReady) return;
-      if (currentEngine === 'tone' && droneVoiceConfig.node) {
-        try {
-          if (param === 'cutoff' && droneVoiceConfig.filter) droneVoiceConfig.filter.frequency.rampTo(val, 0.2);
-          else if (param === 'volume' && droneVoiceConfig.volumeNode) droneVoiceConfig.volumeNode.volume.rampTo(droneVoiceConfig.muted ? -Infinity : val, 0.2);
-          else if (param === 'harmonicity' && droneVoiceConfig.node.harmonicity) droneVoiceConfig.node.harmonicity.value = val;
-          else if (['attack', 'decay', 'sustain', 'release'].includes(param)) {
-            if (droneVoiceConfig.node.envelope) droneVoiceConfig.node.envelope[param] = val;
-          }
-        } catch(err) {}
-      } else if (currentEngine === 'p5' && droneVoiceConfig.p5Env) {
-        droneVoiceConfig.p5Env.setADSR(droneVoiceConfig.attack, droneVoiceConfig.decay, droneVoiceConfig.sustain, droneVoiceConfig.release);
-        if (param === 'volume' && droneVoiceConfig.p5Osc) {
-          const linearGain = droneVoiceConfig.muted ? 0 : Math.pow(10, val / 20) * 0.3;
-          droneVoiceConfig.p5Osc.amp(linearGain);
+      if (param === 'type') {
+        updateCardVisibility(document.getElementById(`card-${droneVoiceConfig.id}`), val);
+        if (audioReady) {
+          initializeAllVoices();
+          return;
         }
       }
+
+      if (!audioReady || !droneVoiceConfig.node) return;
+      try {
+        if (param === 'cutoff' && droneVoiceConfig.filter) {
+          droneVoiceConfig.filter.frequency.rampTo(val, 0.2);
+        } else if (param === 'resonance') {
+          if (droneVoiceConfig.node.resonance !== undefined) droneVoiceConfig.node.resonance.value = val;
+          else if (droneVoiceConfig.node.modulationIndex !== undefined) droneVoiceConfig.node.modulationIndex.value = val;
+          else if (droneVoiceConfig.node.dampening !== undefined) droneVoiceConfig.node.dampening = val;
+          else if (droneVoiceConfig.node.octaves !== undefined) droneVoiceConfig.node.octaves = val / 500;
+        } else if (param === 'volume' && droneVoiceConfig.volumeNode) {
+          droneVoiceConfig.volumeNode.volume.rampTo(droneVoiceConfig.muted ? -Infinity : val, 0.2);
+        } else if (param === 'harmonicity' && droneVoiceConfig.node.harmonicity) {
+          droneVoiceConfig.node.harmonicity.value = val;
+        } else if (['attack', 'decay', 'sustain', 'release'].includes(param)) {
+          if (droneVoiceConfig.node.envelope) droneVoiceConfig.node.envelope[param] = val;
+        }
+      } catch(err) {}
     });
   });
 
@@ -1050,12 +973,8 @@ function attachControlListeners() {
       e.target.textContent = droneVoiceConfig.muted ? 'Unmute' : 'Mute';
       e.target.classList.toggle('active', droneVoiceConfig.muted);
       document.getElementById(`card-${droneVoiceConfig.id}`).classList.toggle('muted', droneVoiceConfig.muted);
-      if (audioReady) {
-        if (currentEngine === 'tone' && droneVoiceConfig.volumeNode) {
-          droneVoiceConfig.volumeNode.volume.rampTo(droneVoiceConfig.muted ? -Infinity : droneVoiceConfig.volume, 0.2);
-        } else if (currentEngine === 'p5' && droneVoiceConfig.p5Osc) {
-          droneVoiceConfig.p5Osc.amp(droneVoiceConfig.muted ? 0 : Math.pow(10, droneVoiceConfig.volume / 20) * 0.3);
-        }
+      if (audioReady && droneVoiceConfig.volumeNode) {
+        droneVoiceConfig.volumeNode.volume.rampTo(droneVoiceConfig.muted ? -Infinity : droneVoiceConfig.volume, 0.2);
       }
     });
   }
@@ -1063,7 +982,7 @@ function attachControlListeners() {
   const droneTestBtn = document.querySelector('[data-test-drone]');
   if (droneTestBtn) {
     droneTestBtn.addEventListener('click', () => {
-      if (!audioReady) {
+      if (!audioReady || !droneVoiceConfig.node) {
         alert('Please click "Start listening" first!');
         return;
       }
@@ -1082,28 +1001,40 @@ function attachControlListeners() {
       
       line[param] = val;
       
-      if (param === 'type' && audioReady && currentEngine === 'tone') {
-        initializeAllVoices();
-        return;
+      if (param === 'type') {
+        updateCardVisibility(document.getElementById(`card-${line.id}`), val);
+        if (audioReady) {
+          initializeAllVoices();
+          return;
+        }
       }
 
-      if (!audioReady) return;
+      if (!audioReady || !line.node) return;
 
-      if (currentEngine === 'tone' && line.node) {
-        try {
-          if (param === 'cutoff' && line.filter) line.filter.frequency.rampTo(val, 0.2);
-          else if (param === 'volume' && line.volumeNode) line.volumeNode.volume.rampTo(line.muted ? -Infinity : val, 0.2);
-          else if (param === 'harmonicity' && line.node.harmonicity) line.node.harmonicity.value = val;
-          else if (['attack', 'decay', 'sustain', 'release'].includes(param)) {
-            if (line.node.envelope) line.node.envelope[param] = val;
+      try {
+        if (param === 'cutoff' && line.filter) {
+          line.filter.frequency.rampTo(val, 0.2);
+        } else if (param === 'resonance') {
+          if (line.node.resonance !== undefined) {
+            line.node.resonance.value = val;
+          } else if (line.node.modulationIndex !== undefined) {
+            line.node.modulationIndex.value = val;
+          } else if (line.node.dampening !== undefined) {
+            line.node.dampening = val;
+          } else if (line.node.octaves !== undefined) {
+            line.node.octaves = val / 500;
           }
-        } catch(err) {}
-      } else if (currentEngine === 'p5' && line.p5Env) {
-        line.p5Env.setADSR(line.attack, line.decay, line.sustain, line.release);
-        if (param === 'volume' && line.p5Osc) {
-          const linearGain = line.muted ? 0 : Math.pow(10, val / 20) * 0.3;
-          line.p5Osc.amp(linearGain);
+        } else if (param === 'volume' && line.volumeNode) {
+          line.volumeNode.volume.rampTo(line.muted ? -Infinity : val, 0.2);
+        } else if (param === 'harmonicity' && line.node.harmonicity) {
+          line.node.harmonicity.value = val;
+        } else if (['attack', 'decay', 'sustain', 'release'].includes(param)) {
+          if (line.node.envelope) {
+            line.node.envelope[param] = val;
+          }
         }
+      } catch(err) {
+        console.warn('Parameter update error:', err);
       }
     });
   });
@@ -1119,12 +1050,8 @@ function attachControlListeners() {
       e.target.classList.toggle('active', line.muted);
       document.getElementById(`card-${line.id}`).classList.toggle('muted', line.muted);
       
-      if (audioReady) {
-        if (currentEngine === 'tone' && line.volumeNode) {
-          line.volumeNode.volume.rampTo(line.muted ? -Infinity : line.volume, 0.2);
-        } else if (currentEngine === 'p5' && line.p5Osc) {
-          line.p5Osc.amp(line.muted ? 0 : Math.pow(10, line.volume / 20) * 0.3);
-        }
+      if (audioReady && line.volumeNode) {
+        line.volumeNode.volume.rampTo(line.muted ? -Infinity : line.volume, 0.2);
       }
     });
   });
@@ -1133,7 +1060,7 @@ function attachControlListeners() {
     btn.addEventListener('click', (e) => {
       const lineId = e.target.getAttribute('data-test-line');
       const line = LINES.find(l => l.id === lineId);
-      if (!line || !audioReady) {
+      if (!line || !audioReady || !line.node) {
         alert('Please click "Start listening" first!');
         return;
       }
@@ -1207,17 +1134,16 @@ async function pollAllData() {
     const normalizedDensity = Math.min(1.0, networkDensityCount / 350);
 
     if (audioReady) {
-      if (currentEngine === 'tone') {
-        ambientReverb.wet.value = 0.35 + (normalizedDensity * 0.45);
-        if (droneVoiceConfig.filter && !droneVoiceConfig.muted) {
-          const dynamicCutoff = droneVoiceConfig.cutoff + (normalizedDensity * 1200);
-          droneVoiceConfig.filter.frequency.rampTo(dynamicCutoff, 3.0);
-        }
+      ambientReverb.wet.value = 0.35 + (normalizedDensity * 0.45);
+      
+      if (droneVoiceConfig.filter && !droneVoiceConfig.muted) {
+        const dynamicCutoff = droneVoiceConfig.cutoff + (normalizedDensity * 1200);
+        droneVoiceConfig.filter.frequency.rampTo(dynamicCutoff, 3.0);
       }
     }
 
     document.getElementById('status').textContent =
-      `Listening — ${networkDensityCount} active trains tracked (${currentEngine.toUpperCase()}), last updated ${new Date().toLocaleTimeString()}`;
+      `Listening — ${networkDensityCount} active trains tracked, last updated ${new Date().toLocaleTimeString()}`;
 
     const now = Date.now();
 
@@ -1292,7 +1218,7 @@ function animateTrain(line, seconds, trainRecord){
 }
 
 function playNote(line, prediction, intensity = 1.0){
-  if (!audioReady || line.muted) return;
+  if (!audioReady || !line.node || line.muted) return;
   
   lastSoundTime = Date.now();
 
@@ -1300,30 +1226,17 @@ function playNote(line, prediction, intensity = 1.0){
   const noteName = currentScaleNotes[hashToIndex(prediction.stationName || prediction.towards || 'x', currentScaleNotes.length)];
   const note = `${noteName}${line.octave}`;
   
-  if (currentEngine === 'tone') {
-    if (!line.node) return;
-    try {
-      if (line.type === 'NoiseSynth') {
-        line.node.triggerAttackRelease((line.release || 2.0) * intensity);
-      } else {
-        line.node.triggerAttackRelease(note, (line.release || 2.0) * intensity);
-      }
-    } catch(e) { console.warn('Tone note failed', e); }
-  } else {
-    if (!line.p5Osc || !line.p5Env) return;
-    try {
-      const freq = Tone.Frequency(note).toHz();
-      const waveType = P5_WAVE_TYPES.includes(line.type) ? line.type : 'sine';
-      line.p5Osc.setType(waveType);
-      line.p5Osc.freq(freq);
-      line.p5Env.setADSR(line.attack, line.decay, line.sustain, line.release);
-      line.p5Env.play(line.p5Osc);
-    } catch(e) { console.warn('p5 note failed', e); }
-  }
+  try{
+    if (line.type === 'NoiseSynth') {
+      line.node.triggerAttackRelease((line.release || 2.0) * intensity);
+    } else {
+      line.node.triggerAttackRelease(note, (line.release || 2.0) * intensity);
+    }
+  }catch(e){ console.warn('note failed', e); }
 
   const out = document.getElementById(`note-${line.id}`);
   if (out) {
-    out.textContent = currentEngine === 'p5' ? `p5:${note}` : (line.type === 'NoiseSynth' ? 'WAVE' : note);
+    out.textContent = line.type === 'NoiseSynth' ? 'WAVE' : note;
     out.style.color = 'var(--ink)';
     setTimeout(()=>{ out.style.color = ''; }, 400);
   }
