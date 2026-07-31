@@ -29,7 +29,7 @@
     margin:0;
     background:var(--bg);
     color:var(--ink);
-    font-family:'Courier New', ui-monospace, monospace;
+    font-family:"P22 Underground", "Johnston100", Arial, Helvetica, sans-serif;
     min-height:100vh;
   }
   header{
@@ -37,11 +37,11 @@
     border-bottom:1px solid var(--border);
   }
   h1{
-    font-family:Arial, Helvetica, sans-serif;
-    font-weight:800;
+    font-weight:700;
     letter-spacing:-0.5px;
     font-size:clamp(24px,4vw,38px);
     margin:0 0 4px;
+    text-transform:uppercase;
   }
   .roundel{
     display:inline-block;
@@ -57,6 +57,7 @@
     margin:0 0 16px;
     font-size:13px;
     max-width:700px;
+    font-family: Arial, sans-serif;
   }
   .actions{
     display:flex;
@@ -68,13 +69,14 @@
     background:var(--ink);
     color:var(--bg);
     border:none;
-    font-family:Arial, sans-serif;
+    font-family:inherit;
     font-weight:700;
     padding:10px 20px;
     border-radius:20px;
     cursor:pointer;
     font-size:13px;
     letter-spacing:0.3px;
+    text-transform:uppercase;
   }
   button:disabled{opacity:0.4;cursor:default;}
   .btn-outline{
@@ -95,7 +97,7 @@
     background:var(--card-bg);
     border-bottom:1px solid var(--border);
     padding:20px 24px;
-    max-height:450px;
+    max-height:480px;
     overflow-y:auto;
   }
   #synthPanel.open{display:block;}
@@ -114,12 +116,22 @@
   }
   .synth-card h3{
     margin:0 0 8px 0;
-    font-family:Arial, sans-serif;
     font-size:13px;
     display:flex;
     align-items:center;
-    gap:6px;
+    justify-content:space-between;
   }
+  .test-btn{
+    background:var(--card-bg);
+    color:var(--ink);
+    border:1px solid var(--border);
+    font-family:inherit;
+    font-size:10px;
+    padding:3px 8px;
+    border-radius:4px;
+    cursor:pointer;
+  }
+  .test-btn:hover{background:var(--border);}
   .control-group{
     margin-bottom:6px;
     display:flex;
@@ -137,18 +149,18 @@
     width:150px;
   }
 
-  /* Board layout */
+  /* Board layout: Map styling */
   .board{
-    padding:16px 24px 60px;
+    padding:24px;
     display:flex;
     flex-direction:column;
-    gap:2px;
+    gap:6px;
   }
   .track{
     display:grid;
     grid-template-columns:170px 1fr 60px;
     align-items:center;
-    height:38px;
+    height:42px;
     border-bottom:1px solid #1c1c1e;
     position:relative;
   }
@@ -156,31 +168,73 @@
     display:flex;
     align-items:center;
     gap:8px;
-    font-family:Arial, sans-serif;
-    font-size:12px;
+    font-size:13px;
     font-weight:700;
+    letter-spacing:0.3px;
   }
   .swatch{
     width:10px;height:10px;border-radius:50%;flex:none;
   }
+  
+  /* Map-style line rails with terminal ticks */
   .rail{
     position:relative;
-    height:2px;
-    background:#1e1e20;
+    height:6px;
     margin-right:12px;
+    display:flex;
+    align-items:center;
   }
+  /* Terminal ticks at start and end of the line */
+  .rail::before, .rail::after {
+    content:'';
+    position:absolute;
+    top: -3px;
+    width: 2px;
+    height: 12px;
+    background: inherit;
+    z-index: 2;
+  }
+  .rail::before { left: 0; }
+  .rail::after { right: 0; }
+
+  .rail-line {
+    position: absolute;
+    top: 0; bottom: 0; left: 0; right: 0;
+    background: currentColor;
+    border-radius: 1px;
+  }
+
+  /* Map style interchange station dots along the rail */
+  .station-node {
+    position: absolute;
+    top: 50%;
+    width: 6px; height: 6px;
+    background: var(--bg);
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 3;
+  }
+  .station-node:nth-child(1) { left: 25%; }
+  .station-node:nth-child(2) { left: 50%; }
+  .station-node:nth-child(3) { left: 75%; }
+
   .train{
     position:absolute;
     top:50%;
     left:0;
-    width:9px;height:9px;
+    width:10px;height:10px;
+    background:#ffffff;
+    border:2px solid currentColor;
     border-radius:50%;
     transform:translate(-50%,-50%);
-    box-shadow:0 0 8px 1px currentColor;
+    box-shadow:0 0 10px 2px currentColor;
     opacity:0;
+    z-index:4;
   }
   .note-out{
-    font-size:11px;
+    font-size:12px;
+    font-weight:700;
     color:var(--dim);
     text-align:right;
   }
@@ -189,6 +243,7 @@
     color:var(--dim);
     font-size:11px;
     max-width:700px;
+    font-family: Arial, sans-serif;
   }
   a{color:var(--ink);}
 </style>
@@ -207,7 +262,7 @@
 
 <!-- Configuration Drawer for Synths -->
 <div id="synthPanel">
-  <h3 style="margin:0; font-family:Arial; font-size:14px;">Live Tone & Synth Modifiers</h3>
+  <h3 style="margin:0; font-size:14px; text-transform:uppercase;">Live Tone & Synth Modifiers</h3>
   <div class="panel-grid" id="panelGrid"></div>
 </div>
 
@@ -224,17 +279,17 @@ const SCALE = ['F1', 'Bb1', 'F2', 'Bb2', 'C3', 'D3', 'F3', 'Bb3', 'D4', 'F4', 'B
 const SYNTH_TYPES = ['FMSynth', 'AMSynth', 'MetalSynth', 'PluckSynth', 'MembraneSynth', 'DuoSynth', 'Synth'];
 
 const LINES = [
-  { id:'bakerloo',        name:'Bakerloo',        color:'var(--line-bakerloo)',        type:'FMSynth',       harmonicity:1.5, resonance:3, cutoff:2000, attack:0.05, decay:0.2, sustain:0.2, release:0.6 },
-  { id:'central',         name:'Central',         color:'var(--line-central)',         type:'MetalSynth',    harmonicity:4.1, resonance:800, cutoff:3000, attack:0.01, decay:0.1, sustain:0.1, release:0.3 },
-  { id:'circle',          name:'Circle',          color:'var(--line-circle)',          type:'PluckSynth',    harmonicity:1.0, resonance:3000, cutoff:4000, attack:0.01, decay:0.2, sustain:0.0, release:0.4 },
-  { id:'district',        name:'District',        color:'var(--line-district)',        type:'AMSynth',       harmonicity:2.0, resonance:5, cutoff:2500, attack:0.1, decay:0.3, sustain:0.3, release:0.7 },
-  { id:'hammersmith-city',name:'Ham. & City',     color:'var(--line-hammersmith)', type:'PluckSynth',    harmonicity:1.0, resonance:5000, cutoff:5000, attack:0.01, decay:0.2, sustain:0.0, release:0.4 },
-  { id:'jubilee',         name:'Jubilee',         color:'var(--line-jubilee)',         type:'MetalSynth',    harmonicity:2.2, resonance:400, cutoff:1500, attack:0.01, decay:0.1, sustain:0.1, release:0.25 },
-  { id:'metropolitan',    name:'Metropolitan',    color:'var(--line-metropolitan)',type:'DuoSynth',      harmonicity:1.5, resonance:4, cutoff:3000, attack:0.1, decay:0.4, sustain:0.4, release:0.8 },
-  { id:'northern',        name:'Northern',        color:'var(--line-northern)',        type:'MembraneSynth', harmonicity:1.0, resonance:2, cutoff:1000, attack:0.01, decay:0.4, sustain:0.1, release:0.5 },
+  { id:'bakerloo',        name:'Bakerloo',        color:'var(--line-bakerloo)',        type:'FMSynth',       harmonicity:1.5, resonance:3, cutoff:2000, attack:0.05, decay:0.2, sustain:0.5, release:0.6 },
+  { id:'central',         name:'Central',         color:'var(--line-central)',         type:'MetalSynth',    harmonicity:4.1, resonance:800, cutoff:3000, attack:0.01, decay:0.1, sustain:0.3, release:0.3 },
+  { id:'circle',          name:'Circle',          color:'var(--line-circle)',          type:'PluckSynth',    harmonicity:1.0, resonance:3000, cutoff:4000, attack:0.01, decay:0.2, sustain:0.2, release:0.4 },
+  { id:'district',        name:'District',        color:'var(--line-district)',        type:'AMSynth',       harmonicity:2.0, resonance:5, cutoff:2500, attack:0.1, decay:0.3, sustain:0.4, release:0.7 },
+  { id:'hammersmith-city',name:'Ham. & City',     color:'var(--line-hammersmith)', type:'PluckSynth',    harmonicity:1.0, resonance:5000, cutoff:5000, attack:0.01, decay:0.2, sustain:0.2, release:0.4 },
+  { id:'jubilee',         name:'Jubilee',         color:'var(--line-jubilee)',         type:'MetalSynth',    harmonicity:2.2, resonance:400, cutoff:1500, attack:0.01, decay:0.1, sustain:0.3, release:0.25 },
+  { id:'metropolitan',    name:'Metropolitan',    color:'var(--line-metropolitan)',type:'DuoSynth',      harmonicity:1.5, resonance:4, cutoff:3000, attack:0.1, decay:0.4, sustain:0.5, release:0.8 },
+  { id:'northern',        name:'Northern',        color:'var(--line-northern)',        type:'MembraneSynth', harmonicity:1.0, resonance:2, cutoff:1000, attack:0.01, decay:0.4, sustain:0.3, release:0.5 },
   { id:'piccadilly',      name:'Piccadilly',      color:'var(--line-piccadilly)',      type:'DuoSynth',      harmonicity:2.0, resonance:6, cutoff:3500, attack:0.1, decay:0.3, sustain:0.5, release:0.9 },
-  { id:'victoria',        name:'Victoria',        color:'var(--line-victoria)',        type:'Synth',         harmonicity:1.0, resonance:1, cutoff:4000, attack:0.05, decay:0.2, sustain:0.2, release:0.3 },
-  { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         harmonicity:1.0, resonance:1, cutoff:2500, attack:0.1, decay:0.3, sustain:0.3, release:0.5 },
+  { id:'victoria',        name:'Victoria',        color:'var(--line-victoria)',        type:'Synth',         harmonicity:1.0, resonance:1, cutoff:4000, attack:0.05, decay:0.2, sustain:0.4, release:0.3 },
+  { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         harmonicity:1.0, resonance:1, cutoff:2500, attack:0.1, decay:0.3, sustain:0.4, release:0.5 },
 ];
 
 const reverb = new Tone.Reverb({decay:3, wet:0.25}).toDestination();
@@ -251,7 +306,7 @@ function createSynthInstance(cfg) {
       s = new Tone.AMSynth({ harmonicity: cfg.harmonicity, envelope: env });
       break;
     case 'MetalSynth':
-      s = new Tone.MetalSynth({ harmonicity: cfg.harmonicity, resonance: cfg.resonance, envelope: { attack: cfg.attack, decay: cfg.decay, release: cfg.release } });
+      s = new Tone.MetalSynth({ harmonicity: cfg.harmonicity, resonance: cfg.resonance, envelope: { attack: cfg.attack, decay: cfg.decay, sustain: cfg.sustain, release: cfg.release } });
       break;
     case 'PluckSynth':
       s = new Tone.PluckSynth({ dampening: cfg.resonance, attackNoise: cfg.attack });
@@ -276,6 +331,14 @@ function createSynthInstance(cfg) {
 const board = document.getElementById('board');
 const panelGrid = document.getElementById('panelGrid');
 
+function getResolvedColor(colorVar) {
+  const match = colorVar.match(/var\((.*)\)/);
+  if (match) {
+    return getComputedStyle(document.documentElement).getPropertyValue(match[1]) || '#fff';
+  }
+  return colorVar;
+}
+
 function buildControlPanel() {
   panelGrid.innerHTML = '';
   LINES.forEach(line => {
@@ -286,13 +349,19 @@ function buildControlPanel() {
     let typeOptions = SYNTH_TYPES.map(t => `<option value="${t}" ${line.type === t ? 'selected' : ''}>${t}</option>`).join('');
     
     card.innerHTML = `
-      <h3><span class="swatch" style="background:${line.color}"></span>${line.name}</h3>
+      <h3>
+        <span style="display:flex; align-items:center; gap:6px;">
+          <span class="swatch" style="background:${line.color}"></span>${line.name}
+        </span>
+        <button class="test-btn" data-test-line="${line.id}">Test Note</button>
+      </h3>
       <div class="control-group"><label>Synth Type</label><select data-line="${line.id}" data-param="type">${typeOptions}</select></div>
       <div class="control-group"><label>Harmonic</label><input type="range" min="0.5" max="5" step="0.1" value="${line.harmonicity}" data-line="${line.id}" data-param="harmonicity"></div>
       <div class="control-group"><label>Resonance</label><input type="range" min="10" max="5000" step="10" value="${line.resonance}" data-line="${line.id}" data-param="resonance"></div>
       <div class="control-group"><label>Cut-off</label><input type="range" min="200" max="10000" step="100" value="${line.cutoff}" data-line="${line.id}" data-param="cutoff"></div>
       <div class="control-group"><label>Attack</label><input type="range" min="0.001" max="1" step="0.01" value="${line.attack}" data-line="${line.id}" data-param="attack"></div>
       <div class="control-group"><label>Decay</label><input type="range" min="0.05" max="2" step="0.05" value="${line.decay}" data-line="${line.id}" data-param="decay"></div>
+      <div class="control-group"><label>Sustain</label><input type="range" min="0" max="1" step="0.05" value="${line.sustain}" data-line="${line.id}" data-param="sustain"></div>
       <div class="control-group"><label>Release</label><input type="range" min="0.05" max="3" step="0.05" value="${line.release}" data-line="${line.id}" data-param="release"></div>
     `;
     panelGrid.appendChild(card);
@@ -303,9 +372,15 @@ function buildControlPanel() {
 LINES.forEach(line => {
   const row = document.createElement('div');
   row.className = 'track';
+  const resolvedLineColor = getResolvedColor(line.color);
   row.innerHTML = `
     <div class="track-label"><span class="swatch" style="background:${line.color}"></span>${line.name}</div>
-    <div class="rail" id="rail-${line.id}"></div>
+    <div class="rail" id="rail-${line.id}" style="color: ${resolvedLineColor};">
+      <div class="rail-line" style="color: ${resolvedLineColor};"></div>
+      <div class="station-node" style="color: ${resolvedLineColor};"></div>
+      <div class="station-node" style="color: ${resolvedLineColor};"></div>
+      <div class="station-node" style="color: ${resolvedLineColor};"></div>
+    </div>
     <div class="note-out" id="note-${line.id}">–</div>
   `;
   board.appendChild(row);
@@ -375,6 +450,18 @@ function attachControlListeners() {
       }
     });
   });
+
+  document.querySelectorAll('.test-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const lineId = e.target.getAttribute('data-test-line');
+      const line = LINES.find(l => l.id === lineId);
+      if (!line || !audioReady || !line.node) {
+        alert('Please click "Start listening" first!');
+        return;
+      }
+      playNote(line, { stationName: 'Test Station' });
+    });
+  });
 }
 
 // ---------- Live API Fetching & Playback Loops ----------
@@ -394,7 +481,7 @@ async function pollArrivals(){
     const data = await res.json();
     
     document.getElementById('status').textContent =
-      `Listening — ${data.length} trains tracked, last updated ${new Date().toLocaleTimeString()}`;
+      `Listening — ${data.length} tracked trains, last updated ${new Date().toLocaleTimeString()}`;
 
     data.forEach(p=>{
       const key = `${p.id || p.vehicleId}-${p.expectedArrival}`;
@@ -422,16 +509,8 @@ function animateTrain(line, seconds){
   const dot = document.createElement('div');
   dot.className = 'train';
   
-  let resolvedColor = '#fff';
-  const match = line.color.match(/var\((.*)\)/);
-  if (match) {
-    resolvedColor = getComputedStyle(document.documentElement).getPropertyValue(match[1]) || '#fff';
-  } else {
-    resolvedColor = line.color;
-  }
-  
+  const resolvedColor = getResolvedColor(line.color);
   dot.style.color = resolvedColor.trim();
-  dot.style.background = 'currentColor';
   rail.appendChild(dot);
   
   requestAnimationFrame(()=>{
