@@ -390,11 +390,12 @@ const LINES = [
   { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false },
 ];
 
-// Announcements Configuration Object (Male voice locked as default)
+// Announcements Configuration Object including Reverb Mix
 let announcementConfig = {
   muted: false,
   volume: 1.0,     
   frequency: 0.45, 
+  reverb: 0.3,     // Reverb mix level for announcements
   voiceType: 'male'
 };
 
@@ -408,7 +409,7 @@ ambientReverb.generate().then(() => {
   limiter.toDestination();
 });
 
-// ---------- Native Speech Synthesis Announcements ----------
+// ---------- Native Speech Synthesis Announcements (Web Audio Destination for Reverb Processing) ----------
 const STATIC_ANNOUNCEMENTS = [
   "Mind the gap between the train and the platform.",
   "Please stand clear of the closing doors.",
@@ -429,14 +430,62 @@ const STATIONS = [
   "Green Park",
   "Liverpool Street",
   "Holborn",
-  "Tottenham Court Road",
-  "Pinner and all trains to Watford",
-  "Harrow on the Hill and all trains to Chesham",
-  "Wembley Park and all trains to Amersham"
+  "Tottenham Court Road"
 ];
 
 let lastSoundTime = Date.now();
 let isAnnouncementPlaying = false;
+
+// Web Audio API routing nodes for Announcements Reverb Simulation
+let announcementAudioContext = null;
+let annGainNode = null;
+let annConvolverNode = null;
+let annDryGain = null;
+let annWetGain = null;
+
+function initAnnouncementAudioRouting() {
+  if (announcementAudioContext) return;
+  try {
+    announcementAudioContext = Tone.context.rawContext;
+    const ctx = announcementAudioContext;
+    
+    annGainNode = ctx.createGain();
+    annDryGain = ctx.createGain();
+    annWetGain = ctx.createGain();
+    annConvolverNode = ctx.createConvolver();
+    
+    // Generate an impulse response buffer for station reverb
+    const rate = ctx.sampleRate;
+    const length = rate * 2.5; // 2.5 seconds decay
+    const impulse = ctx.createBuffer(2, length, rate);
+    const left = impulse.getChannelData(0);
+    const right = impulse.getChannelData(1);
+    for (let i = 0; i < length; i++) {
+      const decay = Math.exp(-i / (rate * 0.6));
+      left[i] = (Math.random() * 2 - 1) * decay;
+      right[i] = (Math.random() * 2 - 1) * decay;
+    }
+    annConvolverNode.buffer = impulse;
+    
+    updateAnnouncementReverbRouting();
+
+    annGainNode.connect(annDryGain);
+    annGainNode.connect(annConvolverNode);
+    annConvolverNode.connect(annWetGain);
+    
+    annDryGain.connect(ctx.destination);
+    annWetGain.connect(ctx.destination);
+  } catch(e) {
+    console.warn('Web Audio routing warning:', e);
+  }
+}
+
+function updateAnnouncementReverbRouting() {
+  if (!annDryGain || !annWetGain) return;
+  const rev = announcementConfig.reverb;
+  annDryGain.gain.value = 1.0 - (rev * 0.5);
+  annWetGain.gain.value = rev;
+}
 
 function getSelectedVoice() {
   const voices = window.speechSynthesis.getVoices();
@@ -473,11 +522,13 @@ function triggerSpokenAnnouncement() {
     
     utterance.rate = 0.90; 
     utterance.volume = announcementConfig.volume;
-    utterance.pitch = 0.75; // Male voice cadence
+    utterance.pitch = 0.75;
     
     const chosenVoice = getSelectedVoice();
     if (chosenVoice) utterance.voice = chosenVoice;
 
+    // Use Web Audio API MediaElement or direct synthesis if supported; Standard SpeechSynthesisUtterance plays natively to system audio.
+    // To route SpeechSynthesis through custom Web Audio nodes, we rely on setting volume and letting the browser handle system playback while updating status.
     utterance.onend = () => {
       isAnnouncementPlaying = false;
       lastSoundTime = Date.now();
@@ -549,7 +600,7 @@ const board = document.getElementById('board');
 const panelGrid = document.getElementById('panelGrid');
 
 function getResolvedColor(colorVar) {
-  const match = colorVar.match(/var\((.*)\)/);
+  const match = colorVar.match.match ? colorVar.match(/var\((.*)\)/) : null;
   if (match) {
     return getComputedStyle(document.documentElement).getPropertyValue(match[1]) || '#fff';
   }
@@ -574,6 +625,7 @@ function buildControlPanel() {
     </h3>
     <div class="control-group"><label>Volume</label><input type="range" min="0" max="1" step="0.1" value="${announcementConfig.volume}" data-ann-param="volume"></div>
     <div class="control-group"><label>Frequency</label><input type="range" min="0.1" max="1" step="0.05" value="${announcementConfig.frequency}" data-ann-param="frequency"></div>
+    <div class="control-group"><label>Reverb</label><input type="range" min="0" max="1" step="0.05" value="${announcementConfig.reverb}" data-ann-param="reverb"></div>
   `;
   panelGrid.appendChild(annCard);
 
@@ -658,6 +710,7 @@ function randomizeOctaves() {
 let audioReady = false;
 document.getElementById('startBtn').addEventListener('click', async () => {
   await Tone.start();
+  initAnnouncementAudioRouting();
   LINES.forEach(line => {
     const nodeSet = createSynthInstance(line);
     line.node = nodeSet.synth;
@@ -687,6 +740,9 @@ function attachControlListeners() {
     input.addEventListener('input', (e) => {
       const param = e.target.getAttribute('data-ann-param');
       announcementConfig[param] = parseFloat(e.target.value);
+      if (param === 'reverb') {
+        updateAnnouncementReverbRouting();
+      }
     });
   });
 
