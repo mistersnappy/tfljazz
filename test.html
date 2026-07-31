@@ -12,7 +12,6 @@
     --ink: #f4f2ee;
     --dim: #7a7a85;
     --border: #22222a;
-    --rail-bg: #181820;
     --station-bg: #070709;
     --line-bakerloo: #B36305;
     --line-central: #E32017;
@@ -25,7 +24,6 @@
     --line-piccadilly: #003688;
     --line-victoria: #0098D4;
     --line-waterloo: #95CDBA;
-    --line-drone: #9370DB;
   }
 
   [data-theme="light"] {
@@ -34,7 +32,6 @@
     --ink: #111115;
     --dim: #62626e;
     --border: #d0d0dc;
-    --rail-bg: #d0d0dc;
     --station-bg: #f0f0f4;
   }
 
@@ -363,7 +360,7 @@
 
 <header>
   <h1><span class="roundel"></span>TfL Jazz: Ambient Underground Soundscape</h1>
-  <p class="sub">Live London Underground arrivals, status updates & event-driven ambient pad bed. Click any line visualization to pluck its chord.</p>
+  <p class="sub">Live London Underground arrivals, status updates & announcements. Click any line visualization to pluck its chord.</p>
   <div class="actions">
     <button id="startBtn">Start listening</button>
     <button id="toggleConfig" class="btn-outline">Configure Tones</button>
@@ -425,7 +422,7 @@ const MUSICAL_SCALES = {
 const SCALE_NAMES = Object.keys(MUSICAL_SCALES);
 let currentGlobalScale = "Major Pentatonic";
 
-const OCTAVES = [1, 2, 3];
+const OCTAVES = [1, 2, 3, 4];
 const SYNTH_TYPES = ['FMSynth', 'AMSynth', 'MetalSynth', 'PluckSynth', 'MembraneSynth', 'DuoSynth', 'Synth', 'MonoSynth', 'NoiseSynth', 'PolySynth'];
 
 const LINES = [
@@ -442,15 +439,6 @@ const LINES = [
   { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false },
 ];
 
-let ambientPadConfig = {
-  id: 'ambient-pad',
-  name: 'Data Ambient Pad',
-  color: 'var(--line-drone)',
-  octave: 1,
-  volume: -10,
-  muted: false
-};
-
 let announcementConfig = {
   muted: false,
   volume: 1.0,     
@@ -459,8 +447,8 @@ let announcementConfig = {
   targetLine: 'all'
 };
 
-const delay = new Tone.FeedbackDelay({ delayTime: "8n.", feedback: 0.4, wet: 0.35 });
-const ambientReverb = new Tone.Reverb({ decay: 9.0, wet: 0.6 });
+const delay = new Tone.FeedbackDelay({ delayTime: "8n.", feedback: 0.35, wet: 0.3 });
+const ambientReverb = new Tone.Reverb({ decay: 8.5, wet: 0.55 });
 const limiter = new Tone.Limiter(-4);
 
 delay.connect(limiter);
@@ -482,34 +470,6 @@ let isAnnouncementPlaying = false;
 let latestArrivalsPool = [];
 let liveDisruptionsPool = [];
 
-// Safe Event-Driven Ambient Pad PolySynth
-let ambientPadSynth = null;
-let ambientPadVolume = null;
-
-function initAmbientPad() {
-  if (ambientPadSynth) {
-    ambientPadSynth.dispose();
-    ambientPadVolume.dispose();
-  }
-  ambientPadVolume = new Tone.Volume(ambientPadConfig.muted ? -Infinity : ambientPadConfig.volume).connect(delay);
-  ambientPadSynth = new Tone.PolySynth(Tone.Synth, {
-    oscillator: { type: "triangle" },
-    envelope: { attack: 3.0, decay: 2.0, sustain: 0.8, release: 5.0 }
-  }).connect(ambientPadVolume);
-}
-
-function triggerAmbientPadChord(densityRatio) {
-  if (!audioReady || ambientPadConfig.muted || !ambientPadSynth) return;
-  const scale = MUSICAL_SCALES[currentGlobalScale] || MUSICAL_SCALES["Major Pentatonic"];
-  const root = `${scale[0]}${ambientPadConfig.octave}`;
-  const third = `${scale[2 % scale.length]}${ambientPadConfig.octave}`;
-  const fifth = `${scale[4 % scale.length]}${ambientPadConfig.octave}`;
-  
-  try {
-    ambientPadSynth.triggerAttackRelease([root, third, fifth], 6.0);
-  } catch(e) {}
-}
-
 function getSelectedVoice() {
   if (!('speechSynthesis' in window)) return null;
   const voices = window.speechSynthesis.getVoices();
@@ -526,7 +486,7 @@ function triggerSpokenAnnouncement() {
     isAnnouncementPlaying = true;
     let text = "Customer announcement, a good service is operating across most underground lines. Please keep your personal belongings with you at all times.";
 
-    if (Math.random() < 0.5 && latestArrivalsPool.length > 0) {
+    if (Math.random() < 0.45 && latestArrivalsPool.length > 0) {
       const livePrediction = latestArrivalsPool[Math.floor(Math.random() * latestArrivalsPool.length)];
       const lineObj = LINES.find(l => l.id === livePrediction.lineId);
       const lineName = lineObj ? lineObj.name : 'Underground';
@@ -622,23 +582,12 @@ function buildControlPanel() {
   annCard.className = `synth-card ${announcementConfig.muted ? 'muted' : ''}`;
   annCard.id = `card-announcements`;
   annCard.innerHTML = `
-    <h3>Station Announcements <button class="mute-btn ${announcementConfig.muted ? 'active' : ''}" data-mute-announcements>${announcementConfig.muted ? 'Unmute' : 'Mute'}</button></h3>
+    <h3>Station Announcements <div class="card-actions"><button class="mute-btn ${announcementConfig.muted ? 'active' : ''}" data-mute-announcements>${announcementConfig.muted ? 'Unmute' : 'Mute'}</button></div></h3>
     <div class="control-group"><label>Target Line</label><select data-ann-param="targetLine">${lineSelectOptions}</select></div>
     <div class="control-group"><label>Volume</label><input type="range" min="0" max="1" step="0.1" value="${announcementConfig.volume}" data-ann-param="volume"></div>
     <div class="control-group"><label>Frequency</label><input type="range" min="0.1" max="1" step="0.05" value="${announcementConfig.frequency}" data-ann-param="frequency"></div>
   `;
   panelGrid.appendChild(annCard);
-
-  const padCard = document.createElement('div');
-  padCard.className = `synth-card ${ambientPadConfig.muted ? 'muted' : ''}`;
-  padCard.id = `card-${ambientPadConfig.id}`;
-  let padOctaveOptions = OCTAVES.map(o => `<option value="${o}" ${ambientPadConfig.octave === o ? 'selected' : ''}>Octave ${o}</option>`).join('');
-  padCard.innerHTML = `
-    <h3>Ambient Pad <button class="mute-btn ${ambientPadConfig.muted ? 'active' : ''}" data-mute-pad="${ambientPadConfig.id}">${ambientPadConfig.muted ? 'Unmute' : 'Mute'}</button></h3>
-    <div class="control-group"><label>Octave</label><select data-pad-param="octave">${padOctaveOptions}</select></div>
-    <div class="control-group"><label>Volume</label><input type="range" min="-30" max="6" step="1" value="${ambientPadConfig.volume}" data-pad-param="volume"></div>
-  `;
-  panelGrid.appendChild(padCard);
 
   LINES.forEach(line => {
     const card = document.createElement('div');
@@ -648,7 +597,15 @@ function buildControlPanel() {
     let octaveOptions = OCTAVES.map(o => `<option value="${o}" ${line.octave === o ? 'selected' : ''}>Octave ${o}</option>`).join('');
     
     card.innerHTML = `
-      <h3><span class="swatch" style="background:${line.color}"></span>${line.name} <button class="mute-btn ${line.muted ? 'active' : ''}" data-mute-line="${line.id}">${line.muted ? 'Unmute' : 'Mute'}</button></h3>
+      <h3>
+        <span style="display:flex; align-items:center; gap:6px;">
+          <span class="swatch" style="background:${line.color}"></span>${line.name}
+        </span>
+        <div class="card-actions">
+          <button class="mute-btn ${line.muted ? 'active' : ''}" data-mute-line="${line.id}">${line.muted ? 'Unmute' : 'Mute'}</button>
+          <button class="test-btn" data-test-line="${line.id}">Test</button>
+        </div>
+      </h3>
       <div class="control-group"><label>Synth Type</label><select data-line="${line.id}" data-param="type">${typeOptions}</select></div>
       <div class="control-group"><label>Octave</label><select data-line="${line.id}" data-param="octave">${octaveOptions}</select></div>
       <div class="control-group"><label>Volume</label><input type="range" min="-30" max="6" step="1" value="${line.volume}" data-line="${line.id}" data-param="volume"></div>
@@ -707,7 +664,6 @@ function randomizeVoices() {
 
 function randomizeOctaves() {
   LINES.forEach(line => { line.octave = OCTAVES[Math.floor(Math.random() * OCTAVES.length)]; });
-  ambientPadConfig.octave = OCTAVES[Math.floor(Math.random() * OCTAVES.length)];
   buildControlPanel();
 }
 
@@ -724,15 +680,12 @@ function randomizeGlobalScale() {
 
 let audioReady = false;
 document.getElementById('startBtn').addEventListener('click', async () => {
-  // Synchronous user-gesture unlock
   await Tone.start();
-  
   initializeAllSynths();
-  initAmbientPad();
 
   audioReady = true;
   document.getElementById('startBtn').disabled = true;
-  document.getElementById('status').textContent = 'Listening — ambient soundscape active…';
+  document.getElementById('status').textContent = 'Listening — ambient soundscape & live announcements active…';
   
   pollAllData();
   setInterval(pollAllData, 18000);
@@ -751,7 +704,21 @@ function initializeAllSynths() {
 }
 
 function attachControlListeners() {
-  document.querySelectorAll('.synth-card input, .synth-card select').forEach(input => {
+  document.querySelectorAll('#card-announcements input, #card-announcements select').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const param = e.target.getAttribute('data-ann-param');
+      announcementConfig[param] = e.target.type === 'select-one' ? e.target.value : parseFloat(e.target.value);
+    });
+  });
+
+  document.querySelector('[data-mute-announcements]')?.addEventListener('click', (e) => {
+    announcementConfig.muted = !announcementConfig.muted;
+    e.target.textContent = announcementConfig.muted ? 'Unmute' : 'Mute';
+    e.target.classList.toggle('active', announcementConfig.muted);
+    document.getElementById('card-announcements').classList.toggle('muted', announcementConfig.muted);
+  });
+
+  document.querySelectorAll('.synth-card:not(#card-announcements) input, .synth-card:not(#card-announcements) select').forEach(input => {
     input.addEventListener('input', (e) => {
       const lineId = e.target.getAttribute('data-line');
       const param = e.target.getAttribute('data-param');
@@ -759,60 +726,175 @@ function attachControlListeners() {
       const val = e.target.type === 'select-one' ? (param === 'octave' ? parseInt(e.target.value) : e.target.value) : parseFloat(e.target.value);
       const line = LINES.find(l => l.id === lineId);
       if (line) line[param] = val;
-      if (param === 'type' && audioReady) initializeAllSynths();
+      if (param === 'type') {
+        updateCardVisibility(document.getElementById(`card-${line.id}`), val);
+        if (audioReady) initializeAllSynths();
+      }
     });
   });
 
-  document.querySelector('[data-mute-pad]')?.addEventListener('click', (e) => {
-    ambientPadConfig.muted = !ambientPadConfig.muted;
-    e.target.textContent = ambientPadConfig.muted ? 'Unmute' : 'Mute';
-    e.target.classList.toggle('active', ambientPadConfig.muted);
-    document.getElementById(`card-${ambientPadConfig.id}`).classList.toggle('muted', ambientPadConfig.muted);
-    if (audioReady && ambientPadVolume) {
-      ambientPadVolume.volume.rampTo(ambientPadConfig.muted ? -Infinity : ambientPadConfig.volume, 0.2);
-    }
+  document.querySelectorAll('.synth-card:not(#card-announcements) .mute-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const lineId = e.target.getAttribute('data-mute-line');
+      const line = LINES.find(l => l.id === lineId);
+      if (!line) return;
+      line.muted = !line.muted;
+      e.target.textContent = line.muted ? 'Unmute' : 'Mute';
+      e.target.classList.toggle('active', line.muted);
+      document.getElementById(`card-${line.id}`).classList.toggle('muted', line.muted);
+      if (audioReady && line.volumeNode) {
+        line.volumeNode.volume.rampTo(line.muted ? -Infinity : line.volume, 0.2);
+      }
+    });
   });
 
-  document.querySelectorAll('#card-ambient-pad input, #card-ambient-pad select').forEach(input => {
-    input.addEventListener('input', (e) => {
-      const param = e.target.getAttribute('data-pad-param');
-      const val = e.target.type === 'select-one' ? parseInt(e.target.value) : parseFloat(e.target.value);
-      ambientPadConfig[param] = val;
-      if (param === 'volume' && audioReady && ambientPadVolume) {
-        ambientPadVolume.volume.rampTo(ambientPadConfig.muted ? -Infinity : val, 0.2);
-      } else if (param === 'octave' && audioReady) {
-        initAmbientPad();
+  document.querySelectorAll('.synth-card:not(#card-announcements) .test-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const lineId = e.target.getAttribute('data-test-line');
+      const line = LINES.find(l => l.id === lineId);
+      if (!line || !audioReady || !line.node) {
+        alert('Please click "Start listening" first!');
+        return;
       }
+      playNote(line, { stationName: 'Ambient Test' });
     });
   });
 }
 
+function hashToIndex(str, mod){
+  let h = 0;
+  for (let i=0; i<str.length; i++){ h = (h*31 + str.charCodeAt(i)) >>> 0; }
+  return h % mod;
+}
+
+const activeTrainTracker = new Map();
+
 async function pollAllData() {
   const ids = LINES.map(l=>l.id).join(',');
+  
   try {
-    const res = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Arrivals`);
-    if (res.ok) {
-      const data = await res.json();
-      latestArrivalsPool = data.filter(p => p.timeToStation != null && p.timeToStation > 5 && p.timeToStation < 300);
-      
-      const normalizedDensity = Math.min(1.0, data.length / 350);
-      ambientReverb.wet.value = 0.35 + (normalizedDensity * 0.5);
-
-      // Trigger ambient chord wash dynamically based on data flow
-      triggerAmbientPadChord(normalizedDensity);
-
-      document.getElementById('status').textContent = `Listening — ${data.length} active trains tracked`;
+    const statusRes = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Disruptions`);
+    if (statusRes.ok) {
+      const disData = await statusRes.json();
+      const extractedAdvisories = [];
+      disData.forEach(d => { if (d.description) extractedAdvisories.push(d.description); });
+      if (extractedAdvisories.length > 0) liveDisruptionsPool = extractedAdvisories;
     }
+  } catch(e) {}
+
+  try {
+    const statusRes = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Status`);
+    if (statusRes.ok) {
+      const statusData = await statusRes.json();
+      statusData.forEach(lineStatus => {
+        const badgeElem = document.getElementById(`status-${lineStatus.id}`);
+        if (badgeElem && lineStatus.lineStatuses && lineStatus.lineStatuses.length > 0) {
+          const statusObj = lineStatus.lineStatuses[0];
+          const statusDesc = statusObj.statusSeverityDescription;
+          badgeElem.textContent = statusDesc;
+          if (statusDesc !== 'Good Service') {
+            badgeElem.className = 'status-badge alert';
+            badgeElem.title = statusObj.reason || '';
+          } else {
+            badgeElem.className = 'status-badge';
+            badgeElem.title = '';
+          }
+        }
+      });
+    }
+  } catch(e) {}
+
+  try{
+    const res = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Arrivals`);
+    if (!res.ok) throw new Error('API failure');
+    const data = await res.json();
+    
+    latestArrivalsPool = data.filter(p => p.timeToStation != null && p.timeToStation > 5 && p.timeToStation < 300);
+    document.getElementById('status').textContent = `Listening — ${data.length} active trains tracked, last updated ${new Date().toLocaleTimeString()}`;
+
+    const now = Date.now();
+    for (const [id, record] of activeTrainTracker.entries()) {
+      if (now - record.lastSeen > 180000) activeTrainTracker.delete(id);
+    }
+
+    data.forEach(p => {
+      const vehicleId = p.vehicleId || p.id || `${p.lineId}-${p.stationName}-${p.expectedArrival}`;
+      if (p.timeToStation == null || p.timeToStation < 2 || p.timeToStation > 90) return;
+
+      const line = LINES.find(l => l.id === p.lineId);
+      if (!line) return;
+
+      let trainRecord = activeTrainTracker.get(vehicleId);
+      if (!trainRecord) {
+        trainRecord = { id: vehicleId, lineId: p.lineId, totalTime: p.timeToStation, startTime: now, lastSeen: now, soundFired: false };
+        activeTrainTracker.set(vehicleId, trainRecord);
+        animateTrain(line, p.timeToStation, trainRecord);
+      } else {
+        trainRecord.lastSeen = now;
+      }
+    });
+
   } catch(err) {
-    document.getElementById('status').textContent = 'Listening (Offline mode / API retrying...)';
+    document.getElementById('status').textContent = 'Could not reach TfL API — retrying soon.';
   }
+}
+
+function animateTrain(line, seconds, trainRecord){
+  const rail = document.getElementById(`rail-${line.id}`);
+  if (!rail) return;
+  
+  const dot = document.createElement('div');
+  dot.className = 'train';
+  rail.appendChild(dot);
+  
+  const startTime = performance.now();
+  const durationMs = seconds * 1000;
+
+  function step(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(1, elapsed / durationMs);
+
+    dot.style.left = `${progress * 100}%`;
+    dot.style.opacity = progress > 0.02 ? '1' : '0';
+
+    if (progress >= 1.0) {
+      if (!trainRecord.soundFired) {
+        trainRecord.soundFired = true;
+        playNote(line, { stationName: line.name }, 1.2);
+      }
+      dot.remove();
+      return;
+    }
+
+    requestAnimationFrame(step);
+  }
+
+  requestAnimationFrame(step);
 }
 
 function playNote(line, prediction, intensity = 1.0){
   if (!audioReady || !line.node || line.muted) return;
-  const scale = MUSICAL_SCALES[currentGlobalScale];
-  const note = `${scale[0]}${line.octave}`;
-  try { line.node.triggerAttackRelease(note, "2n"); } catch(e){}
+  
+  lastSoundTime = Date.now();
+
+  const currentScaleNotes = MUSICAL_SCALES[currentGlobalScale] || MUSICAL_SCALES["Major Pentatonic"];
+  const noteName = currentScaleNotes[hashToIndex(prediction.stationName || prediction.towards || 'x', currentScaleNotes.length)];
+  const note = `${noteName}${line.octave}`;
+  
+  try{
+    if (line.type === 'NoiseSynth') {
+      line.node.triggerAttackRelease((line.release || 2.0) * intensity);
+    } else {
+      line.node.triggerAttackRelease(note, (line.release || 2.0) * intensity);
+    }
+  }catch(e){}
+
+  const out = document.getElementById(`note-${line.id}`);
+  if (out) {
+    out.textContent = line.type === 'NoiseSynth' ? 'WAVE' : note;
+    out.style.color = 'var(--ink)';
+    setTimeout(()=>{ out.style.color = ''; }, 400);
+  }
 }
 </script>
 </body>
