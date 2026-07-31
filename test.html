@@ -390,6 +390,13 @@ const LINES = [
   { id:'waterloo-city',   name:'Waterloo & City', color:'var(--line-waterloo)',        type:'Synth',         octave:2, harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false },
 ];
 
+// Announcements Configuration Object
+let announcementConfig = {
+  muted: false,
+  volume: 1.0,     // 0.0 to 1.0 speech synthesis volume
+  frequency: 0.45  // probability threshold for firing during gaps
+};
+
 const delay = new Tone.FeedbackDelay({ delayTime: "8n.", feedback: 0.35, wet: 0.3 });
 const ambientReverb = new Tone.Reverb({ decay: 8.5, wet: 0.55 });
 const limiter = new Tone.Limiter(-4);
@@ -414,21 +421,21 @@ let lastSoundTime = Date.now();
 let isAnnouncementPlaying = false;
 
 function triggerSpokenAnnouncement() {
-  if (!audioReady || isAnnouncementPlaying || !('speechSynthesis' in window)) return;
+  if (!audioReady || announcementConfig.muted || isAnnouncementPlaying || !('speechSynthesis' in window)) return;
 
   const now = Date.now();
   const gapDuration = (now - lastSoundTime) / 1000;
 
-  // Fire if there's a gap longer than 2 seconds and random chance hits
-  if (gapDuration > 2.0 && Math.random() < 0.45) {
+  // Fire if there's a gap longer than 2 seconds and random chance hits based on configured frequency
+  if (gapDuration > 2.0 && Math.random() < announcementConfig.frequency) {
     isAnnouncementPlaying = true;
     const text = ANNOUNCEMENTS[Math.floor(Math.random() * ANNOUNCEMENTS.length)];
     const utterance = new SpeechSynthesisUtterance(text);
     
-    utterance.rate = 0.95; // Slightly slower, more deliberate cadence
-    utterance.pitch = 0.9;  
+    utterance.rate = 0.95; 
+    utterance.pitch = 0.9;
+    utterance.volume = announcementConfig.volume;
     
-    // Try to pick a British English voice if available
     const voices = window.speechSynthesis.getVoices();
     const ukVoice = voices.find(v => v.lang === 'en-GB' || v.name.includes('UK') || v.name.includes('British'));
     if (ukVoice) utterance.voice = ukVoice;
@@ -447,7 +454,6 @@ function triggerSpokenAnnouncement() {
   }
 }
 
-// Check every second for quiet gaps
 setInterval(triggerSpokenAnnouncement, 1000);
 
 function createSynthInstance(cfg) {
@@ -514,6 +520,27 @@ function getResolvedColor(colorVar) {
 
 function buildControlPanel() {
   panelGrid.innerHTML = '';
+  
+  // 1. Add Dedicated Announcements Control Card first
+  const annCard = document.createElement('div');
+  annCard.className = `synth-card ${announcementConfig.muted ? 'muted' : ''}`;
+  annCard.id = `card-announcements`;
+  annCard.innerHTML = `
+    <h3>
+      <span style="display:flex; align-items:center; gap:6px;">
+        <span class="swatch" style="background:var(--ink)"></span>Station Announcements
+      </span>
+      <div class="card-actions">
+        <button class="mute-btn ${announcementConfig.muted ? 'active' : ''}" data-mute-announcements>${announcementConfig.muted ? 'Unmute' : 'Mute'}</button>
+        <button class="test-btn" data-test-announcements>Test</button>
+      </div>
+    </h3>
+    <div class="control-group"><label>Volume</label><input type="range" min="0" max="1" step="0.1" value="${announcementConfig.volume}" data-ann-param="volume"></div>
+    <div class="control-group"><label>Frequency</label><input type="range" min="0.1" max="1" step="0.05" value="${announcementConfig.frequency}" data-ann-param="frequency"></div>
+  `;
+  panelGrid.appendChild(annCard);
+
+  // 2. Add Train Lines Cards
   LINES.forEach(line => {
     const card = document.createElement('div');
     card.className = `synth-card ${line.muted ? 'muted' : ''}`;
@@ -620,7 +647,45 @@ function recreateSynth(line) {
 }
 
 function attachControlListeners() {
-  document.querySelectorAll('.synth-card input, .synth-card select').forEach(input => {
+  // Announcements card listener inputs
+  document.querySelectorAll('#card-announcements input').forEach(input => {
+    input.addEventListener('input', (e) => {
+      const param = e.target.getAttribute('data-ann-param');
+      announcementConfig[param] = parseFloat(e.target.value);
+    });
+  });
+
+  const annMuteBtn = document.querySelector('[data-mute-announcements]');
+  if (annMuteBtn) {
+    annMuteBtn.addEventListener('click', (e) => {
+      announcementConfig.muted = !announcementConfig.muted;
+      e.target.textContent = announcementConfig.muted ? 'Unmute' : 'Mute';
+      e.target.classList.toggle('active', announcementConfig.muted);
+      document.getElementById('card-announcements').classList.toggle('muted', announcementConfig.muted);
+    });
+  }
+
+  const annTestBtn = document.querySelector('[data-test-announcements]');
+  if (annTestBtn) {
+    annTestBtn.addEventListener('click', () => {
+      if (!audioReady) {
+        alert('Please click "Start listening" first!');
+        return;
+      }
+      const text = ANNOUNCEMENTS[Math.floor(Math.random() * ANNOUNCEMENTS.length)];
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.rate = 0.95;
+      utterance.pitch = 0.9;
+      utterance.volume = announcementConfig.volume;
+      const voices = window.speechSynthesis.getVoices();
+      const ukVoice = voices.find(v => v.lang === 'en-GB' || v.name.includes('UK') || v.name.includes('British'));
+      if (ukVoice) utterance.voice = ukVoice;
+      window.speechSynthesis.speak(utterance);
+    });
+  }
+
+  // Train lines input listeners
+  document.querySelectorAll('.synth-card:not(#card-announcements) input, .synth-card:not(#card-announcements) select').forEach(input => {
     input.addEventListener('input', (e) => {
       const lineId = e.target.getAttribute('data-line');
       const param = e.target.getAttribute('data-param');
@@ -666,8 +731,8 @@ function attachControlListeners() {
     });
   });
 
-  // Mute Button Handlers
-  document.querySelectorAll('.mute-btn').forEach(btn => {
+  // Mute Button Handlers for lines
+  document.querySelectorAll('.synth-card:not(#card-announcements) .mute-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const lineId = e.target.getAttribute('data-mute-line');
       const line = LINES.find(l => l.id === lineId);
@@ -684,8 +749,8 @@ function attachControlListeners() {
     });
   });
 
-  // Test Note Button Handlers
-  document.querySelectorAll('.test-btn').forEach(btn => {
+  // Test Note Button Handlers for lines
+  document.querySelectorAll('.synth-card:not(#card-announcements) .test-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const lineId = e.target.getAttribute('data-test-line');
       const line = LINES.find(l => l.id === lineId);
@@ -756,7 +821,6 @@ function animateTrain(line, seconds){
 function playNote(line, prediction){
   if (!audioReady || !line.node || line.muted) return;
   
-  // Record sound timestamp to track quiet gaps
   lastSoundTime = Date.now();
 
   const noteName = SCALE[hashToIndex(prediction.stationName || prediction.towards || 'x', SCALE.length)];
