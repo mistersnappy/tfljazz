@@ -444,7 +444,7 @@ const LINES = [
 let announcementConfig = {
   muted: false,
   volume: 1.0,     
-  frequency: 0.15, // Sparsely fired rare announcements
+  frequency: 0.15,
   reverb: 0.3,     
   targetLine: 'all', 
   voiceType: 'male'
@@ -481,7 +481,7 @@ const STATIC_ANNOUNCEMENTS = [
 
 let lastSoundTime = Date.now();
 let isAnnouncementPlaying = false;
-let latestArrivalsPool = []; // Global pool populated from active live train arrivals data to feed real-time announcements
+let latestArrivalsPool = [];
 
 function getSelectedVoice() {
   const voices = window.speechSynthesis.getVoices();
@@ -503,12 +503,10 @@ function triggerSpokenAnnouncement() {
   const now = Date.now();
   const gapDuration = (now - lastSoundTime) / 1000;
 
-  // Fire sparsely and only during quiet gaps
   if (gapDuration > 6.0 && Math.random() < announcementConfig.frequency) {
     isAnnouncementPlaying = true;
     
     let text;
-    // 60% chance to announce an actual live train arrival from fetched API data, 40% standard safety message
     if (latestArrivalsPool.length > 0 && Math.random() < 0.6) {
       const livePrediction = latestArrivalsPool[Math.floor(Math.random() * latestArrivalsPool.length)];
       const lineObj = LINES.find(l => l.id === livePrediction.lineId);
@@ -768,7 +766,7 @@ document.getElementById('startBtn').addEventListener('click', async () => {
   document.getElementById('startBtn').disabled = true;
   document.getElementById('status').textContent = 'Listening — ambient soundscape & status active…';
   pollAllData();
-  setInterval(pollAllData, 20000);
+  setInterval(pollAllData, 18000);
 });
 
 function recreateSynth(line) {
@@ -920,7 +918,7 @@ const activeTrainTracker = new Map();
 async function pollAllData() {
   const ids = LINES.map(l=>l.id).join(',');
   
-  // 1. Fetch Line Status (Delays / Disruptions) endpoint
+  // 1. Fetch Line Status (Delays / Disruptions)
   try {
     const statusRes = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Status`);
     if (statusRes.ok) {
@@ -945,14 +943,13 @@ async function pollAllData() {
     console.warn('Status fetch warning:', e);
   }
 
-  // 2. Fetch Live Arrivals endpoint
+  // 2. Fetch Live Arrivals
   try{
     const res = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Arrivals`);
     if (!res.ok) throw new Error('API network failure');
     const data = await res.json();
     
-    // Populate global arrivals pool for accurate real-time voice announcements
-    latestArrivalsPool = data.filter(p => p.timeToStation != null && p.timeToStation > 10 && p.timeToStation < 300);
+    latestArrivalsPool = data.filter(p => p.timeToStation != null && p.timeToStation > 5 && p.timeToStation < 300);
 
     document.getElementById('status').textContent =
       `Listening — ${data.length} tracked records, last updated ${new Date().toLocaleTimeString()}`;
@@ -967,7 +964,7 @@ async function pollAllData() {
 
     data.forEach(p => {
       const vehicleId = p.vehicleId || p.id || `${p.lineId}-${p.stationName}-${p.expectedArrival}`;
-      if (p.timeToStation == null || p.timeToStation < 2 || p.timeToStation > 120) return;
+      if (p.timeToStation == null || p.timeToStation < 2 || p.timeToStation > 90) return;
 
       const line = LINES.find(l => l.id === p.lineId);
       if (!line) return;
@@ -981,28 +978,12 @@ async function pollAllData() {
           totalTime: p.timeToStation,
           startTime: now,
           lastSeen: now,
-          milestonesHit: { node1: false, node2: false, arrival: false }
+          soundFired: false
         };
         activeTrainTracker.set(vehicleId, trainRecord);
-        animateTrain(line, p.timeToStation);
+        animateTrain(line, p.timeToStation, trainRecord);
       } else {
         trainRecord.lastSeen = now;
-      }
-
-      const elapsedSec = (now - trainRecord.startTime) / 1000;
-      const progressRatio = Math.min(1, elapsedSec / trainRecord.totalTime);
-
-      if (progressRatio >= 0.25 && !trainRecord.milestonesHit.node1) {
-        trainRecord.milestonesHit.node1 = true;
-        playNote(line, p, 0.6);
-      }
-      if (progressRatio >= 0.60 && !trainRecord.milestonesHit.node2) {
-        trainRecord.milestonesHit.node2 = true;
-        playNote(line, p, 0.8);
-      }
-      if (progressRatio >= 0.95 && !trainRecord.milestonesHit.arrival) {
-        trainRecord.milestonesHit.arrival = true;
-        playNote(line, p, 1.0);
       }
     });
 
@@ -1012,7 +993,7 @@ async function pollAllData() {
   }
 }
 
-function animateTrain(line, seconds){
+function animateTrain(line, seconds, trainRecord){
   const rail = document.getElementById(`rail-${line.id}`);
   if (!rail) return;
   
@@ -1020,13 +1001,32 @@ function animateTrain(line, seconds){
   dot.className = 'train';
   rail.appendChild(dot);
   
-  requestAnimationFrame(()=>{
-    dot.style.transition = `left ${seconds}s linear, opacity 0.3s ease`;
-    dot.style.opacity = '1';
-    dot.style.left = '100%';
-  });
-  
-  setTimeout(()=> dot.remove(), seconds * 1000 + 400);
+  // Use requestAnimationFrame loop to track actual right-side arrival smoothly
+  const startTime = performance.now();
+  const durationMs = seconds * 1000;
+
+  function step(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(1, elapsed / durationMs);
+
+    // Update visual CSS left position percent
+    dot.style.left = `${progress * 100}%`;
+    dot.style.opacity = progress > 0.02 ? '1' : '0';
+
+    // Fire sound precisely when dot hits or passes the right hand side (100% progress)
+    if (progress >= 1.0) {
+      if (!trainRecord.soundFired) {
+        trainRecord.soundFired = true;
+        playNote(line, { stationName: line.name }, 1.2);
+      }
+      dot.remove();
+      return;
+    }
+
+    requestAnimationFrame(step);
+  }
+
+  requestAnimationFrame(step);
 }
 
 function playNote(line, prediction, intensity = 1.0){
