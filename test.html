@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rainbow Plant Bio-Signal Visualizer & Native Audio</title>
+  <title>Dynamic Rainbow Plant Bio-Signal Visualizer</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
   <style>
@@ -36,7 +36,7 @@
       border: 1px solid rgba(255, 255, 255, 0.2);
       pointer-events: none;
       font-size: 11px;
-      width: 240px;
+      width: 250px;
     }
     .legend-item {
       display: flex;
@@ -82,13 +82,13 @@
   </div>
 
   <div id="legend">
-    <strong style="display:block; margin-bottom:8px; border-bottom:1px solid #444; padding-bottom:4px;">RAINBOW SIGNAL MAPPING</strong>
-    <div class="legend-item"><span><span class="color-dot" style="background:#ff3333;"></span>Red (Variance)</span><span id="legRed">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#ff9933;"></span>Orange (Delta)</span><span id="legOrange">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#ffff33;"></span>Yellow (Pitch/X)</span><span id="legYellow">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#33cc33;"></span>Green (Velocity/Vol)</span><span id="legGreen">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#3399ff;"></span>Blue (Pulse Time)</span><span id="legBlue">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#9933ff;"></span>Indigo (Harmonic)</span><span id="legIndigo">0.00</span></div>
+    <strong style="display:block; margin-bottom:8px; border-bottom:1px solid #444; padding-bottom:4px;">RAINBOW DYNAMIC MAPPING</strong>
+    <div class="legend-item"><span><span class="color-dot" style="background:#ff3333;"></span>Red (Variance pulse)</span><span id="legRed">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#ff9933;"></span>Orange (Delta drift)</span><span id="legOrange">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#ffff33;"></span>Yellow (Orbital Spin)</span><span id="legYellow">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#33cc33;"></span>Green (Organic Wave)</span><span id="legGreen">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#3399ff;"></span>Blue (Breathing Radiance)</span><span id="legBlue">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#9933ff;"></span>Indigo (Phase Harmonic)</span><span id="legIndigo">0.00</span></div>
     <div class="legend-item"><span><span class="color-dot" style="background:#cc33ff;"></span>Violet (Total Energy)</span><span id="legViolet">0.00</span></div>
   </div>
 
@@ -107,11 +107,7 @@
     let mic, micActive = false;
     let midiStatus = "Searching for MIDI...";
 
-    // Native Web Audio API variables
-    let audioCtx;
-    let masterGain;
-    let mainFilter;
-    let audioActive = false;
+    let audioCtx, masterGain, mainFilter, audioActive = false;
 
     function setup() {
       createCanvas(windowWidth, windowHeight);
@@ -125,36 +121,40 @@
       if (!micActive && midiStatus.includes("Searching")) {
         targetDelta = constrain(mouseX / width, 0.1, 1.0);
         targetVariance = constrain(mouseY / height, 0.1, 1.0);
-        inputParamX = mouseX / width;
-        inputParamY = mouseY / height;
+        inputParamX = constrain(mouseX / width, 0.05, 1.0);
+        inputParamY = constrain(mouseY / height, 0.05, 1.0);
       }
 
       if (micActive && mic) {
         let level = mic.getLevel();
         targetVariance = constrain(level * 6, 0.1, 1.0);
         targetDelta = constrain(map(sin(frameCount * 0.04), -1, 1, 0.2, 0.9), 0.1, 1.0);
-        inputParamX = constrain(level * 10, 0, 1);
-        inputParamY = constrain(abs(sin(frameCount * 0.1)), 0, 1);
+        inputParamX = constrain(level * 10, 0.05, 1.0);
+        inputParamY = constrain(abs(sin(frameCount * 0.1)), 0.05, 1.0);
       }
 
       smoothDelta = lerp(smoothDelta, targetDelta, 0.05);
       smoothVariance = lerp(smoothVariance, targetVariance, 0.05);
 
-      // Map variance directly to native audio filter cutoff if running
       if (audioActive && mainFilter) {
         let targetCutoff = map(smoothVariance, 0, 1, 200, 4000);
         mainFilter.frequency.setTargetAtTime(targetCutoff, audioCtx.currentTime, 0.1);
       }
 
-      // Calculate 7 rainbow signal aspects
-      let sigRed    = smoothVariance;                            
-      let sigOrange = smoothDelta;                               
-      let sigYellow = inputParamX;                               
-      let sigGreen  = inputParamY;                               
-      let sigBlue   = (sin(frameCount * 0.05) + 1) / 2;          
-      let sigIndigo = abs(cos(smoothDelta * PI + frameCount * 0.03)); 
-      let sigViolet = (smoothDelta * smoothVariance);            
+      // --- DYNAMICALLY DRIVEN SIGNAL ASPECTS ---
+      // We blend user/plant input with rich mathematical wave modifiers (sin/cos/noise) 
+      // so every single color layer has continuous, independent motion.
+      let time = frameCount * 0.03;
 
+      let sigRed    = constrain(smoothVariance * 0.7 + (sin(time * 0.8) + 1) * 0.15, 0, 1);
+      let sigOrange = constrain(smoothDelta * 0.7 + (cos(time * 0.6) + 1) * 0.15, 0, 1);
+      let sigYellow = constrain(inputParamX * 0.5 + (sin(time * 1.2) + 1) * 0.25, 0, 1);
+      let sigGreen  = constrain(inputParamY * 0.5 + (cos(time * 0.9) + 1) * 0.25, 0, 1);
+      let sigBlue   = (sin(time * 0.5) + 1) / 2;          
+      let sigIndigo = abs(sin(smoothDelta * PI + time * 0.7)); 
+      let sigViolet = constrain((smoothDelta * smoothVariance) + (sin(time * 0.4) + 1) * 0.2, 0, 1);
+
+      // Update HUD & Side Legend Text
       document.getElementById('valDelta').innerText = smoothDelta.toFixed(2);
       document.getElementById('valVariance').innerText = smoothVariance.toFixed(2);
       document.getElementById('legRed').innerText = sigRed.toFixed(2);
@@ -167,16 +167,64 @@
 
       translate(width / 2, height / 2);
 
-      // Render 7 Rainbow Fractal Layers
+      // --- RENDER 7 DYNAMIC RAINBOW FRACTAL LAYERS ---
       noFill();
       
-      push(); stroke(255, 51, 51, 150); strokeWeight(map(sigRed, 0, 1, 1, 3)); rotate(frameCount * 0.005); drawFractalBranch(map(sigRed, 0, 1, 50, 180), floor(map(sigRed, 0, 1, 2, 5))); pop();
-      push(); stroke(255, 153, 51, 150); strokeWeight(1.5); rotate(-frameCount * 0.008); drawCustomBranch(120, 4, map(sigOrange, 0, 1, 0.1, 0.9)); pop();
-      push(); stroke(255, 255, 51, 140); strokeWeight(2); rotate(sigYellow * TWO_PI); drawFractalBranch(100, 4); pop();
-      push(); stroke(51, 204, 51, 160); strokeWeight(map(sigGreen, 0, 1, 0.5, 4)); rotate(frameCount * 0.012); drawFractalBranch(map(sigGreen, 0, 1, 40, 200), 3); pop();
-      push(); stroke(51, 153, 255, 150); strokeWeight(1.2); rotate(-frameCount * 0.004); drawFractalBranch(map(sigBlue, 0, 1, 60, 220), 5); pop();
-      push(); stroke(153, 51, 255, 140); strokeWeight(1.8); rotate(sigIndigo * PI); drawCustomBranch(140, 4, 0.5); pop();
-      push(); stroke(204, 51, 255, 180); strokeWeight(map(sigViolet, 0, 1, 1, 3.5)); rotate(frameCount * 0.015); drawFractalBranch(map(sigViolet, 0, 1, 80, 160), 4); pop();
+      // 1. RED Layer (Variance pulse -> size and depth)
+      push();
+      stroke(255, 51, 51, 160);
+      strokeWeight(map(sigRed, 0, 1, 1, 3.5));
+      rotate(frameCount * 0.004);
+      drawFractalBranch(map(sigRed, 0, 1, 40, 180), floor(map(sigRed, 0, 1, 2, 5)));
+      pop();
+
+      // 2. ORANGE Layer (Delta drift -> branch angle)
+      push();
+      stroke(255, 153, 51, 160);
+      strokeWeight(1.5);
+      rotate(-frameCount * 0.007);
+      drawCustomBranch(110, 4, map(sigOrange, 0, 1, 0.15, 0.85));
+      pop();
+
+      // 3. YELLOW Layer (Orbital Spin -> driven by Yellow signal)
+      push();
+      stroke(255, 255, 51, 150);
+      strokeWeight(2);
+      rotate(sigYellow * TWO_PI + (frameCount * 0.01));
+      drawFractalBranch(90, 4);
+      pop();
+
+      // 4. GREEN Layer (Organic Wave -> thickness and reach)
+      push();
+      stroke(51, 204, 51, 170);
+      strokeWeight(map(sigGreen, 0, 1, 0.5, 4));
+      rotate(frameCount * 0.01 + sin(frameCount * 0.05) * 0.2);
+      drawFractalBranch(map(sigGreen, 0, 1, 50, 190), 3);
+      pop();
+
+      // 5. BLUE Layer (Breathing Radiance -> expanding scale)
+      push();
+      stroke(51, 153, 255, 160);
+      strokeWeight(1.2);
+      rotate(-frameCount * 0.005);
+      drawFractalBranch(map(sigBlue, 0, 1, 70, 210), 5);
+      pop();
+
+      // 6. INDIGO Layer (Phase Harmonic -> swirling rotation)
+      push();
+      stroke(153, 51, 255, 150);
+      strokeWeight(1.8);
+      rotate(sigIndigo * PI - (frameCount * 0.008));
+      drawCustomBranch(130, 4, 0.45);
+      pop();
+
+      // 7. VIOLET Layer (Total Energy -> pulsing crown)
+      push();
+      stroke(204, 51, 255, 190);
+      strokeWeight(map(sigViolet, 0, 1, 1, 3.5));
+      rotate(frameCount * 0.012);
+      drawFractalBranch(map(sigViolet, 0, 1, 60, 170), 4);
+      pop();
     }
 
     function drawFractalBranch(len, depth) {
@@ -195,22 +243,17 @@
       push(); rotate(-theta); drawCustomBranch(len * 0.67, depth - 1, theta); pop();
     }
 
-    // --- NATIVE WEB AUDIO API SYNTHESIZER ENGINE ---
     function toggleAudioEngine() {
       if (!audioActive) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        
-        // Master Volume Gain Node
         masterGain = audioCtx.createGain();
         masterGain.gain.setValueAtTime(0.2, audioCtx.currentTime);
 
-        // Low-pass Filter Node (brightness responds to plant variance)
         mainFilter = audioCtx.createBiquadFilter();
         mainFilter.type = 'lowpass';
         mainFilter.frequency.setValueAtTime(1000, audioCtx.currentTime);
         mainFilter.Q.setValueAtTime(3, audioCtx.currentTime);
 
-        // Connect chain: Filter -> Master Gain -> Speakers
         mainFilter.connect(masterGain);
         masterGain.connect(audioCtx.destination);
 
@@ -225,26 +268,21 @@
       }
     }
 
-    // Trigger a native web audio synth note when MIDI note arrives or mouse is clicked
     function playNativeSynthTone(freq, velocity = 0.8) {
       if (!audioActive || !audioCtx) return;
-
       let osc = audioCtx.createOscillator();
       let noteGain = audioCtx.createGain();
 
-      // Soft ambient tone blend (triangle wave)
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
 
-      // Envelope configuration (Soft Attack, Long Lush Release)
       let now = audioCtx.currentTime;
       let peakGain = map(velocity, 0, 127, 0.05, 0.3);
 
       noteGain.gain.setValueAtTime(0, now);
-      noteGain.gain.linearRampToValueAtTime(peakGain, now + 0.2); // Attack
-      noteGain.gain.exponentialRampToValueAtTime(0.0001, now + 3.0); // Release
+      noteGain.gain.linearRampToValueAtTime(peakGain, now + 0.2);
+      noteGain.gain.exponentialRampToValueAtTime(0.0001, now + 3.0);
 
-      // Connect oscillator -> envelope gain -> shared filter chain
       osc.connect(noteGain);
       noteGain.connect(mainFilter);
 
@@ -252,15 +290,13 @@
       osc.stop(now + 3.1);
     }
 
-    // Mouse click triggers a synthesized ambient note when audio is on
     function mousePressed() {
       if (audioActive && mouseY < height - 60) {
-        let freq = map(mouseX, 0, width, 110, 880); // Bass to High pitch scale
+        let freq = map(mouseX, 0, width, 110, 880);
         playNativeSynthTone(freq, 100);
       }
     }
 
-    // --- WEB MIDI SUPPORT ---
     function setupWebMIDI() {
       if (navigator.requestMIDIAccess) {
         navigator.requestMIDIAccess().then(onMIDISuccess, onMIDIFailure);
@@ -289,7 +325,6 @@
         inputParamX = note / 127;
         inputParamY = velocity / 127;
 
-        // Convert MIDI note number to Frequency in Hertz and play native sound
         let freq = 440 * Math.pow(2, (note - 69) / 12);
         playNativeSynthTone(freq, velocity);
       }
