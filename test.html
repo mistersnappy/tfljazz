@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bioluminescent Plant Fractal Visualizer</title>
+  <title>Rainbow Plant Bio-Signal Visualizer</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
   <style>
@@ -12,26 +12,50 @@
       background-color: #020408;
       overflow: hidden;
       font-family: monospace;
+      color: #f4f2ee;
     }
     #info {
       position: absolute;
       top: 20px;
       left: 20px;
-      color: #4af3a2;
-      font-size: 12px;
-      letter-spacing: 1px;
-      background: rgba(2, 4, 8, 0.8);
+      background: rgba(2, 4, 8, 0.85);
       padding: 12px 16px;
       border-radius: 6px;
-      border: 1px solid rgba(74, 243, 162, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.2);
       pointer-events: none;
+      font-size: 11px;
       line-height: 1.5;
+    }
+    #legend {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(2, 4, 8, 0.85);
+      padding: 14px 18px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      pointer-events: none;
+      font-size: 11px;
+      width: 240px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 6px;
+    }
+    .color-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 8px;
     }
     #micBtn {
       position: absolute;
       bottom: 20px;
       left: 20px;
-      background: #4af3a2;
+      background: #f4f2ee;
       color: #020408;
       border: none;
       padding: 8px 14px;
@@ -42,17 +66,26 @@
       pointer-events: auto;
     }
     #micBtn:hover {
-      background: #76ffc2;
+      background: #ffffff;
     }
   </style>
 </head>
 <body>
 
   <div id="info">
-    BIOLUMINESCENT PLANT VISUALIZER<br>
-    Input Mode: <span id="inputMode" style="color: #ffde4a;">Interactive (Move Mouse / Enable Mic)</span><br>
-    Delta (Complexity): <span id="valDelta">0.50</span><br>
-    Variance (Activity): <span id="valVariance">0.50</span>
+    SIGNAL SOURCE: <span id="inputMode" style="color: #ffde4a;">Interactive (Move Mouse / Mic)</span><br>
+    Raw Delta: <span id="valDelta">0.50</span> | Raw Variance: <span id="valVariance">0.50</span>
+  </div>
+
+  <div id="legend">
+    <strong style="display:block; margin-bottom:8px; border-bottom:1px solid #444; padding-bottom:4px;">RAINBOW SIGNAL MAPPING</strong>
+    <div class="legend-item"><span><span class="color-dot" style="background:#ff3333;"></span>Red (Variance)</span><span id="legRed">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#ff9933;"></span>Orange (Delta)</span><span id="legOrange">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#ffff33;"></span>Yellow (Pitch/X)</span><span id="legYellow">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#33cc33;"></span>Green (Velocity/Vol)</span><span id="legGreen">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#3399ff;"></span>Blue (Pulse Time)</span><span id="legBlue">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#9933ff;"></span>Indigo (Harmonic)</span><span id="legIndigo">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#cc33ff;"></span>Violet (Total Energy)</span><span id="legViolet">0.00</span></div>
   </div>
 
   <button id="micBtn" onclick="toggleMic()">Enable Mic Reactivity</button>
@@ -62,110 +95,181 @@
     let targetVariance = 0.5;
     let smoothDelta = 0.5;
     let smoothVariance = 0.5;
-    let angleSpeed = 0.01;
+    let inputParamX = 0.5; // Driven by Mouse X or MIDI Note
+    let inputParamY = 0.5; // Driven by Mouse Y or MIDI Velocity
     let mic, micActive = false;
     let midiStatus = "Searching for MIDI...";
 
     function setup() {
       createCanvas(windowWidth, windowHeight);
-      colorMode(HSB, 360, 100, 100, 100);
+      colorMode(RGB, 255);
       setupWebMIDI();
     }
 
     function draw() {
-      background(210, 80, 4, 15);
+      // Deep background trail
+      background(2, 4, 8, 25);
 
-      // Fallback interaction: If no MIDI/Mic input, use mouse position to drive the fractal
+      // Fallback inputs via mouse if no hardware/mic active
       if (!micActive && midiStatus.includes("Searching")) {
         targetDelta = constrain(mouseX / width, 0.1, 1.0);
         targetVariance = constrain(mouseY / height, 0.1, 1.0);
+        inputParamX = mouseX / width;
+        inputParamY = mouseY / height;
       }
 
-      // If microphone is active, map audio volume to variance and frequency to delta
+      // Microphone active reactivity
       if (micActive && mic) {
         let level = mic.getLevel();
-        targetVariance = constrain(level * 5, 0.1, 1.0);
-        targetDelta = constrain(map(sin(frameCount * 0.05), -1, 1, 0.2, 0.9), 0.1, 1.0);
+        targetVariance = constrain(level * 6, 0.1, 1.0);
+        targetDelta = constrain(map(sin(frameCount * 0.04), -1, 1, 0.2, 0.9), 0.1, 1.0);
+        inputParamX = constrain(level * 10, 0, 1);
+        inputParamY = constrain(abs(sin(frameCount * 0.1)), 0, 1);
       }
 
       smoothDelta = lerp(smoothDelta, targetDelta, 0.05);
       smoothVariance = lerp(smoothVariance, targetVariance, 0.05);
 
+      // Calculate the 7 distinct rainbow signal aspects
+      let sigRed    = smoothVariance;                            // Driven by Activity/Variance
+      let sigOrange = smoothDelta;                               // Driven by Complexity/Delta
+      let sigYellow = inputParamX;                               // Driven by Pitch / X-Position
+      let sigGreen  = inputParamY;                               // Driven by Velocity / Volume
+      let sigBlue   = (sin(frameCount * 0.05) + 1) / 2;          // Driven by Pulse / Breathing time
+      let sigIndigo = abs(cos(smoothDelta * PI + frameCount * 0.03)); // Driven by Harmonic shift
+      let sigViolet = (smoothDelta * smoothVariance);            // Driven by Combined Total Energy
+
+      // Update HUD & Side Legend Text
       document.getElementById('valDelta').innerText = smoothDelta.toFixed(2);
       document.getElementById('valVariance').innerText = smoothVariance.toFixed(2);
+      document.getElementById('legRed').innerText = sigRed.toFixed(2);
+      document.getElementById('legOrange').innerText = sigOrange.toFixed(2);
+      document.getElementById('legYellow').innerText = sigYellow.toFixed(2);
+      document.getElementById('legGreen').innerText = sigGreen.toFixed(2);
+      document.getElementById('legBlue').innerText = sigBlue.toFixed(2);
+      document.getElementById('legIndigo').innerText = sigIndigo.toFixed(2);
+      document.getElementById('legViolet').innerText = sigViolet.toFixed(2);
 
       translate(width / 2, height / 2);
 
-      let branches = floor(map(smoothVariance, 0, 1, 3, 7, true));
-      angleSpeed = map(smoothDelta, 0, 1, 0.002, 0.03);
-      let baseLength = map(smoothDelta, 0, 1, 80, 240, true);
-
+      // Render 7 Rainbow Fractal Layers, each controlled by its own signal aspect
       noFill();
-      let layers = 4;
-      for (let i = 0; i < layers; i++) {
-        push();
-        rotate(frameCount * angleSpeed * (i % 2 === 0 ? 1 : -1) + (i * TWO_PI / layers));
-        
-        let hueVal = (160 + sin(frameCount * 0.02 + i) * 40) % 360;
-        let alphaVal = map(i, 0, layers, 60, 20);
-        
-        stroke(hueVal, 90, 90, alphaVal);
-        strokeWeight(map(i, 0, layers, 2.5, 0.8));
+      
+      // 1. RED Layer (Variance -> Scale & Spread)
+      push();
+      stroke(255, 51, 51, 150);
+      strokeWeight(map(sigRed, 0, 1, 1, 3));
+      rotate(frameCount * 0.005);
+      drawFractalBranch(map(sigRed, 0, 1, 50, 180), floor(map(sigRed, 0, 1, 2, 5)));
+      pop();
 
-        branch(baseLength, branches);
-        pop();
-      }
+      // 2. ORANGE Layer (Delta -> Branch Angle)
+      push();
+      stroke(255, 153, 51, 150);
+      strokeWeight(1.5);
+      rotate(-frameCount * 0.008);
+      drawCustomBranch(120, 4, map(sigOrange, 0, 1, 0.1, 0.9));
+      pop();
+
+      // 3. YELLOW Layer (Pitch/X -> Rotation & Bloom)
+      push();
+      stroke(255, 255, 51, 140);
+      strokeWeight(2);
+      rotate(sigYellow * TWO_PI);
+      drawFractalBranch(100, 4);
+      pop();
+
+      // 4. GREEN Layer (Velocity/Vol -> Stroke Thickness & Length)
+      push();
+      stroke(51, 204, 51, 160);
+      strokeWeight(map(sigGreen, 0, 1, 0.5, 4));
+      rotate(frameCount * 0.012);
+      drawFractalBranch(map(sigGreen, 0, 1, 40, 200), 3);
+      pop();
+
+      // 5. BLUE Layer (Pulse Time -> Breathing Radius)
+      push();
+      stroke(51, 153, 255, 150);
+      strokeWeight(1.2);
+      rotate(-frameCount * 0.004);
+      drawFractalBranch(map(sigBlue, 0, 1, 60, 220), 5);
+      pop();
+
+      // 6. INDIGO Layer (Harmonic -> Alternate Symmetry)
+      push();
+      stroke(153, 51, 255, 140);
+      strokeWeight(1.8);
+      rotate(sigIndigo * PI);
+      drawCustomBranch(140, 4, 0.5);
+      pop();
+
+      // 7. VIOLET Layer (Total Energy -> Core Intensity)
+      push();
+      stroke(204, 51, 255, 180);
+      strokeWeight(map(sigViolet, 0, 1, 1, 3.5));
+      rotate(frameCount * 0.015);
+      drawFractalBranch(map(sigViolet, 0, 1, 80, 160), 4);
+      pop();
     }
 
-    function branch(len, depth) {
+    // Standard recursive fractal branch function
+    function drawFractalBranch(len, depth) {
       if (depth === 0) return;
-
       line(0, 0, 0, -len);
       translate(0, -len);
-
-      let theta = map(smoothVariance, 0, 1, 0.2, 0.8);
-
       push();
-      rotate(theta);
-      branch(len * 0.67, depth - 1);
+      rotate(0.4);
+      drawFractalBranch(len * 0.67, depth - 1);
       pop();
-
       push();
-      rotate(-theta);
-      branch(len * 0.67, depth - 1);
+      rotate(-0.4);
+      drawFractalBranch(len * 0.67, depth - 1);
       pop();
     }
 
-    // Web MIDI Support for Hardware Devices over USB-C
+    // Branch function with custom angle mapping (for Orange/Delta layer)
+    function drawCustomBranch(len, depth, theta) {
+      if (depth === 0) return;
+      line(0, 0, 0, -len);
+      translate(0, -len);
+      push();
+      rotate(theta);
+      drawCustomBranch(len * 0.67, depth - 1, theta);
+      pop();
+      push();
+      rotate(-theta);
+      drawCustomBranch(len * 0.67, depth - 1, theta);
+      pop();
+    }
+
+    // Web MIDI Support for Hardware Connection
     function setupWebMIDI() {
       if (navigator.requestMIDIAccess) {
         navigator.requestMIDIAccess().then(onMIDISuccess, onMIDIFailure);
       } else {
-        midiStatus = "Web MIDI not supported in this browser";
-        document.getElementById('inputMode').innerText = midiStatus;
+        document.getElementById('inputMode').innerText = "Web MIDI not supported";
       }
     }
 
     function onMIDISuccess(midiAccess) {
-      midiStatus = "MIDI Connected";
-      document.getElementById('inputMode').innerText = midiStatus;
+      document.getElementById('inputMode').innerText = "MIDI Connected (Hardware Active)";
       document.getElementById('inputMode').style.color = '#4af3a2';
-
       for (let input of midiAccess.inputs.values()) {
         input.onmidimessage = getMIDIMessage;
       }
     }
 
     function onMIDIFailure() {
-      midiStatus = "MIDI access denied/unavailable";
+      document.getElementById('inputMode').innerText = "MIDI unavailable - Using Mouse/Mic";
     }
 
     function getMIDIMessage(message) {
       let [command, note, velocity] = message.data;
-      // Map incoming MIDI notes/velocity to fractal metrics
-      if (command === 144 && velocity > 0) { // Note On
+      if (command === 144 && velocity > 0) {
         targetDelta = map(note, 0, 127, 0.1, 1.0);
         targetVariance = map(velocity, 0, 127, 0.1, 1.0);
+        inputParamX = note / 127;
+        inputParamY = velocity / 127;
       }
     }
 
