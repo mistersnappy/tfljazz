@@ -453,6 +453,7 @@
   <div class="actions-wrapper">
     <div class="actions">
       <button id="startBtn">Start listening</button>
+      <button id="refreshBtn" class="btn-outline" onclick="manualRefreshFeed()">Refresh Feed</button>
       <button id="toggleConfig" class="btn-outline">Configure Tones</button>
       <button class="theme-btn" id="dayTubeBtn" onclick="setTheme('light')">
         <svg class="tfl-icon" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="12" cy="12" r="4"/></svg>
@@ -892,7 +893,6 @@ function setNetworkFilter(category) {
       cardElem.style.display = 'none';
     }
 
-    // Apply strict sound filtering: if audio is running, mute non-matching lines unless 'all' is selected
     if (audioReady && line.volumeNode) {
       const effectiveMuted = line.muted || (!matchesFilter && category !== 'all');
       line.volumeNode.volume.rampTo(effectiveMuted ? -Infinity : line.volume, 0.2);
@@ -946,12 +946,20 @@ document.getElementById('startBtn').addEventListener('click', async () => {
   document.getElementById('startBtn').disabled = true;
   document.getElementById('status').textContent = 'Listening — ambient soundscape & announcements active…';
   
-  // Apply current filter muting state upon start
   setNetworkFilter(currentNetworkFilter);
 
   pollAllData();
   setInterval(pollAllData, 18000);
 });
+
+function manualRefreshFeed() {
+  if (!audioReady) {
+    alert('Please click "Start listening" first!');
+    return;
+  }
+  document.getElementById('status').textContent = 'Manually refreshing TfL API feeds...';
+  pollAllData();
+}
 
 function recreateSynth(line) {
   if (line.node) line.node.dispose();
@@ -1242,7 +1250,6 @@ function animateTrain(line, seconds, trainRecord){
 function playNote(line, prediction, intensity = 1.0){
   if (!audioReady || !line.node || line.muted) return;
   
-  // Enforce filter muting check
   if (currentNetworkFilter !== 'all' && line.category !== currentNetworkFilter) return;
   
   lastSoundTime = Date.now();
