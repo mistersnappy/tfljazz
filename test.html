@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -708,6 +709,16 @@ function buildControlPanel() {
     let octaveOptions = OCTAVES.map(o => `<option value="${o}" ${line.octave === o ? 'selected' : ''}>Octave ${o}</option>`).join('');
     let scaleOptions = SCALE_NAMES.map(s => `<option value="${s}" ${line.scale === s ? 'selected' : ''}>${s}</option>`).join('');
     
+    // Determine which parameter controls to show based on synth type
+    const t = line.type;
+    const showHarmonic = ['FMSynth', 'AMSynth', 'MetalSynth', 'DuoSynth'].includes(t);
+    const showResonance = !['Synth', 'NoiseSynth', 'PolySynth'].includes(t);
+    const showCutoff = t !== 'NoiseSynth';
+    const showAttack = t !== 'PluckSynth';
+    const showDecay = t !== 'PluckSynth' && t !== 'NoiseSynth';
+    const showSustain = t !== 'PluckSynth' && t !== 'NoiseSynth' && t !== 'MetalSynth';
+    const showRelease = t !== 'PluckSynth';
+
     card.innerHTML = `
       <h3>
         <span style="display:flex; align-items:center; gap:6px;">
@@ -722,13 +733,13 @@ function buildControlPanel() {
       <div class="control-group"><label>Scale</label><select data-line="${line.id}" data-param="scale">${scaleOptions}</select></div>
       <div class="control-group"><label>Octave</label><select data-line="${line.id}" data-param="octave">${octaveOptions}</select></div>
       <div class="control-group"><label>Volume</label><input type="range" min="-30" max="6" step="1" value="${line.volume}" data-line="${line.id}" data-param="volume"></div>
-      <div class="control-group"><label>Harmonic</label><input type="range" min="0.5" max="5" step="0.1" value="${line.harmonicity}" data-line="${line.id}" data-param="harmonicity"></div>
-      <div class="control-group"><label>Resonance</label><input type="range" min="10" max="5000" step="10" value="${line.resonance}" data-line="${line.id}" data-param="resonance"></div>
-      <div class="control-group"><label>Cut-off</label><input type="range" min="200" max="8000" step="100" value="${line.cutoff}" data-line="${line.id}" data-param="cutoff"></div>
-      <div class="control-group"><label>Attack</label><input type="range" min="0.01" max="1.5" step="0.05" value="${line.attack}" data-line="${line.id}" data-param="attack"></div>
-      <div class="control-group"><label>Decay</label><input type="range" min="0.1" max="3" step="0.1" value="${line.decay}" data-line="${line.id}" data-param="decay"></div>
-      <div class="control-group"><label>Sustain</label><input type="range" min="0" max="1" step="0.05" value="${line.sustain}" data-line="${line.id}" data-param="sustain"></div>
-      <div class="control-group"><label>Release</label><input type="range" min="0.5" max="5" step="0.1" value="${line.release}" data-line="${line.id}" data-param="release"></div>
+      ${showHarmonic ? `<div class="control-group"><label>Harmonic</label><input type="range" min="0.5" max="5" step="0.1" value="${line.harmonicity}" data-line="${line.id}" data-param="harmonicity"></div>` : ''}
+      ${showResonance ? `<div class="control-group"><label>Resonance</label><input type="range" min="10" max="5000" step="10" value="${line.resonance}" data-line="${line.id}" data-param="resonance"></div>` : ''}
+      ${showCutoff ? `<div class="control-group"><label>Cut-off</label><input type="range" min="200" max="8000" step="100" value="${line.cutoff}" data-line="${line.id}" data-param="cutoff"></div>` : ''}
+      ${showAttack ? `<div class="control-group"><label>Attack</label><input type="range" min="0.01" max="1.5" step="0.05" value="${line.attack}" data-line="${line.id}" data-param="attack"></div>` : ''}
+      ${showDecay ? `<div class="control-group"><label>Decay</label><input type="range" min="0.1" max="3" step="0.1" value="${line.decay}" data-line="${line.id}" data-param="decay"></div>` : ''}
+      ${showSustain ? `<div class="control-group"><label>Sustain</label><input type="range" min="0" max="1" step="0.05" value="${line.sustain}" data-line="${line.id}" data-param="sustain"></div>` : ''}
+      ${showRelease ? `<div class="control-group"><label>Release</label><input type="range" min="0.5" max="5" step="0.1" value="${line.release}" data-line="${line.id}" data-param="release"></div>` : ''}
     `;
     panelGrid.appendChild(card);
   });
@@ -920,8 +931,9 @@ function attachControlListeners() {
       
       line[param] = val;
       
-      if (param === 'type' && audioReady) {
-        recreateSynth(line);
+      if (param === 'type') {
+        if (audioReady) recreateSynth(line);
+        buildControlPanel(); // Re-render card controls dynamically to match new synth type
         return;
       }
 
@@ -1143,3 +1155,5 @@ function playNote(line, prediction, intensity = 1.0){
 </script>
 </body>
 </html>
+
+```
