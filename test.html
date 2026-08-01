@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TfL Jazz: Ambient Underground Soundscape & Announcements</title>
+<title>TfL Jazz: Ambient Multi-Network Soundscape</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
 <style>
   :root {
@@ -489,12 +489,11 @@
 <!-- Configuration Drawer for Synths -->
 <div id="synthPanel">
   <div class="panel-header-actions">
-    <h3 style="margin:0; font-size:13px; text-transform:uppercase;">Ambient Tone & Data Feed Modifiers</h3>
+    <h3 style="margin:0; font-size:13px; text-transform:uppercase;">Ambient Tone Modifiers</h3>
     <div class="random-btn-group">
       <select id="globalScaleSelect" class="global-scale-select" onchange="setGlobalScale(this.value)"></select>
       <button class="rand-btn" onclick="randomizeVoices()">🎲 Random Voices</button>
       <button class="rand-btn" onclick="randomizeOctaves()">🎲 Random Octaves</button>
-      <button class="rand-btn" onclick="randomizeFeeds()">🎲 Random Feeds</button>
       <button class="rand-btn" onclick="randomizeGlobalScale()">🎲 Random Scale</button>
     </div>
   </div>
@@ -537,39 +536,38 @@ let currentNetworkFilter = "all";
 
 const OCTAVES = [1, 2, 3, 4];
 const SYNTH_TYPES = ['FMSynth', 'AMSynth', 'MetalSynth', 'PluckSynth', 'MembraneSynth', 'DuoSynth', 'Synth', 'MonoSynth', 'NoiseSynth', 'PolySynth'];
-const AVAILABLE_FEEDS = ['bakerloo', 'central', 'circle', 'district', 'hammersmith-city', 'jubilee', 'metropolitan', 'northern', 'piccadilly', 'victoria', 'waterloo-city', 'elizabeth', 'dlr', 'overground', 'tram', 'river-bus', 'cable-car'];
 
 const LINES = [
   /* Tube lines */
-  { id:'bakerloo',        name:'Bakerloo',        category:'tube', color:'var(--line-bakerloo)',        feedSource:'bakerloo', type:'FMSynth',       octave:2, scale: 'Major Pentatonic', harmonicity:1.5, resonance:4, cutoff:1200, attack:0.4, decay:0.8, sustain:0.7, release:2.5, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'central',         name:'Central',         category:'tube', color:'var(--line-central)',         feedSource:'central', type:'MetalSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:3.1, resonance:600, cutoff:1800, attack:0.2, decay:0.5, sustain:0.5, release:2.0, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'circle',          name:'Circle',          category:'tube', color:'var(--line-circle)',          feedSource:'circle', type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2500, cutoff:2200, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'district',        name:'District',        category:'tube', color:'var(--line-district)',        feedSource:'district', type:'AMSynth',       octave:2, scale: 'Major Pentatonic', harmonicity:2.0, resonance:6, cutoff:1500, attack:0.5, decay:1.0, sustain:0.8, release:3.0, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'hammersmith-city',name:'Ham. & City',     category:'tube', color:'var(--line-hammersmith)', feedSource:'hammersmith-city', type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:4000, cutoff:3000, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'jubilee',         name:'Jubilee',         category:'tube', color:'var(--line-jubilee)',         feedSource:'jubilee', type:'MetalSynth',    octave:2, scale: 'Major Pentatonic', harmonicity:2.2, resonance:300, cutoff:1000, attack:0.3, decay:0.4, sustain:0.4, release:1.8, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'metropolitan',    name:'Metropolitan',    category:'tube', color:'var(--line-metropolitan)',feedSource:'metropolitan', type:'DuoSynth',      octave:3, scale: 'Major Pentatonic', harmonicity:1.5, resonance:5, cutoff:2000, attack:0.6, decay:1.2, sustain:0.8, release:3.5, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'northern',        name:'Northern',        category:'tube', color:'var(--line-northern)',        feedSource:'northern', type:'MembraneSynth', octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:3, cutoff:800, attack:0.2, decay:0.8, sustain:0.5, release:2.5, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'piccadilly',      name:'Piccadilly',      category:'tube', color:'var(--line-piccadilly)',      feedSource:'piccadilly', type:'DuoSynth',      octave:3, scale: 'Major Pentatonic', harmonicity:2.0, resonance:7, cutoff:2500, attack:0.5, decay:1.0, sustain:0.8, release:3.2, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'victoria',        name:'Victoria',        category:'tube', color:'var(--line-victoria)',        feedSource:'victoria', type:'Synth',         octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'waterloo-city',   name:'Waterloo & City', category:'tube', color:'var(--line-waterloo)',        feedSource:'waterloo-city', type:'Synth',         octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'bakerloo',        name:'Bakerloo',        category:'tube', feedSource:'bakerloo', type:'FMSynth',       octave:2, scale: 'Major Pentatonic', harmonicity:1.5, resonance:4, cutoff:1200, attack:0.4, decay:0.8, sustain:0.7, release:2.5, volume:-6, muted:false, color:'var(--line-bakerloo)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'central',         name:'Central',         category:'tube', feedSource:'central', type:'MetalSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:3.1, resonance:600, cutoff:1800, attack:0.2, decay:0.5, sustain:0.5, release:2.0, volume:-8, muted:false, color:'var(--line-central)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'circle',          name:'Circle',          category:'tube', feedSource:'circle', type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2500, cutoff:2200, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, color:'var(--line-circle)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'district',        name:'District',        category:'tube', feedSource:'district', type:'AMSynth',       octave:2, scale: 'Major Pentatonic', harmonicity:2.0, resonance:6, cutoff:1500, attack:0.5, decay:1.0, sustain:0.8, release:3.0, volume:-6, muted:false, color:'var(--line-district)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'hammersmith-city',name:'Ham. & City',     category:'tube', feedSource:'hammersmith-city', type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:4000, cutoff:3000, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, color:'var(--line-hammersmith)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'jubilee',         name:'Jubilee',         category:'tube', feedSource:'jubilee', type:'MetalSynth',    octave:2, scale: 'Major Pentatonic', harmonicity:2.2, resonance:300, cutoff:1000, attack:0.3, decay:0.4, sustain:0.4, release:1.8, volume:-8, muted:false, color:'var(--line-jubilee)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'metropolitan',    name:'Metropolitan',    category:'tube', feedSource:'metropolitan', type:'DuoSynth',      octave:3, scale: 'Major Pentatonic', harmonicity:1.5, resonance:5, cutoff:2000, attack:0.6, decay:1.2, sustain:0.8, release:3.5, volume:-6, muted:false, color:'var(--line-metropolitan)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'northern',        name:'Northern',        category:'tube', feedSource:'northern', type:'MembraneSynth', octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:3, cutoff:800, attack:0.2, decay:0.8, sustain:0.5, release:2.5, volume:-6, muted:false, color:'var(--line-northern)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'piccadilly',      name:'Piccadilly',      category:'tube', feedSource:'piccadilly', type:'DuoSynth',      octave:3, scale: 'Major Pentatonic', harmonicity:2.0, resonance:7, cutoff:2500, attack:0.5, decay:1.0, sustain:0.8, release:3.2, volume:-6, muted:false, color:'var(--line-piccadilly)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'victoria',        name:'Victoria',        category:'tube', feedSource:'victoria', type:'Synth',         octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, color:'var(--line-victoria)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'waterloo-city',   name:'Waterloo & City', category:'tube', feedSource:'waterloo-city', type:'Synth',         octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false, color:'var(--line-waterloo)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
   
   /* Overground */
-  { id:'overground',      name:'Overground',      category:'overground', color:'var(--line-overground)', feedSource:'overground', type:'Synth', octave:2, scale: 'Major Pentatonic', harmonicity:1.2, resonance:2, cutoff:1600, attack:0.3, decay:0.8, sustain:0.6, release:2.5, volume:-7, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'overground',      name:'Overground',      category:'overground', feedSource:'overground', type:'Synth', octave:2, scale: 'Major Pentatonic', harmonicity:1.2, resonance:2, cutoff:1600, attack:0.3, decay:0.8, sustain:0.6, release:2.5, volume:-7, muted:false, color:'var(--line-overground)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
 
   /* Elizabeth Line */
-  { id:'elizabeth',       name:'Elizabeth Line',  category:'elizabeth', color:'var(--line-elizabeth)',  feedSource:'elizabeth', type:'Synth',         octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'elizabeth',       name:'Elizabeth Line',  category:'elizabeth', feedSource:'elizabeth', type:'Synth',         octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, color:'var(--line-elizabeth)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
 
   /* DLR */
-  { id:'dlr',             name:'DLR',             category:'dlr', color:'var(--line-dlr)',            feedSource:'dlr', type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2000, cutoff:2500, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'dlr',             name:'DLR',             category:'dlr', feedSource:'dlr', type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2000, cutoff:2500, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, color:'var(--line-dlr)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
 
   /* Tram */
-  { id:'tram',            name:'Tram',            category:'tram', color:'var(--line-tram)',            feedSource:'tram', type:'AMSynth', octave:2, scale: 'Major Pentatonic', harmonicity:1.5, resonance:4, cutoff:1400, attack:0.2, decay:0.7, sustain:0.5, release:2.0, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'tram',            name:'Tram',            category:'tram', feedSource:'tram', type:'AMSynth', octave:2, scale: 'Major Pentatonic', harmonicity:1.5, resonance:4, cutoff:1400, attack:0.2, decay:0.7, sustain:0.5, release:2.0, volume:-8, muted:false, color:'var(--line-tram)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
 
   /* River Bus */
-  { id:'river',           name:'River Bus',       category:'river', color:'var(--line-river)',          feedSource:'river-bus', type:'MonoSynth', octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:1200, attack:0.5, decay:1.2, sustain:0.7, release:3.0, volume:-7, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'river',           name:'River Bus',       category:'river', feedSource:'river-bus', type:'MonoSynth', octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:1200, attack:0.5, decay:1.2, sustain:0.7, release:3.0, volume:-7, muted:false, color:'var(--line-river)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
 
   /* Cable Car */
-  { id:'cable',           name:'Cable Car',       category:'cable', color:'var(--line-cable)',          feedSource:'cable-car', type:'MetalSynth', octave:3, scale: 'Major Pentatonic', harmonicity:2.0, resonance:400, cutoff:2000, attack:0.1, decay:0.5, sustain:0.3, release:2.0, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' }
+  { id:'cable',           name:'Cable Car',       category:'cable', feedSource:'cable-car', type:'MetalSynth', octave:3, scale: 'Major Pentatonic', harmonicity:2.0, resonance:400, cutoff:2000, attack:0.1, decay:0.5, sustain:0.3, release:2.0, volume:-8, muted:false, color:'var(--line-cable)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' }
 ];
 
 let announcementConfig = {
@@ -785,7 +783,6 @@ function buildControlPanel() {
     card.id = `card-${line.id}`;
     
     let typeOptions = SYNTH_TYPES.map(t => `<option value="${t}" ${line.type === t ? 'selected' : ''}>${t}</option>`).join('');
-    let feedOptions = AVAILABLE_FEEDS.map(f => `<option value="${f}" ${line.feedSource === f ? 'selected' : ''}>${f}</option>`).join('');
     let octaveOptions = OCTAVES.map(o => `<option value="${o}" ${line.octave === o ? 'selected' : ''}>Octave ${o}</option>`).join('');
     let scaleOptions = SCALE_NAMES.map(s => `<option value="${s}" ${line.scale === s ? 'selected' : ''}>${s}</option>`).join('');
     
@@ -808,7 +805,6 @@ function buildControlPanel() {
           <button class="test-btn" data-test-line="${line.id}">Test</button>
         </div>
       </h3>
-      <div class="control-group"><label>Data Feed</label><select data-line="${line.id}" data-param="feedSource">${feedOptions}</select></div>
       <div class="control-group"><label>Synth Type</label><select data-line="${line.id}" data-param="type">${typeOptions}</select></div>
       <div class="control-group"><label>Scale</label><select data-line="${line.id}" data-param="scale">${scaleOptions}</select></div>
       <div class="control-group"><label>Octave</label><select data-line="${line.id}" data-param="octave">${octaveOptions}</select></div>
@@ -837,7 +833,7 @@ LINES.forEach(line => {
   row.innerHTML = `
     <div class="track-info">
       <div class="track-label"><span class="swatch" style="background:${line.color}"></span>${line.name}</div>
-      <div class="status-badge" id="status-${line.id}">Good Service<br>0 trains active</div>
+      <div class="status-badge" id="status-${line.id}">Good Service<br>0 active</div>
     </div>
     <div class="rail" id="rail-${line.id}" style="color: ${resolvedLineColor};" title="Click to pluck line chord">
       <div class="rail-line" style="color: ${resolvedLineColor};"></div>
@@ -883,12 +879,23 @@ function setNetworkFilter(category) {
 
   LINES.forEach(line => {
     const trackElem = document.getElementById(`track-${line.id}`);
-    if (!trackElem) return;
+    const cardElem = document.getElementById(`card-${line.id}`);
+    if (!trackElem || !cardElem) return;
 
-    if (category === 'all' || line.category === category) {
+    const matchesFilter = (category === 'all' || line.category === category);
+
+    if (matchesFilter) {
       trackElem.classList.remove('hidden-track');
+      cardElem.style.display = '';
     } else {
       trackElem.classList.add('hidden-track');
+      cardElem.style.display = 'none';
+    }
+
+    // Apply strict sound filtering: if audio is running, mute non-matching lines unless 'all' is selected
+    if (audioReady && line.volumeNode) {
+      const effectiveMuted = line.muted || (!matchesFilter && category !== 'all');
+      line.volumeNode.volume.rampTo(effectiveMuted ? -Infinity : line.volume, 0.2);
     }
   });
 }
@@ -905,13 +912,6 @@ function randomizeVoices() {
 function randomizeOctaves() {
   LINES.forEach(line => {
     line.octave = OCTAVES[Math.floor(Math.random() * OCTAVES.length)];
-  });
-  buildControlPanel();
-}
-
-function randomizeFeeds() {
-  LINES.forEach(line => {
-    line.feedSource = AVAILABLE_FEEDS[Math.floor(Math.random() * AVAILABLE_FEEDS.length)];
   });
   buildControlPanel();
 }
@@ -946,6 +946,9 @@ document.getElementById('startBtn').addEventListener('click', async () => {
   document.getElementById('startBtn').disabled = true;
   document.getElementById('status').textContent = 'Listening — ambient soundscape & announcements active…';
   
+  // Apply current filter muting state upon start
+  setNetworkFilter(currentNetworkFilter);
+
   pollAllData();
   setInterval(pollAllData, 18000);
 });
@@ -1084,7 +1087,9 @@ function attachControlListeners() {
       document.getElementById(`card-${line.id}`).classList.toggle('muted', line.muted);
       
       if (audioReady && line.volumeNode) {
-        line.volumeNode.volume.rampTo(line.muted ? -Infinity : line.volume, 0.2);
+        const matchesFilter = (currentNetworkFilter === 'all' || line.category === currentNetworkFilter);
+        const effectiveMuted = line.muted || (!matchesFilter && currentNetworkFilter !== 'all');
+        line.volumeNode.volume.rampTo(effectiveMuted ? -Infinity : line.volume, 0.2);
       }
     });
   });
@@ -1154,7 +1159,8 @@ async function pollAllData() {
     latestArrivalsPool = data.filter(p => p.timeToStation != null && p.timeToStation > 5 && p.timeToStation < 300);
 
     const feedCounts = {};
-    AVAILABLE_FEEDS.forEach(f => { feedCounts[f] = new Set(); });
+    const uniqueFeedList = [...new Set(LINES.map(l => l.feedSource))];
+    uniqueFeedList.forEach(f => { feedCounts[f] = new Set(); });
 
     data.forEach(p => {
       if (feedCounts[p.lineId]) {
@@ -1235,6 +1241,9 @@ function animateTrain(line, seconds, trainRecord){
 
 function playNote(line, prediction, intensity = 1.0){
   if (!audioReady || !line.node || line.muted) return;
+  
+  // Enforce filter muting check
+  if (currentNetworkFilter !== 'all' && line.category !== currentNetworkFilter) return;
   
   lastSoundTime = Date.now();
 
