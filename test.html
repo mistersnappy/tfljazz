@@ -471,17 +471,17 @@
     </div>
   </div>
 
-  <!-- Filter Switch Toolbar -->
+  <!-- Multi-Select Filter Toolbar -->
   <div class="filter-bar">
     <span class="filter-label">Network View:</span>
-    <button class="filter-btn active" data-filter="all" onclick="setNetworkFilter('all')">All Networks</button>
-    <button class="filter-btn" data-filter="tube" onclick="setNetworkFilter('tube')">Underground</button>
-    <button class="filter-btn" data-filter="overground" onclick="setNetworkFilter('overground')">Overground</button>
-    <button class="filter-btn" data-filter="elizabeth" onclick="setNetworkFilter('elizabeth')">Elizabeth Line</button>
-    <button class="filter-btn" data-filter="dlr" onclick="setNetworkFilter('dlr')">DLR</button>
-    <button class="filter-btn" data-filter="tram" onclick="setNetworkFilter('tram')">Tram</button>
-    <button class="filter-btn" data-filter="river" onclick="setNetworkFilter('river')">River Bus</button>
-    <button class="filter-btn" data-filter="cable" onclick="setNetworkFilter('cable')">Cable Car</button>
+    <button class="filter-btn active" data-filter="all" onclick="toggleNetworkFilter('all')">All Networks</button>
+    <button class="filter-btn" data-filter="tube" onclick="toggleNetworkFilter('tube')">Underground</button>
+    <button class="filter-btn" data-filter="overground" onclick="toggleNetworkFilter('overground')">Overground</button>
+    <button class="filter-btn" data-filter="elizabeth" onclick="toggleNetworkFilter('elizabeth')">Elizabeth Line</button>
+    <button class="filter-btn" data-filter="dlr" onclick="toggleNetworkFilter('dlr')">DLR</button>
+    <button class="filter-btn" data-filter="tram" onclick="toggleNetworkFilter('tram')">Tram</button>
+    <button class="filter-btn" data-filter="river" onclick="toggleNetworkFilter('river')">River Bus</button>
+    <button class="filter-btn" data-filter="cable" onclick="toggleNetworkFilter('cable')">Cable Car</button>
   </div>
 
   <div id="status">Audio is off. Click start (browsers require a user gesture before playing sound).</div>
@@ -533,7 +533,7 @@ const MUSICAL_SCALES = {
 
 const SCALE_NAMES = Object.keys(MUSICAL_SCALES);
 let currentGlobalScale = "Major Pentatonic";
-let currentNetworkFilter = "all";
+let selectedFilters = new Set(['all']);
 
 const OCTAVES = [1, 2, 3, 4];
 const SYNTH_TYPES = ['FMSynth', 'AMSynth', 'MetalSynth', 'PluckSynth', 'MembraneSynth', 'DuoSynth', 'Synth', 'MonoSynth', 'NoiseSynth', 'PolySynth'];
@@ -866,12 +866,27 @@ document.getElementById('toggleConfig').addEventListener('click', () => {
   document.getElementById('synthPanel').classList.toggle('open');
 });
 
-// ---------- Network Filter Switch Function ----------
-function setNetworkFilter(category) {
-  currentNetworkFilter = category;
+// ---------- Multi-Select Network Filter Function ----------
+function toggleNetworkFilter(category) {
+  if (category === 'all') {
+    selectedFilters.clear();
+    selectedFilters.add('all');
+  } else {
+    selectedFilters.delete('all');
+    if (selectedFilters.has(category)) {
+      selectedFilters.delete(category);
+      if (selectedFilters.size === 0) {
+        selectedFilters.add('all');
+      }
+    } else {
+      selectedFilters.add(category);
+    }
+  }
   
+  // Update button active classes
   document.querySelectorAll('.filter-btn').forEach(btn => {
-    if (btn.getAttribute('data-filter') === category) {
+    const btnCat = btn.getAttribute('data-filter');
+    if (selectedFilters.has(btnCat)) {
       btn.classList.add('active');
     } else {
       btn.classList.remove('active');
@@ -883,7 +898,7 @@ function setNetworkFilter(category) {
     const cardElem = document.getElementById(`card-${line.id}`);
     if (!trackElem || !cardElem) return;
 
-    const matchesFilter = (category === 'all' || line.category === category);
+    const matchesFilter = selectedFilters.has('all') || selectedFilters.has(line.category);
 
     if (matchesFilter) {
       trackElem.classList.remove('hidden-track');
@@ -894,7 +909,7 @@ function setNetworkFilter(category) {
     }
 
     if (audioReady && line.volumeNode) {
-      const effectiveMuted = line.muted || (!matchesFilter && category !== 'all');
+      const effectiveMuted = line.muted || !matchesFilter;
       line.volumeNode.volume.rampTo(effectiveMuted ? -Infinity : line.volume, 0.2);
     }
   });
@@ -946,7 +961,10 @@ document.getElementById('startBtn').addEventListener('click', async () => {
   document.getElementById('startBtn').disabled = true;
   document.getElementById('status').textContent = 'Listening — ambient soundscape & announcements active…';
   
-  setNetworkFilter(currentNetworkFilter);
+  // Enforce filter muting state upon start
+  toggleNetworkFilter('all');
+  selectedFilters.clear();
+  selectedFilters.add('all');
 
   pollAllData();
   setInterval(pollAllData, 18000);
@@ -1095,8 +1113,8 @@ function attachControlListeners() {
       document.getElementById(`card-${line.id}`).classList.toggle('muted', line.muted);
       
       if (audioReady && line.volumeNode) {
-        const matchesFilter = (currentNetworkFilter === 'all' || line.category === currentNetworkFilter);
-        const effectiveMuted = line.muted || (!matchesFilter && currentNetworkFilter !== 'all');
+        const matchesFilter = selectedFilters.has('all') || selectedFilters.has(line.category);
+        const effectiveMuted = line.muted || !matchesFilter;
         line.volumeNode.volume.rampTo(effectiveMuted ? -Infinity : line.volume, 0.2);
       }
     });
@@ -1250,7 +1268,8 @@ function animateTrain(line, seconds, trainRecord){
 function playNote(line, prediction, intensity = 1.0){
   if (!audioReady || !line.node || line.muted) return;
   
-  if (currentNetworkFilter !== 'all' && line.category !== currentNetworkFilter) return;
+  const matchesFilter = selectedFilters.has('all') || selectedFilters.has(line.category);
+  if (!matchesFilter) return;
   
   lastSoundTime = Date.now();
 
