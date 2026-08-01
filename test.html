@@ -76,27 +76,11 @@
       background: #ffffff;
     }
 
-    /* Left Slide-out Config Drawer & Tab */
-    #configTab {
-      position: absolute;
-      top: 130px;
-      left: 0;
-      background: #f4f2ee;
-      color: #020408;
-      padding: 10px 14px;
-      font-weight: bold;
-      font-size: 11px;
-      cursor: pointer;
-      border-top-right-radius: 6px;
-      border-bottom-right-radius: 6px;
-      z-index: 20;
-      box-shadow: 2px 0 10px rgba(0,0,0,0.5);
-      transition: left 0.3s ease;
-    }
+    /* Left Slide-out Drawer & Attached Handle Tab */
     #configDrawer {
       position: absolute;
       top: 0;
-      left: -320px;
+      left: -280px;
       width: 280px;
       height: 100vh;
       background: rgba(10, 12, 18, 0.95);
@@ -110,6 +94,20 @@
     }
     #configDrawer.open {
       left: 0;
+    }
+    #configTab {
+      position: absolute;
+      top: 130px;
+      right: -45px;
+      background: #f4f2ee;
+      color: #020408;
+      padding: 10px 14px;
+      font-weight: bold;
+      font-size: 11px;
+      cursor: pointer;
+      border-top-right-radius: 6px;
+      border-bottom-right-radius: 6px;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.5);
     }
     .drawer-title {
       font-size: 13px;
@@ -142,9 +140,9 @@
 </head>
 <body>
 
-  <!-- Slide-out Tab and Drawer -->
-  <div id="configTab" onclick="toggleConfigDrawer()">config</div>
+  <!-- Slide-out Drawer with Handle Tab Attached -->
   <div id="configDrawer">
+    <div id="configTab" onclick="toggleConfigDrawer()">config</div>
     <div class="drawer-title">SYNTHESIZER CONFIG</div>
     
     <div class="control-group">
@@ -214,7 +212,6 @@
 
     let audioCtx, masterGain, mainFilter, audioActive = false;
     
-    // Configurable Synth Settings
     let synthConfig = {
       waveform: 'triangle',
       attack: 0.3,
@@ -425,16 +422,12 @@
     function triggerVoiceCluster(baseFreq, velocity) {
       playNativeSynthTone(baseFreq, velocity, 0);
       if (synthConfig.arp === 'cascade') {
-        // Play gentle harmonic intervals above the root note
-        playNativeSynthTone(baseFreq * 1.25, velocity * 0.8, 0.15); // Major 3rd
-        playNativeSynthTone(baseFreq * 1.5, velocity * 0.6, 0.3);   // Perfect 5th
+        playNativeSynthTone(baseFreq * 1.25, velocity * 0.8, 0.15);
+        playNativeSynthTone(baseFreq * 1.5, velocity * 0.6, 0.3);
       }
     }
 
     function mousePressed() {
-      // Don't trigger sound if clicking inside the slide-out config drawer
-      if (mouseX < 300 && document.getElementById('configDrawer').classList.contains('open')) return;
-
       if (audioActive && mouseY < height - 60) {
         let freq = map(mouseX, 0, width, 110, 880);
         triggerVoiceCluster(freq, 100);
