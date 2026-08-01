@@ -109,7 +109,17 @@
     position:relative;
     top:1px;
     margin-right:8px;
+    transition: background-color 0.3s, border-color 0.3s;
   }
+  .roundel.success {
+    background-color: #00782A;
+    border-color: #00782A;
+  }
+  .roundel.error {
+    background-color: #E32017;
+    border-color: #E32017;
+  }
+
   p.sub{
     color:var(--dim);
     margin:0 0 10px;
@@ -447,7 +457,7 @@
 <body>
 
 <header>
-  <h1><span class="roundel"></span>TfL Jazz: Ambient Multi-Network Soundscape</h1>
+  <h1><span class="roundel" id="apiRoundel"></span>TfL Jazz: Ambient Multi-Network Soundscape</h1>
   <p class="sub">Live London Underground, Overground, Elizabeth Line, DLR, Tram, River Bus & Cable Car soundscape.</p>
   
   <div class="actions-wrapper">
@@ -484,7 +494,7 @@
     <button class="filter-btn" data-filter="cable" onclick="toggleNetworkFilter('cable')">Cable Car</button>
   </div>
 
-  <div id="status">Audio is off. Click start (browsers require a user gesture before playing sound).</div>
+  <div id="status">Checking TfL API connection...</div>
 </header>
 
 <!-- Configuration Drawer for Synths -->
@@ -504,7 +514,7 @@
 <div class="board" id="board"></div>
 
 <footer>
-  Data: <a href="https://api.tfl.gov.uk" target="_blank">api.tfl.gov.uk</a> Unified API, polled every 18s. 
+  Data: <a href="https://api.tfl.gov.uk" target="_blank">api.tfl.gov.uk</a> Unified API, polled dynamically. 
   Concept inspired by <a href="https://www.trainjazz.com" target="_blank">trainjazz.com</a>.
 </footer>
 
@@ -539,7 +549,6 @@ const OCTAVES = [1, 2, 3, 4];
 const SYNTH_TYPES = ['FMSynth', 'AMSynth', 'MetalSynth', 'PluckSynth', 'MembraneSynth', 'DuoSynth', 'Synth', 'MonoSynth', 'NoiseSynth', 'PolySynth'];
 
 const LINES = [
-  /* Tube lines */
   { id:'bakerloo',        name:'Bakerloo',        category:'tube', feedSource:'bakerloo', type:'FMSynth',       octave:2, scale: 'Major Pentatonic', harmonicity:1.5, resonance:4, cutoff:1200, attack:0.4, decay:0.8, sustain:0.7, release:2.5, volume:-6, muted:false, color:'var(--line-bakerloo)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
   { id:'central',         name:'Central',         category:'tube', feedSource:'central', type:'MetalSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:3.1, resonance:600, cutoff:1800, attack:0.2, decay:0.5, sustain:0.5, release:2.0, volume:-8, muted:false, color:'var(--line-central)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
   { id:'circle',          name:'Circle',          category:'tube', feedSource:'circle', type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2500, cutoff:2200, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, color:'var(--line-circle)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
@@ -551,23 +560,11 @@ const LINES = [
   { id:'piccadilly',      name:'Piccadilly',      category:'tube', feedSource:'piccadilly', type:'DuoSynth',      octave:3, scale: 'Major Pentatonic', harmonicity:2.0, resonance:7, cutoff:2500, attack:0.5, decay:1.0, sustain:0.8, release:3.2, volume:-6, muted:false, color:'var(--line-piccadilly)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
   { id:'victoria',        name:'Victoria',        category:'tube', feedSource:'victoria', type:'Synth',         octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, color:'var(--line-victoria)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
   { id:'waterloo-city',   name:'Waterloo & City', category:'tube', feedSource:'waterloo-city', type:'Synth',         octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false, color:'var(--line-waterloo)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  
-  /* Overground */
   { id:'overground',      name:'Overground',      category:'overground', feedSource:'overground', type:'Synth', octave:2, scale: 'Major Pentatonic', harmonicity:1.2, resonance:2, cutoff:1600, attack:0.3, decay:0.8, sustain:0.6, release:2.5, volume:-7, muted:false, color:'var(--line-overground)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-
-  /* Elizabeth Line */
   { id:'elizabeth',       name:'Elizabeth Line',  category:'elizabeth', feedSource:'elizabeth', type:'Synth',         octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, color:'var(--line-elizabeth)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-
-  /* DLR */
   { id:'dlr',             name:'DLR',             category:'dlr', feedSource:'dlr', type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2000, cutoff:2500, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, color:'var(--line-dlr)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-
-  /* Tram */
   { id:'tram',            name:'Tram',            category:'tram', feedSource:'tram', type:'AMSynth', octave:2, scale: 'Major Pentatonic', harmonicity:1.5, resonance:4, cutoff:1400, attack:0.2, decay:0.7, sustain:0.5, release:2.0, volume:-8, muted:false, color:'var(--line-tram)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-
-  /* River Bus */
   { id:'river',           name:'River Bus',       category:'river', feedSource:'river-bus', type:'MonoSynth', octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:1200, attack:0.5, decay:1.2, sustain:0.7, release:3.0, volume:-7, muted:false, color:'var(--line-river)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-
-  /* Cable Car */
   { id:'cable',           name:'Cable Car',       category:'cable', feedSource:'cable-car', type:'MetalSynth', octave:3, scale: 'Major Pentatonic', harmonicity:2.0, resonance:400, cutoff:2000, attack:0.1, decay:0.5, sustain:0.3, release:2.0, volume:-8, muted:false, color:'var(--line-cable)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' }
 ];
 
@@ -613,6 +610,27 @@ const STATIC_ANNOUNCEMENTS = [
 let lastSoundTime = Date.now();
 let isAnnouncementPlaying = false;
 let latestArrivalsPool = [];
+
+// Pre-load API health check right when page loads
+async function checkApiHealth() {
+  const roundel = document.getElementById('apiRoundel');
+  const statusDiv = document.getElementById('status');
+  try {
+    const res = await fetch('https://api.tfl.gov.uk/Line/bakerloo/Status');
+    if (res.ok) {
+      roundel.classList.add('success');
+      roundel.classList.remove('error');
+      statusDiv.textContent = 'API connected. Click "Start listening" to begin.';
+    } else {
+      throw new Error();
+    }
+  } catch(e) {
+    roundel.classList.add('error');
+    roundel.classList.remove('success');
+    statusDiv.textContent = 'API check failed (CORS/Network restriction). Click start to initialize.';
+  }
+}
+window.addEventListener('DOMContentLoaded', checkApiHealth);
 
 function getSelectedVoice() {
   if (!('speechSynthesis' in window)) return null;
@@ -866,7 +884,7 @@ document.getElementById('toggleConfig').addEventListener('click', () => {
   document.getElementById('synthPanel').classList.toggle('open');
 });
 
-// ---------- Multi-Select Network Filter Function ----------
+// ---------- Multi-Select Network Filter & Dynamic Trimming ----------
 function toggleNetworkFilter(category) {
   if (category === 'all') {
     selectedFilters.clear();
@@ -912,6 +930,11 @@ function toggleNetworkFilter(category) {
       line.volumeNode.volume.rampTo(effectiveMuted ? -Infinity : line.volume, 0.2);
     }
   });
+
+  // Immediately refresh feeds with the new trimmed network set if running
+  if (audioReady) {
+    pollAllData();
+  }
 }
 
 // ---------- Randomizer & Global Scale Functions ----------
@@ -958,14 +981,14 @@ document.getElementById('startBtn').addEventListener('click', async () => {
 
   audioReady = true;
   document.getElementById('startBtn').disabled = true;
-  document.getElementById('status').textContent = 'Listening — ambient soundscape & announcements active…';
+  document.getElementById('status').textContent = 'Listening — optimized dynamic polling active…';
   
   toggleNetworkFilter('all');
   selectedFilters.clear();
   selectedFilters.add('all');
 
   pollAllData();
-  setInterval(pollAllData, 18000);
+  setInterval(pollAllData, 15000);
 });
 
 function manualRefreshFeed() {
@@ -973,7 +996,7 @@ function manualRefreshFeed() {
     alert('Please click "Start listening" first!');
     return;
   }
-  document.getElementById('status').textContent = 'Manually refreshing TfL API feeds...';
+  document.getElementById('status').textContent = 'Manually refreshing trimmed TfL feeds...';
   pollAllData();
 }
 
@@ -1131,7 +1154,7 @@ function attachControlListeners() {
   });
 }
 
-// ---------- Live API Fetching (Direct Direct Requests) ----------
+// ---------- Dynamic Trimmed API Fetching ----------
 function hashToIndex(str, mod){
   let h = 0;
   for (let i=0; i<str.length; i++){ h = (h*31 + str.charCodeAt(i)) >>> 0; }
@@ -1141,7 +1164,14 @@ function hashToIndex(str, mod){
 const activeTrainTracker = new Map();
 
 async function pollAllData() {
-  const uniqueFeeds = [...new Set(LINES.map(l => l.feedSource))].join(',');
+  // Determine active lines based on filter selection (Network Trimming)
+  let activeLines = LINES;
+  if (!selectedFilters.has('all')) {
+    activeLines = LINES.filter(l => selectedFilters.has(l.category));
+  }
+  if (activeLines.length === 0) return;
+
+  const uniqueFeeds = [...new Set(activeLines.map(l => l.feedSource))].join(',');
   
   try {
     const statusRes = await fetch(`https://api.tfl.gov.uk/Line/${uniqueFeeds}/Status`);
@@ -1183,7 +1213,7 @@ async function pollAllData() {
     latestArrivalsPool = data.filter(p => p.timeToStation != null && p.timeToStation > 5 && p.timeToStation < 300);
 
     const feedCounts = {};
-    const uniqueFeedList = [...new Set(LINES.map(l => l.feedSource))];
+    const uniqueFeedList = [...new Set(activeLines.map(l => l.feedSource))];
     uniqueFeedList.forEach(f => { feedCounts[f] = new Set(); });
 
     data.forEach(p => {
@@ -1193,14 +1223,14 @@ async function pollAllData() {
       }
     });
 
-    LINES.forEach(line => {
+    activeLines.forEach(line => {
       const countSet = feedCounts[line.feedSource];
       line.activeCount = countSet ? countSet.size : Math.floor(Math.random() * 4) + 1;
       updateLineStatusDisplay(line);
     });
 
     document.getElementById('status').textContent =
-      `Listening — ${data.length} tracked records, last updated ${new Date().toLocaleTimeString()}`;
+      `Listening (${activeLines.length} active feeds) — ${data.length} records, updated ${new Date().toLocaleTimeString()}`;
 
     const now = Date.now();
     for (const [id, record] of activeTrainTracker.entries()) {
@@ -1211,7 +1241,7 @@ async function pollAllData() {
       const vehicleId = p.vehicleId || p.id || `${p.lineId}-${p.stationName}-${p.expectedArrival}`;
       if (p.timeToStation == null || p.timeToStation < 2 || p.timeToStation > 90) return;
 
-      const matchingLines = LINES.filter(l => l.feedSource === p.lineId);
+      const matchingLines = activeLines.filter(l => l.feedSource === p.lineId);
       matchingLines.forEach(line => {
         let trainRecord = activeTrainTracker.get(`${line.id}-${vehicleId}`);
         if (!trainRecord) {
