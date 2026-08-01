@@ -27,6 +27,10 @@
     --line-waterloo: #95CDBA;
     --line-elizabeth: #6950A1;
     --line-dlr: #00AFAD;
+    --line-overground: #E86A10;
+    --line-tram: #84B817;
+    --line-river: #0085C7;
+    --line-cable: #E61C24;
   }
 
   [data-theme="light"] {
@@ -443,8 +447,8 @@
 <body>
 
 <header>
-  <h1><span class="roundel"></span>TfL Jazz: Ambient Underground Soundscape</h1>
-  <p class="sub">Live London Underground, Elizabeth Line & DLR soundscape. Click any line visualization to pluck its chord.</p>
+  <h1><span class="roundel"></span>TfL Jazz: Ambient Multi-Network Soundscape</h1>
+  <p class="sub">Live London Underground, Overground, Elizabeth Line, DLR, Tram, River Bus & Cable Car soundscape.</p>
   
   <div class="actions-wrapper">
     <div class="actions">
@@ -471,8 +475,12 @@
     <span class="filter-label">Network View:</span>
     <button class="filter-btn active" data-filter="all" onclick="setNetworkFilter('all')">All Networks</button>
     <button class="filter-btn" data-filter="tube" onclick="setNetworkFilter('tube')">Underground</button>
+    <button class="filter-btn" data-filter="overground" onclick="setNetworkFilter('overground')">Overground</button>
     <button class="filter-btn" data-filter="elizabeth" onclick="setNetworkFilter('elizabeth')">Elizabeth Line</button>
     <button class="filter-btn" data-filter="dlr" onclick="setNetworkFilter('dlr')">DLR</button>
+    <button class="filter-btn" data-filter="tram" onclick="setNetworkFilter('tram')">Tram</button>
+    <button class="filter-btn" data-filter="river" onclick="setNetworkFilter('river')">River Bus</button>
+    <button class="filter-btn" data-filter="cable" onclick="setNetworkFilter('cable')">Cable Car</button>
   </div>
 
   <div id="status">Audio is off. Click start (browsers require a user gesture before playing sound).</div>
@@ -481,11 +489,12 @@
 <!-- Configuration Drawer for Synths -->
 <div id="synthPanel">
   <div class="panel-header-actions">
-    <h3 style="margin:0; font-size:13px; text-transform:uppercase;">Ambient Tone & Synth Modifiers</h3>
+    <h3 style="margin:0; font-size:13px; text-transform:uppercase;">Ambient Tone & Data Feed Modifiers</h3>
     <div class="random-btn-group">
       <select id="globalScaleSelect" class="global-scale-select" onchange="setGlobalScale(this.value)"></select>
       <button class="rand-btn" onclick="randomizeVoices()">🎲 Random Voices</button>
       <button class="rand-btn" onclick="randomizeOctaves()">🎲 Random Octaves</button>
+      <button class="rand-btn" onclick="randomizeFeeds()">🎲 Random Feeds</button>
       <button class="rand-btn" onclick="randomizeGlobalScale()">🎲 Random Scale</button>
     </div>
   </div>
@@ -528,26 +537,39 @@ let currentNetworkFilter = "all";
 
 const OCTAVES = [1, 2, 3, 4];
 const SYNTH_TYPES = ['FMSynth', 'AMSynth', 'MetalSynth', 'PluckSynth', 'MembraneSynth', 'DuoSynth', 'Synth', 'MonoSynth', 'NoiseSynth', 'PolySynth'];
+const AVAILABLE_FEEDS = ['bakerloo', 'central', 'circle', 'district', 'hammersmith-city', 'jubilee', 'metropolitan', 'northern', 'piccadilly', 'victoria', 'waterloo-city', 'elizabeth', 'dlr', 'overground', 'tram', 'river-bus', 'cable-car'];
 
 const LINES = [
   /* Tube lines */
-  { id:'bakerloo',        name:'Bakerloo',        category:'tube', color:'var(--line-bakerloo)',        type:'FMSynth',       octave:2, scale: 'Major Pentatonic', harmonicity:1.5, resonance:4, cutoff:1200, attack:0.4, decay:0.8, sustain:0.7, release:2.5, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'central',         name:'Central',         category:'tube', color:'var(--line-central)',         type:'MetalSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:3.1, resonance:600, cutoff:1800, attack:0.2, decay:0.5, sustain:0.5, release:2.0, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'circle',          name:'Circle',          category:'tube', color:'var(--line-circle)',          type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2500, cutoff:2200, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'district',        name:'District',        category:'tube', color:'var(--line-district)',        type:'AMSynth',       octave:2, scale: 'Major Pentatonic', harmonicity:2.0, resonance:6, cutoff:1500, attack:0.5, decay:1.0, sustain:0.8, release:3.0, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'hammersmith-city',name:'Ham. & City',     category:'tube', color:'var(--line-hammersmith)', type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:4000, cutoff:3000, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'jubilee',         name:'Jubilee',         category:'tube', color:'var(--line-jubilee)',         type:'MetalSynth',    octave:2, scale: 'Major Pentatonic', harmonicity:2.2, resonance:300, cutoff:1000, attack:0.3, decay:0.4, sustain:0.4, release:1.8, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'metropolitan',    name:'Metropolitan',    category:'tube', color:'var(--line-metropolitan)',type:'DuoSynth',      octave:3, scale: 'Major Pentatonic', harmonicity:1.5, resonance:5, cutoff:2000, attack:0.6, decay:1.2, sustain:0.8, release:3.5, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'northern',        name:'Northern',        category:'tube', color:'var(--line-northern)',        type:'MembraneSynth', octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:3, cutoff:800, attack:0.2, decay:0.8, sustain:0.5, release:2.5, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'piccadilly',      name:'Piccadilly',      category:'tube', color:'var(--line-piccadilly)',      type:'DuoSynth',      octave:3, scale: 'Major Pentatonic', harmonicity:2.0, resonance:7, cutoff:2500, attack:0.5, decay:1.0, sustain:0.8, release:3.2, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'victoria',        name:'Victoria',        category:'tube', color:'var(--line-victoria)',        type:'Synth',         octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'waterloo-city',   name:'Waterloo & City', category:'tube', color:'var(--line-waterloo)',        type:'Synth',         octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'bakerloo',        name:'Bakerloo',        category:'tube', color:'var(--line-bakerloo)',        feedSource:'bakerloo', type:'FMSynth',       octave:2, scale: 'Major Pentatonic', harmonicity:1.5, resonance:4, cutoff:1200, attack:0.4, decay:0.8, sustain:0.7, release:2.5, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'central',         name:'Central',         category:'tube', color:'var(--line-central)',         feedSource:'central', type:'MetalSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:3.1, resonance:600, cutoff:1800, attack:0.2, decay:0.5, sustain:0.5, release:2.0, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'circle',          name:'Circle',          category:'tube', color:'var(--line-circle)',          feedSource:'circle', type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2500, cutoff:2200, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'district',        name:'District',        category:'tube', color:'var(--line-district)',        feedSource:'district', type:'AMSynth',       octave:2, scale: 'Major Pentatonic', harmonicity:2.0, resonance:6, cutoff:1500, attack:0.5, decay:1.0, sustain:0.8, release:3.0, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'hammersmith-city',name:'Ham. & City',     category:'tube', color:'var(--line-hammersmith)', feedSource:'hammersmith-city', type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:4000, cutoff:3000, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'jubilee',         name:'Jubilee',         category:'tube', color:'var(--line-jubilee)',         feedSource:'jubilee', type:'MetalSynth',    octave:2, scale: 'Major Pentatonic', harmonicity:2.2, resonance:300, cutoff:1000, attack:0.3, decay:0.4, sustain:0.4, release:1.8, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'metropolitan',    name:'Metropolitan',    category:'tube', color:'var(--line-metropolitan)',feedSource:'metropolitan', type:'DuoSynth',      octave:3, scale: 'Major Pentatonic', harmonicity:1.5, resonance:5, cutoff:2000, attack:0.6, decay:1.2, sustain:0.8, release:3.5, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'northern',        name:'Northern',        category:'tube', color:'var(--line-northern)',        feedSource:'northern', type:'MembraneSynth', octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:3, cutoff:800, attack:0.2, decay:0.8, sustain:0.5, release:2.5, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'piccadilly',      name:'Piccadilly',      category:'tube', color:'var(--line-piccadilly)',      feedSource:'piccadilly', type:'DuoSynth',      octave:3, scale: 'Major Pentatonic', harmonicity:2.0, resonance:7, cutoff:2500, attack:0.5, decay:1.0, sustain:0.8, release:3.2, volume:-6, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'victoria',        name:'Victoria',        category:'tube', color:'var(--line-victoria)',        feedSource:'victoria', type:'Synth',         octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'waterloo-city',   name:'Waterloo & City', category:'tube', color:'var(--line-waterloo)',        feedSource:'waterloo-city', type:'Synth',         octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
   
+  /* Overground */
+  { id:'overground',      name:'Overground',      category:'overground', color:'var(--line-overground)', feedSource:'overground', type:'Synth', octave:2, scale: 'Major Pentatonic', harmonicity:1.2, resonance:2, cutoff:1600, attack:0.3, decay:0.8, sustain:0.6, release:2.5, volume:-7, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+
   /* Elizabeth Line */
-  { id:'elizabeth',       name:'Elizabeth Line',  category:'elizabeth', color:'var(--line-elizabeth)',  type:'Synth',         octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+  { id:'elizabeth',       name:'Elizabeth Line',  category:'elizabeth', color:'var(--line-elizabeth)',  feedSource:'elizabeth', type:'Synth',         octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
 
   /* DLR */
-  { id:'dlr',             name:'DLR',             category:'dlr', color:'var(--line-dlr)',            type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2000, cutoff:2500, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' }
+  { id:'dlr',             name:'DLR',             category:'dlr', color:'var(--line-dlr)',            feedSource:'dlr', type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2000, cutoff:2500, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+
+  /* Tram */
+  { id:'tram',            name:'Tram',            category:'tram', color:'var(--line-tram)',            feedSource:'tram', type:'AMSynth', octave:2, scale: 'Major Pentatonic', harmonicity:1.5, resonance:4, cutoff:1400, attack:0.2, decay:0.7, sustain:0.5, release:2.0, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+
+  /* River Bus */
+  { id:'river',           name:'River Bus',       category:'river', color:'var(--line-river)',          feedSource:'river-bus', type:'MonoSynth', octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:1200, attack:0.5, decay:1.2, sustain:0.7, release:3.0, volume:-7, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
+
+  /* Cable Car */
+  { id:'cable',           name:'Cable Car',       category:'cable', color:'var(--line-cable)',          feedSource:'cable-car', type:'MetalSynth', octave:3, scale: 'Major Pentatonic', harmonicity:2.0, resonance:400, cutoff:2000, attack:0.1, decay:0.5, sustain:0.3, release:2.0, volume:-8, muted:false, crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' }
 ];
 
 let announcementConfig = {
@@ -580,15 +602,13 @@ const synthAnnouncementChime = new Tone.Synth({
 const STATIC_ANNOUNCEMENTS = [
   "Mind the gap between the train and the platform.",
   "Please stand clear of the closing doors.",
-  "This train terminates here.",
-  "Customer announcement, a good service is operating on all lines.",
+  "This service terminates here.",
+  "Customer announcement, a good service is operating on all networks.",
   "Obstructing the doors or pulling the emergency alarm can cause delays and is a criminal offence.",
   "See it. Say it. Sorted. Contact the British Transport Police or speak to a member of staff.",
-  "Please keep your personal belongings with you at all times. Unattended items may be removed or destroyed without warning.",
+  "Please keep your personal belongings with you at all times.",
   "Would Inspector Sands please report to the operations room.",
-  "Please stand on the right of the escalator and hold the handrail.",
-  "Smoking and the use of e-cigarettes is strictly prohibited anywhere on London Underground premises.",
-  "Please stand behind the yellow line."
+  "Please stand on the right of the escalator and hold the handrail."
 ];
 
 let lastSoundTime = Date.now();
@@ -639,7 +659,7 @@ function triggerSpokenAnnouncement() {
 
     if (latestArrivalsPool.length > 0 && Math.random() < 0.6) {
       const livePrediction = latestArrivalsPool[Math.floor(Math.random() * latestArrivalsPool.length)];
-      lineObj = LINES.find(l => l.id === livePrediction.lineId);
+      lineObj = LINES.find(l => l.feedSource === livePrediction.lineId || l.id === livePrediction.lineId);
       const lineName = lineObj ? lineObj.name : 'Network';
       const destination = livePrediction.destinationName || livePrediction.towards || 'Destination unknown';
       const station = livePrediction.stationName || 'this station';
@@ -734,7 +754,7 @@ function updateGlobalScaleSelectOptions() {
 function buildControlPanel() {
   panelGrid.innerHTML = '';
   
-  let lineSelectOptions = `<option value="all" ${announcementConfig.targetLine === 'all' ? 'selected' : ''}>All Lines</option>`;
+  let lineSelectOptions = `<option value="all" ${announcementConfig.targetLine === 'all' ? 'selected' : ''}>All Feeds</option>`;
   LINES.forEach(l => {
     lineSelectOptions += `<option value="${l.id}" ${announcementConfig.targetLine === l.id ? 'selected' : ''}>${l.name}</option>`;
   });
@@ -765,6 +785,7 @@ function buildControlPanel() {
     card.id = `card-${line.id}`;
     
     let typeOptions = SYNTH_TYPES.map(t => `<option value="${t}" ${line.type === t ? 'selected' : ''}>${t}</option>`).join('');
+    let feedOptions = AVAILABLE_FEEDS.map(f => `<option value="${f}" ${line.feedSource === f ? 'selected' : ''}>${f}</option>`).join('');
     let octaveOptions = OCTAVES.map(o => `<option value="${o}" ${line.octave === o ? 'selected' : ''}>Octave ${o}</option>`).join('');
     let scaleOptions = SCALE_NAMES.map(s => `<option value="${s}" ${line.scale === s ? 'selected' : ''}>${s}</option>`).join('');
     
@@ -787,6 +808,7 @@ function buildControlPanel() {
           <button class="test-btn" data-test-line="${line.id}">Test</button>
         </div>
       </h3>
+      <div class="control-group"><label>Data Feed</label><select data-line="${line.id}" data-param="feedSource">${feedOptions}</select></div>
       <div class="control-group"><label>Synth Type</label><select data-line="${line.id}" data-param="type">${typeOptions}</select></div>
       <div class="control-group"><label>Scale</label><select data-line="${line.id}" data-param="scale">${scaleOptions}</select></div>
       <div class="control-group"><label>Octave</label><select data-line="${line.id}" data-param="octave">${octaveOptions}</select></div>
@@ -851,7 +873,6 @@ document.getElementById('toggleConfig').addEventListener('click', () => {
 function setNetworkFilter(category) {
   currentNetworkFilter = category;
   
-  // Update button active classes
   document.querySelectorAll('.filter-btn').forEach(btn => {
     if (btn.getAttribute('data-filter') === category) {
       btn.classList.add('active');
@@ -860,7 +881,6 @@ function setNetworkFilter(category) {
     }
   });
 
-  // Show/Hide tracks on board
   LINES.forEach(line => {
     const trackElem = document.getElementById(`track-${line.id}`);
     if (!trackElem) return;
@@ -885,6 +905,13 @@ function randomizeVoices() {
 function randomizeOctaves() {
   LINES.forEach(line => {
     line.octave = OCTAVES[Math.floor(Math.random() * OCTAVES.length)];
+  });
+  buildControlPanel();
+}
+
+function randomizeFeeds() {
+  LINES.forEach(line => {
+    line.feedSource = AVAILABLE_FEEDS[Math.floor(Math.random() * AVAILABLE_FEEDS.length)];
   });
   buildControlPanel();
 }
@@ -945,7 +972,7 @@ function updateLineStatusDisplay(line) {
     alertClass = 'status-badge alert';
   }
   badgeElem.className = alertClass;
-  badgeElem.innerHTML = `${line.statusText}<br>${line.activeCount} trains active`;
+  badgeElem.innerHTML = `${line.statusText}<br>${line.activeCount} active`;
 }
 
 function attachControlListeners() {
@@ -1020,7 +1047,7 @@ function attachControlListeners() {
       
       if (param === 'type') {
         if (audioReady) recreateSynth(line);
-        buildControlPanel(); // Re-render card controls dynamically to match new synth type
+        buildControlPanel();
         return;
       }
 
@@ -1085,58 +1112,60 @@ function hashToIndex(str, mod){
 const activeTrainTracker = new Map();
 
 async function pollAllData() {
-  const ids = LINES.map(l=>l.id).join(',');
+  const uniqueFeeds = [...new Set(LINES.map(l => l.feedSource))].join(',');
   
   try {
-    const statusRes = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Status`);
+    const statusRes = await fetch(`https://api.tfl.gov.uk/Line/${uniqueFeeds}/Status`);
     if (statusRes.ok) {
       const statusData = await statusRes.json();
       statusData.forEach(lineStatus => {
-        const lineObj = LINES.find(l => l.id === lineStatus.id);
+        const targetLines = LINES.filter(l => l.feedSource === lineStatus.id);
 
-        if (lineObj && lineStatus.lineStatuses && lineStatus.lineStatuses.length > 0) {
-          const statusObj = lineStatus.lineStatuses[0];
-          const statusDesc = statusObj.statusSeverityDescription;
+        targetLines.forEach(lineObj => {
+          if (lineStatus.lineStatuses && lineStatus.lineStatuses.length > 0) {
+            const statusObj = lineStatus.lineStatuses[0];
+            const statusDesc = statusObj.statusSeverityDescription;
 
-          let crowdingFactor = 1.0;
-          if (statusDesc === 'Severe Delays' || statusDesc === 'Suspended') {
-            crowdingFactor = 1.8;
-          } else if (statusDesc === 'Minor Delays') {
-            crowdingFactor = 1.3;
+            let crowdingFactor = 1.0;
+            if (statusDesc === 'Severe Delays' || statusDesc === 'Suspended') {
+              crowdingFactor = 1.8;
+            } else if (statusDesc === 'Minor Delays') {
+              crowdingFactor = 1.3;
+            }
+
+            lineObj.statusText = statusDesc;
+            lineObj.crowdingFactor = crowdingFactor;
+            updateLineStatusDisplay(lineObj);
+
+            if (audioReady && lineObj.node && lineObj.node.envelope) {
+              lineObj.node.envelope.release = Math.max(0.4, 2.5 / crowdingFactor);
+            }
           }
-
-          lineObj.statusText = statusDesc;
-          lineObj.crowdingFactor = crowdingFactor;
-          updateLineStatusDisplay(lineObj);
-
-          if (audioReady && lineObj.node && lineObj.node.envelope) {
-            lineObj.node.envelope.release = Math.max(0.4, 2.5 / crowdingFactor);
-          }
-        }
+        });
       });
     }
   } catch(e) {}
 
   try{
-    const res = await fetch(`https://api.tfl.gov.uk/Line/${ids}/Arrivals`);
+    const res = await fetch(`https://api.tfl.gov.uk/Line/${uniqueFeeds}/Arrivals`);
     if (!res.ok) throw new Error('API network failure');
     const data = await res.json();
     
     latestArrivalsPool = data.filter(p => p.timeToStation != null && p.timeToStation > 5 && p.timeToStation < 300);
 
-    const lineTrainSets = {};
-    LINES.forEach(l => { lineTrainSets[l.id] = new Set(); });
+    const feedCounts = {};
+    AVAILABLE_FEEDS.forEach(f => { feedCounts[f] = new Set(); });
 
     data.forEach(p => {
-      if (lineTrainSets[p.lineId]) {
+      if (feedCounts[p.lineId]) {
         const trainId = p.vehicleId || p.id || `${p.stationName}-${p.expectedArrival}`;
-        lineTrainSets[p.lineId].add(trainId);
+        feedCounts[p.lineId].add(trainId);
       }
     });
 
     LINES.forEach(line => {
-      const count = lineTrainSets[line.id] ? lineTrainSets[line.id].size : 0;
-      line.activeCount = count;
+      const countSet = feedCounts[line.feedSource];
+      line.activeCount = countSet ? countSet.size : Math.floor(Math.random() * 4) + 1;
       updateLineStatusDisplay(line);
     });
 
@@ -1152,17 +1181,17 @@ async function pollAllData() {
       const vehicleId = p.vehicleId || p.id || `${p.lineId}-${p.stationName}-${p.expectedArrival}`;
       if (p.timeToStation == null || p.timeToStation < 2 || p.timeToStation > 90) return;
 
-      const line = LINES.find(l => l.id === p.lineId);
-      if (!line) return;
-
-      let trainRecord = activeTrainTracker.get(vehicleId);
-      if (!trainRecord) {
-        trainRecord = { id: vehicleId, lineId: p.lineId, totalTime: p.timeToStation, startTime: now, lastSeen: now, soundFired: false };
-        activeTrainTracker.set(vehicleId, trainRecord);
-        animateTrain(line, p.timeToStation, trainRecord);
-      } else {
-        trainRecord.lastSeen = now;
-      }
+      const matchingLines = LINES.filter(l => l.feedSource === p.lineId);
+      matchingLines.forEach(line => {
+        let trainRecord = activeTrainTracker.get(`${line.id}-${vehicleId}`);
+        if (!trainRecord) {
+          trainRecord = { id: `${line.id}-${vehicleId}`, lineId: line.id, totalTime: p.timeToStation, startTime: now, lastSeen: now, soundFired: false };
+          activeTrainTracker.set(`${line.id}-${vehicleId}`, trainRecord);
+          animateTrain(line, p.timeToStation, trainRecord);
+        } else {
+          trainRecord.lastSeen = now;
+        }
+      });
     });
 
   } catch(err) {
