@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TfL Jazz: Ambient Multi-Network Soundscape</title>
+<title>TfL Jazz: Ambient Underground & Elizabeth Line Soundscape</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
 <style>
   :root {
@@ -26,11 +26,6 @@
     --line-victoria: #0098D4;
     --line-waterloo: #95CDBA;
     --line-elizabeth: #6950A1;
-    --line-dlr: #00AFAD;
-    --line-overground: #E86A10;
-    --line-tram: #84B817;
-    --line-river: #0085C7;
-    --line-cable: #E61C24;
   }
 
   [data-theme="light"] {
@@ -457,8 +452,8 @@
 <body>
 
 <header>
-  <h1><span class="roundel" id="apiRoundel"></span>TfL Jazz: Ambient Multi-Network Soundscape</h1>
-  <p class="sub">Live London Underground, Overground, Elizabeth Line, DLR, Tram, River Bus & Cable Car soundscape.</p>
+  <h1><span class="roundel" id="apiRoundel"></span>TfL Jazz: Underground & Elizabeth Line Soundscape</h1>
+  <p class="sub">Live London Underground & Elizabeth Line soundscape.</p>
   
   <div class="actions-wrapper">
     <div class="actions">
@@ -484,14 +479,9 @@
   <!-- Multi-Select Filter Toolbar -->
   <div class="filter-bar">
     <span class="filter-label">Network View:</span>
-    <button class="filter-btn active" data-filter="all" onclick="toggleNetworkFilter('all')">All Networks</button>
+    <button class="filter-btn active" data-filter="all" onclick="toggleNetworkFilter('all')">All Lines</button>
     <button class="filter-btn" data-filter="tube" onclick="toggleNetworkFilter('tube')">Underground</button>
-    <button class="filter-btn" data-filter="overground" onclick="toggleNetworkFilter('overground')">Overground</button>
     <button class="filter-btn" data-filter="elizabeth" onclick="toggleNetworkFilter('elizabeth')">Elizabeth Line</button>
-    <button class="filter-btn" data-filter="dlr" onclick="toggleNetworkFilter('dlr')">DLR</button>
-    <button class="filter-btn" data-filter="tram" onclick="toggleNetworkFilter('tram')">Tram</button>
-    <button class="filter-btn" data-filter="river" onclick="toggleNetworkFilter('river')">River Bus</button>
-    <button class="filter-btn" data-filter="cable" onclick="toggleNetworkFilter('cable')">Cable Car</button>
   </div>
 
   <div id="status">Checking TfL API connection...</div>
@@ -560,12 +550,7 @@ const LINES = [
   { id:'piccadilly',      name:'Piccadilly',      category:'tube', feedSource:'piccadilly', type:'DuoSynth',      octave:3, scale: 'Major Pentatonic', harmonicity:2.0, resonance:7, cutoff:2500, attack:0.5, decay:1.0, sustain:0.8, release:3.2, volume:-6, muted:false, color:'var(--line-piccadilly)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
   { id:'victoria',        name:'Victoria',        category:'tube', feedSource:'victoria', type:'Synth',         octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, color:'var(--line-victoria)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
   { id:'waterloo-city',   name:'Waterloo & City', category:'tube', feedSource:'waterloo-city', type:'Synth',         octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false, color:'var(--line-waterloo)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'overground',      name:'Overground',      category:'overground', feedSource:'overground', type:'Synth', octave:2, scale: 'Major Pentatonic', harmonicity:1.2, resonance:2, cutoff:1600, attack:0.3, decay:0.8, sustain:0.6, release:2.5, volume:-7, muted:false, color:'var(--line-overground)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'elizabeth',       name:'Elizabeth Line',  category:'elizabeth', feedSource:'elizabeth', type:'Synth',         octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, color:'var(--line-elizabeth)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'dlr',             name:'DLR',             category:'dlr', feedSource:'dlr', type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2000, cutoff:2500, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, color:'var(--line-dlr)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'tram',            name:'Tram',            category:'tram', feedSource:'tram', type:'AMSynth', octave:2, scale: 'Major Pentatonic', harmonicity:1.5, resonance:4, cutoff:1400, attack:0.2, decay:0.7, sustain:0.5, release:2.0, volume:-8, muted:false, color:'var(--line-tram)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'river',           name:'River Bus',       category:'river', feedSource:'river-bus', type:'MonoSynth', octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:1200, attack:0.5, decay:1.2, sustain:0.7, release:3.0, volume:-7, muted:false, color:'var(--line-river)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'cable',           name:'Cable Car',       category:'cable', feedSource:'cable-car', type:'MetalSynth', octave:3, scale: 'Major Pentatonic', harmonicity:2.0, resonance:400, cutoff:2000, attack:0.1, decay:0.5, sustain:0.3, release:2.0, volume:-8, muted:false, color:'var(--line-cable)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' }
+  { id:'elizabeth',       name:'Elizabeth Line',  category:'elizabeth', feedSource:'elizabeth', type:'Synth',         octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, color:'var(--line-elizabeth)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' }
 ];
 
 let announcementConfig = {
@@ -599,7 +584,7 @@ const STATIC_ANNOUNCEMENTS = [
   "Mind the gap between the train and the platform.",
   "Please stand clear of the closing doors.",
   "This service terminates here.",
-  "Customer announcement, a good service is operating on all networks.",
+  "Customer announcement, a good service is operating on all lines.",
   "Obstructing the doors or pulling the emergency alarm can cause delays and is a criminal offence.",
   "See it. Say it. Sorted. Contact the British Transport Police or speak to a member of staff.",
   "Please keep your personal belongings with you at all times.",
@@ -611,7 +596,6 @@ let lastSoundTime = Date.now();
 let isAnnouncementPlaying = false;
 let latestArrivalsPool = [];
 
-// Pre-load API health check right when page loads
 async function checkApiHealth() {
   const roundel = document.getElementById('apiRoundel');
   const statusDiv = document.getElementById('status');
@@ -771,7 +755,7 @@ function updateGlobalScaleSelectOptions() {
 function buildControlPanel() {
   panelGrid.innerHTML = '';
   
-  let lineSelectOptions = `<option value="all" ${announcementConfig.targetLine === 'all' ? 'selected' : ''}>All Feeds</option>`;
+  let lineSelectOptions = `<option value="all" ${announcementConfig.targetLine === 'all' ? 'selected' : ''}>All Lines</option>`;
   LINES.forEach(l => {
     lineSelectOptions += `<option value="${l.id}" ${announcementConfig.targetLine === l.id ? 'selected' : ''}>${l.name}</option>`;
   });
@@ -931,7 +915,6 @@ function toggleNetworkFilter(category) {
     }
   });
 
-  // Immediately refresh feeds with the new trimmed network set if running
   if (audioReady) {
     pollAllData();
   }
@@ -1164,7 +1147,6 @@ function hashToIndex(str, mod){
 const activeTrainTracker = new Map();
 
 async function pollAllData() {
-  // Determine active lines based on filter selection (Network Trimming)
   let activeLines = LINES;
   if (!selectedFilters.has('all')) {
     activeLines = LINES.filter(l => selectedFilters.has(l.category));
