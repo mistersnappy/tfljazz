@@ -1,1308 +1,195 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TfL Jazz: Ambient Underground & Elizabeth Line Soundscape</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
-<style>
-  :root {
-    --bg: #070709;
-    --card-bg: #121216;
-    --ink: #f4f2ee;
-    --dim: #7a7a85;
-    --border: #22222a;
-    --rail-bg: #181820;
-    --station-bg: #070709;
-    --line-bakerloo: #B36305;
-    --line-central: #E32017;
-    --line-circle: #FFD300;
-    --line-district: #00782A;
-    --line-hammersmith: #F3A9BB;
-    --line-jubilee: #8b9195;
-    --line-metropolitan: #9B0056;
-    --line-northern: #6E6E6E;
-    --line-piccadilly: #003688;
-    --line-victoria: #0098D4;
-    --line-waterloo: #95CDBA;
-    --line-elizabeth: #6950A1;
-  }
-
-  [data-theme="light"] {
-    --bg: #f0f0f4;
-    --card-bg: #ffffff;
-    --ink: #111115;
-    --dim: #62626e;
-    --border: #d0d0dc;
-    --rail-bg: #d0d0dc;
-    --station-bg: #f0f0f4;
-  }
-
-  *{box-sizing:border-box;}
-  body{
-    margin:0;
-    background:var(--bg);
-    color:var(--ink);
-    font-family:"P22 Underground", "Johnston100", Arial, Helvetica, sans-serif;
-    min-height:100vh;
-  }
-  header{
-    padding:24px 24px 14px;
-    border-bottom:1px solid var(--border);
-  }
-  .actions-wrapper{
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-top: 12px;
-  }
-  .actions{
-    display:flex;
-    gap:8px;
-    align-items:center;
-    flex-wrap:wrap;
-  }
-  .theme-btn {
-    background: var(--card-bg);
-    color: var(--ink);
-    border: 1px solid var(--border);
-    padding: 8px 14px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    text-transform: uppercase;
-  }
-  .theme-btn.active {
-    background: var(--ink);
-    color: var(--bg);
-    border-color: var(--ink);
-  }
-  .tfl-icon {
-    width: 14px;
-    height: 14px;
-    display: inline-block;
-  }
-
-  h1{
-    font-weight:700;
-    letter-spacing:-0.5px;
-    font-size:clamp(22px,3.5vw,32px);
-    margin:0 0 4px;
-    text-transform:uppercase;
-  }
-  .roundel{
-    display:inline-block;
-    width:13px;height:13px;
-    border:3px solid var(--ink);
-    border-radius:50%;
-    position:relative;
-    top:1px;
-    margin-right:8px;
-    transition: background-color 0.3s, border-color 0.3s;
-  }
-  .roundel.success {
-    background-color: #00782A;
-    border-color: #00782A;
-  }
-  .roundel.error {
-    background-color: #E32017;
-    border-color: #E32017;
-  }
-
-  p.sub{
-    color:var(--dim);
-    margin:0 0 10px;
-    font-size:12px;
-    max-width:700px;
-    font-family: Arial, sans-serif;
-  }
-  button{
-    background:var(--ink);
-    color:var(--bg);
-    border:none;
-    font-family:inherit;
-    font-weight:700;
-    padding:8px 16px;
-    border-radius:20px;
-    cursor:pointer;
-    font-size:12px;
-    letter-spacing:0.3px;
-    text-transform:uppercase;
-  }
-  button:disabled{opacity:0.4;cursor:default;}
-  .btn-outline{
-    background:transparent;
-    color:var(--ink);
-    border:1px solid var(--border);
-  }
-  .btn-outline:hover{background:var(--card-bg);}
-  
-  #status{
-    color:var(--dim);
-    font-size:11px;
-    margin-top:8px;
-    font-family: monospace;
-  }
-
-  /* Multi-Select Filter Toolbar */
-  .filter-bar {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-    flex-wrap: wrap;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px dashed var(--border);
-  }
-  .filter-label {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    color: var(--dim);
-    margin-right: 4px;
-  }
-  .filter-btn {
-    background: var(--card-bg);
-    color: var(--ink);
-    border: 1px solid var(--border);
-    font-size: 11px;
-    padding: 5px 10px;
-    border-radius: 12px;
-    cursor: pointer;
-    font-weight: 700;
-    text-transform: uppercase;
-  }
-  .filter-btn:hover { background: var(--border); }
-  .filter-btn.active {
-    background: var(--ink);
-    color: var(--bg);
-    border-color: var(--ink);
-  }
-
-  /* Live Announcement Display Banner */
-  .announcement-banner {
-    background: var(--card-bg);
-    border: 1px solid var(--border);
-    border-left: 4px solid var(--ink);
-    padding: 8px 14px;
-    border-radius: 6px;
-    font-size: 12px;
-    flex: 1;
-    min-width: 260px;
-    max-width: 480px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    transition: all 0.3s ease;
-  }
-  .announcement-banner.hidden {
-    display: none;
-  }
-  .announcement-icon {
-    font-weight: 700;
-    text-transform: uppercase;
-    font-size: 9px;
-    letter-spacing: 1px;
-    background: var(--border);
-    padding: 2px 5px;
-    border-radius: 4px;
-    flex-shrink: 0;
-  }
-  .announcement-text {
-    font-family: Arial, sans-serif;
-    color: var(--ink);
-  }
-
-  /* Control Panel Drawer */
-  #synthPanel{
-    display:none;
-    background:var(--card-bg);
-    border-bottom:1px solid var(--border);
-    padding:16px 20px;
-    max-height:550px;
-    overflow-y:auto;
-  }
-  #synthPanel.open{display:block;}
-  .panel-header-actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 12px;
-  }
-  .random-btn-group {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-  .rand-btn {
-    background: var(--card-bg);
-    color: var(--ink);
-    border: 1px solid var(--border);
-    font-size: 11px;
-    padding: 5px 10px;
-    border-radius: 12px;
-    cursor: pointer;
-    font-weight: 700;
-  }
-  .rand-btn:hover { background: var(--border); }
-
-  .global-scale-select {
-    background: var(--card-bg);
-    color: var(--ink);
-    border: 1px solid var(--border);
-    font-size: 11px;
-    padding: 5px 8px;
-    border-radius: 12px;
-    cursor: pointer;
-    font-weight: 700;
-    font-family: inherit;
-  }
-
-  .panel-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));
-    gap:12px;
-  }
-  .synth-card{
-    background:var(--bg);
-    border:1px solid var(--border);
-    border-radius:6px;
-    padding:10px;
-    font-size:11px;
-  }
-  .synth-card.muted{opacity:0.4;}
-  .synth-card h3{
-    margin:0 0 6px 0;
-    font-size:12px;
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-  }
-  .card-actions{
-    display:flex;
-    gap:4px;
-  }
-  .test-btn, .mute-btn{
-    background:var(--card-bg);
-    color:var(--ink);
-    border:1px solid var(--border);
-    font-family:inherit;
-    font-size:10px;
-    padding:2px 6px;
-    border-radius:4px;
-    cursor:pointer;
-  }
-  .test-btn:hover, .mute-btn:hover{background:var(--border);}
-  .mute-btn.active{background:var(--ink); color:var(--bg);}
-  
-  .control-group{
-    margin-bottom:5px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-  }
-  .control-group label{color:var(--dim); width:75px;}
-  .control-group input, .control-group select{
-    background:var(--card-bg);
-    color:var(--ink);
-    border:1px solid var(--border);
-    padding:2px 4px;
-    font-family:inherit;
-    font-size:10px;
-    width:140px;
-    border-radius:3px;
-  }
-
-  /* Board layout - Compact height optimization */
-  .board{
-    padding:16px 24px;
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-  }
-  .track{
-    display:grid;
-    grid-template-columns:180px 1fr 50px;
-    align-items:center;
-    min-height:44px;
-    border-bottom:1px solid var(--border);
-    position:relative;
-    padding: 4px 0;
-  }
-  .track.hidden-track {
-    display: none;
-  }
-  .track-info{
-    display:flex;
-    flex-direction:column;
-    gap:1px;
-  }
-  .track-label{
-    display:flex;
-    align-items:center;
-    gap:6px;
-    font-size:12px;
-    font-weight:700;
-    letter-spacing:0.2px;
-  }
-  .swatch{
-    width:9px;height:9px;border-radius:50%;flex:none;
-  }
-  .status-badge {
-    font-size: 8.5px;
-    font-family: monospace;
-    color: var(--dim);
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    padding-left: 15px;
-    line-height: 1.3;
-  }
-  .status-badge.alert {
-    color: #E32017;
-    font-weight: 700;
-  }
-  
-  .rail{
-    position:relative;
-    height:7px;
-    margin-right:10px;
-    display:flex;
-    align-items:center;
-    cursor: pointer;
-  }
-  .rail:hover .rail-line {
-    filter: brightness(1.3);
-    box-shadow: 0 0 8px currentColor;
-  }
-  .rail::before, .rail::after {
-    content:'';
-    position:absolute;
-    top: -3px;
-    width: 2px;
-    height: 13px;
-    background: inherit;
-    z-index: 2;
-  }
-  .rail::before { left: 0; }
-  .rail::after { right: 0; }
-
-  .rail-line {
-    position: absolute;
-    top: 0; bottom: 0; left: 0; right: 0;
-    background: currentColor;
-    border-radius: 1px;
-    transition: filter 0.2s, box-shadow 0.2s;
-  }
-
-  .station-node {
-    position: absolute;
-    top: 50%;
-    width: 5px; height: 5px;
-    background: var(--station-bg);
-    border: 2px solid currentColor;
-    border-radius: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 3;
-  }
-  .station-node:nth-child(1) { left: 25%; }
-  .station-node:nth-child(2) { left: 50%; }
-  .station-node:nth-child(3) { left: 75%; }
-
-  .train{
-    position:absolute;
-    top:50%;
-    left:0;
-    width:9px;height:9px;
-    background:var(--card-bg);
-    border:2px solid currentColor;
-    border-radius:50%;
-    transform:translate(-50%,-50%);
-    box-shadow:0 0 8px 2px currentColor;
-    opacity:0;
-    z-index:4;
-    will-change: left, opacity;
-  }
-
-  .note-out{
-    font-size:11px;
-    font-weight:700;
-    color:var(--dim);
-    text-align:right;
-    font-family: monospace;
-  }
-  footer{
-    padding:0 24px 30px;
-    color:var(--dim);
-    font-size:11px;
-    max-width:700px;
-    font-family: Arial, sans-serif;
-  }
-  a{color:var(--ink);}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bioluminescent Plant Fractal Visualizer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
+  <style>
+    body {
+      margin: 0;
+      background-color: #020408;
+      overflow: hidden;
+      font-family: monospace;
+    }
+    #info {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: #4af3a2;
+      font-size: 12px;
+      letter-spacing: 1px;
+      background: rgba(2, 4, 8, 0.8);
+      padding: 12px 16px;
+      border-radius: 6px;
+      border: 1px solid rgba(74, 243, 162, 0.3);
+      pointer-events: none;
+      line-height: 1.5;
+    }
+    #micBtn {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      background: #4af3a2;
+      color: #020408;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 4px;
+      font-weight: bold;
+      cursor: pointer;
+      font-family: monospace;
+      pointer-events: auto;
+    }
+    #micBtn:hover {
+      background: #76ffc2;
+    }
+  </style>
 </head>
 <body>
 
-<header>
-  <h1><span class="roundel" id="apiRoundel"></span>TfL Jazz: Underground & Elizabeth Line Soundscape</h1>
-  <p class="sub">Live London Underground & Elizabeth Line soundscape.</p>
-  
-  <div class="actions-wrapper">
-    <div class="actions">
-      <button id="startBtn">Start listening</button>
-      <button id="refreshBtn" class="btn-outline" onclick="manualRefreshFeed()">Refresh Feed</button>
-      <button id="toggleConfig" class="btn-outline">Configure Tones</button>
-      <button class="theme-btn" id="dayTubeBtn" onclick="setTheme('light')">
-        <svg class="tfl-icon" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="12" cy="12" r="4"/></svg>
-        Day Tube
-      </button>
-      <button class="theme-btn active" id="nightTubeBtn" onclick="setTheme('dark')">
-        <svg class="tfl-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.38 5.38 0 0 1-4.24 2.16A5.38 5.38 0 0 1 11.3 7.56 5.38 5.38 0 0 1 13.46 3.3 9 9 0 0 0 12 3z"/></svg>
-        Night Tube
-      </button>
-    </div>
-    
-    <div id="announcementBanner" class="announcement-banner hidden" style="border-left-color: var(--ink);">
-      <div class="announcement-icon">Announcement</div>
-      <div id="announcementText" class="announcement-text"></div>
-    </div>
+  <div id="info">
+    BIOLUMINESCENT PLANT VISUALIZER<br>
+    Input Mode: <span id="inputMode" style="color: #ffde4a;">Interactive (Move Mouse / Enable Mic)</span><br>
+    Delta (Complexity): <span id="valDelta">0.50</span><br>
+    Variance (Activity): <span id="valVariance">0.50</span>
   </div>
 
-  <!-- Multi-Select Filter Toolbar -->
-  <div class="filter-bar">
-    <span class="filter-label">Network View:</span>
-    <button class="filter-btn active" data-filter="all" onclick="toggleNetworkFilter('all')">All Lines</button>
-    <button class="filter-btn" data-filter="tube" onclick="toggleNetworkFilter('tube')">Underground</button>
-    <button class="filter-btn" data-filter="elizabeth" onclick="toggleNetworkFilter('elizabeth')">Elizabeth Line</button>
-  </div>
+  <button id="micBtn" onclick="toggleMic()">Enable Mic Reactivity</button>
 
-  <div id="status">Checking TfL API connection...</div>
-</header>
+  <script>
+    let targetDelta = 0.5;
+    let targetVariance = 0.5;
+    let smoothDelta = 0.5;
+    let smoothVariance = 0.5;
+    let angleSpeed = 0.01;
+    let mic, micActive = false;
+    let midiStatus = "Searching for MIDI...";
 
-<!-- Configuration Drawer for Synths -->
-<div id="synthPanel">
-  <div class="panel-header-actions">
-    <h3 style="margin:0; font-size:13px; text-transform:uppercase;">Ambient Tone Modifiers</h3>
-    <div class="random-btn-group">
-      <select id="globalScaleSelect" class="global-scale-select" onchange="setGlobalScale(this.value)"></select>
-      <button class="rand-btn" onclick="randomizeVoices()">🎲 Random Voices</button>
-      <button class="rand-btn" onclick="randomizeOctaves()">🎲 Random Octaves</button>
-      <button class="rand-btn" onclick="randomizeGlobalScale()">🎲 Random Scale</button>
-    </div>
-  </div>
-  <div class="panel-grid" id="panelGrid"></div>
-</div>
-
-<div class="board" id="board"></div>
-
-<footer>
-  Data: <a href="https://api.tfl.gov.uk" target="_blank">api.tfl.gov.uk</a> Unified API, polled dynamically. 
-  Concept inspired by <a href="https://www.trainjazz.com" target="_blank">trainjazz.com</a>.
-</footer>
-
-<script>
-function setTheme(mode) {
-  if (mode === 'light') {
-    document.documentElement.setAttribute('data-theme', 'light');
-    document.getElementById('dayTubeBtn').classList.add('active');
-    document.getElementById('nightTubeBtn').classList.remove('active');
-  } else {
-    document.documentElement.removeAttribute('data-theme');
-    document.getElementById('nightTubeBtn').classList.add('active');
-    document.getElementById('dayTubeBtn').classList.remove('active');
-  }
-}
-
-const MUSICAL_SCALES = {
-  "Major Pentatonic": ["F", "G", "A", "C", "D"],
-  "Minor Pentatonic": ["F", "Ab", "Bb", "C", "Eb"],
-  "Major Diatonic": ["F", "G", "A", "Bb", "C", "D", "E"],
-  "Natural Minor": ["F", "G", "Ab", "Bb", "C", "Db", "Eb"],
-  "Dorian Mode": ["F", "G", "Ab", "Bb", "C", "D", "Eb"],
-  "Mixolydian Mode": ["F", "G", "A", "Bb", "C", "D", "Eb"],
-  "Blues Scale": ["F", "Ab", "Bb", "B", "C", "Eb"]
-};
-
-const SCALE_NAMES = Object.keys(MUSICAL_SCALES);
-let currentGlobalScale = "Major Pentatonic";
-let selectedFilters = new Set(['all']);
-
-const OCTAVES = [1, 2, 3, 4];
-const SYNTH_TYPES = ['FMSynth', 'AMSynth', 'MetalSynth', 'PluckSynth', 'MembraneSynth', 'DuoSynth', 'Synth', 'MonoSynth', 'NoiseSynth', 'PolySynth'];
-
-const LINES = [
-  { id:'bakerloo',        name:'Bakerloo',        category:'tube', feedSource:'bakerloo', type:'FMSynth',       octave:2, scale: 'Major Pentatonic', harmonicity:1.5, resonance:4, cutoff:1200, attack:0.4, decay:0.8, sustain:0.7, release:2.5, volume:-6, muted:false, color:'var(--line-bakerloo)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'central',         name:'Central',         category:'tube', feedSource:'central', type:'MetalSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:3.1, resonance:600, cutoff:1800, attack:0.2, decay:0.5, sustain:0.5, release:2.0, volume:-8, muted:false, color:'var(--line-central)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'circle',          name:'Circle',          category:'tube', feedSource:'circle', type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2500, cutoff:2200, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, color:'var(--line-circle)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'district',        name:'District',        category:'tube', feedSource:'district', type:'AMSynth',       octave:2, scale: 'Major Pentatonic', harmonicity:2.0, resonance:6, cutoff:1500, attack:0.5, decay:1.0, sustain:0.8, release:3.0, volume:-6, muted:false, color:'var(--line-district)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'hammersmith-city',name:'Ham. & City',     category:'tube', feedSource:'hammersmith-city', type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:4000, cutoff:3000, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, color:'var(--line-hammersmith)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'jubilee',         name:'Jubilee',         category:'tube', feedSource:'jubilee', type:'MetalSynth',    octave:2, scale: 'Major Pentatonic', harmonicity:2.2, resonance:300, cutoff:1000, attack:0.3, decay:0.4, sustain:0.4, release:1.8, volume:-8, muted:false, color:'var(--line-jubilee)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'metropolitan',    name:'Metropolitan',    category:'tube', feedSource:'metropolitan', type:'DuoSynth',      octave:3, scale: 'Major Pentatonic', harmonicity:1.5, resonance:5, cutoff:2000, attack:0.6, decay:1.2, sustain:0.8, release:3.5, volume:-6, muted:false, color:'var(--line-metropolitan)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'northern',        name:'Northern',        category:'tube', feedSource:'northern', type:'MembraneSynth', octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:3, cutoff:800, attack:0.2, decay:0.8, sustain:0.5, release:2.5, volume:-6, muted:false, color:'var(--line-northern)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'piccadilly',      name:'Piccadilly',      category:'tube', feedSource:'piccadilly', type:'DuoSynth',      octave:3, scale: 'Major Pentatonic', harmonicity:2.0, resonance:7, cutoff:2500, attack:0.5, decay:1.0, sustain:0.8, release:3.2, volume:-6, muted:false, color:'var(--line-piccadilly)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'victoria',        name:'Victoria',        category:'tube', feedSource:'victoria', type:'Synth',         octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, color:'var(--line-victoria)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'waterloo-city',   name:'Waterloo & City', category:'tube', feedSource:'waterloo-city', type:'Synth',         octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:1, cutoff:1600, attack:0.4, decay:0.8, sustain:0.7, release:2.8, volume:-8, muted:false, color:'var(--line-waterloo)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-  { id:'elizabeth',       name:'Elizabeth Line',  category:'elizabeth', feedSource:'elizabeth', type:'Synth',         octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, color:'var(--line-elizabeth)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' }
-];
-
-let announcementConfig = {
-  muted: false,
-  volume: 1.0,     
-  frequency: 0.15,
-  reverb: 0.3,     
-  targetLine: 'all', 
-  voiceType: 'male'
-};
-
-const delay = new Tone.FeedbackDelay({ delayTime: "8n.", feedback: 0.35, wet: 0.3 });
-const ambientReverb = new Tone.Reverb({ decay: 8.5, wet: 0.55 });
-const limiter = new Tone.Limiter(-4);
-
-ambientReverb.generate().then(() => {
-  delay.connect(ambientReverb);
-  ambientReverb.connect(limiter);
-  limiter.toDestination();
-}).catch(() => {
-  delay.connect(limiter);
-  limiter.toDestination();
-});
-
-const synthAnnouncementChime = new Tone.Synth({
-  oscillator: { type: 'sine' },
-  envelope: { attack: 0.1, decay: 0.5, sustain: 0.2, release: 1.5 }
-}).connect(delay);
-
-const STATIC_ANNOUNCEMENTS = [
-  "Mind the gap between the train and the platform.",
-  "Please stand clear of the closing doors.",
-  "This service terminates here.",
-  "Customer announcement, a good service is operating on all lines.",
-  "Obstructing the doors or pulling the emergency alarm can cause delays and is a criminal offence.",
-  "See it. Say it. Sorted. Contact the British Transport Police or speak to a member of staff.",
-  "Please keep your personal belongings with you at all times.",
-  "Would Inspector Sands please report to the operations room.",
-  "Please stand on the right of the escalator and hold the handrail."
-];
-
-let lastSoundTime = Date.now();
-let isAnnouncementPlaying = false;
-let latestArrivalsPool = [];
-
-async function checkApiHealth() {
-  const roundel = document.getElementById('apiRoundel');
-  const statusDiv = document.getElementById('status');
-  try {
-    const res = await fetch('https://api.tfl.gov.uk/Line/bakerloo/Status');
-    if (res.ok) {
-      roundel.classList.add('success');
-      roundel.classList.remove('error');
-      statusDiv.textContent = 'API connected. Click "Start listening" to begin.';
-    } else {
-      throw new Error();
-    }
-  } catch(e) {
-    roundel.classList.add('error');
-    roundel.classList.remove('success');
-    statusDiv.textContent = 'API check failed (CORS/Network restriction). Click start to initialize.';
-  }
-}
-window.addEventListener('DOMContentLoaded', checkApiHealth);
-
-function getSelectedVoice() {
-  if (!('speechSynthesis' in window)) return null;
-  const voices = window.speechSynthesis.getVoices();
-  const ukVoices = voices.filter(v => v.lang === 'en-GB' || v.lang === 'en_GB' || v.name.includes('UK') || v.name.includes('British'));
-  const pool = ukVoices.length > 0 ? ukVoices : voices;
-
-  const targetVoices = pool.filter(v => {
-    const nameLower = v.name.toLowerCase();
-    return nameLower.includes('male') || nameLower.includes('george') || nameLower.includes('daniel') || nameLower.includes('oliver') || nameLower.includes('ryan') || nameLower.includes('brian') || nameLower.includes('arthur');
-  });
-
-  return targetVoices[0] || pool[0] || null;
-}
-
-function displayAnnouncementBanner(text, lineObj) {
-  const banner = document.getElementById('announcementBanner');
-  const bannerText = document.getElementById('announcementText');
-  if (!banner || !bannerText) return;
-
-  bannerText.textContent = text;
-  const borderColor = lineObj ? getResolvedColor(lineObj.color) : 'var(--ink)';
-  banner.style.borderLeftColor = borderColor;
-  banner.classList.remove('hidden');
-}
-
-function hideAnnouncementBanner() {
-  const banner = document.getElementById('announcementBanner');
-  if (banner) banner.classList.add('hidden');
-}
-
-function triggerSpokenAnnouncement() {
-  if (!audioReady || announcementConfig.muted || isAnnouncementPlaying || !('speechSynthesis' in window)) return;
-
-  const now = Date.now();
-  const gapDuration = (now - lastSoundTime) / 1000;
-
-  if (gapDuration > 6.0 && Math.random() < announcementConfig.frequency) {
-    isAnnouncementPlaying = true;
-    
-    let text;
-    let lineObj = null;
-
-    if (latestArrivalsPool.length > 0 && Math.random() < 0.6) {
-      const livePrediction = latestArrivalsPool[Math.floor(Math.random() * latestArrivalsPool.length)];
-      lineObj = LINES.find(l => l.feedSource === livePrediction.lineId || l.id === livePrediction.lineId);
-      const lineName = lineObj ? lineObj.name : 'Network';
-      const destination = livePrediction.destinationName || livePrediction.towards || 'Destination unknown';
-      const station = livePrediction.stationName || 'this station';
-      const mins = Math.max(1, Math.round(livePrediction.timeToStation / 60));
-      
-      text = `The next ${lineName} service to ${destination}, arriving at ${station}, is in approximately ${mins} minutes. Please mind the gap.`;
-    } else {
-      text = STATIC_ANNOUNCEMENTS[Math.floor(Math.random() * STATIC_ANNOUNCEMENTS.length)];
+    function setup() {
+      createCanvas(windowWidth, windowHeight);
+      colorMode(HSB, 360, 100, 100, 100);
+      setupWebMIDI();
     }
 
-    try {
-      delay.wet.value = announcementConfig.reverb;
-      synthAnnouncementChime.volume.value = (announcementConfig.volume > 0) ? -10 : -Infinity;
-      synthAnnouncementChime.triggerAttackRelease("C4", "2n");
-    } catch(e) {}
+    function draw() {
+      background(210, 80, 4, 15);
 
-    displayAnnouncementBanner(text, lineObj);
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.90; 
-    utterance.volume = announcementConfig.volume;
-    utterance.pitch = 0.75;
-    
-    const chosenVoice = getSelectedVoice();
-    if (chosenVoice) utterance.voice = chosenVoice;
-
-    utterance.onend = () => {
-      isAnnouncementPlaying = false;
-      lastSoundTime = Date.now();
-      setTimeout(hideAnnouncementBanner, 4000);
-    };
-    
-    utterance.onerror = () => {
-      isAnnouncementPlaying = false;
-      hideAnnouncementBanner();
-    };
-
-    window.speechSynthesis.speak(utterance);
-  }
-}
-
-setInterval(triggerSpokenAnnouncement, 3000);
-
-function createSynthInstance(cfg) {
-  let s;
-  const env = { attack: cfg.attack, decay: cfg.decay, sustain: cfg.sustain, release: cfg.release };
-  switch(cfg.type) {
-    case 'FMSynth': s = new Tone.FMSynth({ harmonicity: cfg.harmonicity, modulationIndex: cfg.resonance, envelope: env }); break;
-    case 'AMSynth': s = new Tone.AMSynth({ harmonicity: cfg.harmonicity, envelope: env }); break;
-    case 'MetalSynth': s = new Tone.MetalSynth({ harmonicity: cfg.harmonicity, resonance: cfg.resonance, envelope: { attack: cfg.attack, decay: cfg.decay, release: cfg.release } }); break;
-    case 'PluckSynth': s = new Tone.PluckSynth({ dampening: cfg.resonance, attackNoise: cfg.attack }); break;
-    case 'MembraneSynth': s = new Tone.MembraneSynth({ octaves: cfg.resonance / 500, envelope: env }); break;
-    case 'DuoSynth': s = new Tone.DuoSynth({ vibratoAmount: cfg.harmonicity/10, voice0: { envelope: env } }); break;
-    case 'MonoSynth': s = new Tone.MonoSynth({ oscillator: { type: 'sine' }, envelope: env, filterEnvelope: { attack: cfg.attack, decay: cfg.decay, sustain: cfg.sustain, release: cfg.release, baseFrequency: 150 } }); break;
-    case 'NoiseSynth': s = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: env }); break;
-    case 'PolySynth': s = new Tone.PolySynth(Tone.Synth, { oscillator: { type: 'sine' }, envelope: env }); break;
-    default: s = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: env }); break;
-  }
-  
-  const filter = new Tone.Filter({ frequency: cfg.cutoff, type: "lowpass", Q: 1.5 });
-  const volNode = new Tone.Volume(cfg.muted ? -Infinity : cfg.volume);
-
-  if (cfg.type !== 'NoiseSynth') {
-    s.connect(filter);
-    filter.connect(volNode);
-  } else {
-    s.connect(volNode);
-  }
-  
-  volNode.connect(delay);
-  return { synth: s, filter: filter, volumeNode: volNode };
-}
-
-// ---------- Build UI Board & Control Panel ----------
-const board = document.getElementById('board');
-const panelGrid = document.getElementById('panelGrid');
-
-function getResolvedColor(colorVar) {
-  const match = colorVar.match(/var\((.*)\)/);
-  if (match) {
-    return getComputedStyle(document.documentElement).getPropertyValue(match[1]) || '#fff';
-  }
-  return colorVar;
-}
-
-function updateGlobalScaleSelectOptions() {
-  const selectElem = document.getElementById('globalScaleSelect');
-  if (!selectElem) return;
-  selectElem.innerHTML = SCALE_NAMES.map(s => `<option value="${s}" ${currentGlobalScale === s ? 'selected' : ''}>Scale: ${s}</option>`).join('');
-}
-
-function buildControlPanel() {
-  panelGrid.innerHTML = '';
-  
-  let lineSelectOptions = `<option value="all" ${announcementConfig.targetLine === 'all' ? 'selected' : ''}>All Lines</option>`;
-  LINES.forEach(l => {
-    lineSelectOptions += `<option value="${l.id}" ${announcementConfig.targetLine === l.id ? 'selected' : ''}>${l.name}</option>`;
-  });
-
-  const annCard = document.createElement('div');
-  annCard.className = `synth-card ${announcementConfig.muted ? 'muted' : ''}`;
-  annCard.id = `card-announcements`;
-  annCard.innerHTML = `
-    <h3>
-      <span style="display:flex; align-items:center; gap:6px;">
-        <span class="swatch" style="background:var(--ink)"></span>Station Announcements
-      </span>
-      <div class="card-actions">
-        <button class="mute-btn ${announcementConfig.muted ? 'active' : ''}" data-mute-announcements>${announcementConfig.muted ? 'Unmute' : 'Mute'}</button>
-        <button class="test-btn" data-test-announcements>Test</button>
-      </div>
-    </h3>
-    <div class="control-group"><label>Target Line</label><select data-ann-param="targetLine">${lineSelectOptions}</select></div>
-    <div class="control-group"><label>Volume</label><input type="range" min="0" max="1" step="0.1" value="${announcementConfig.volume}" data-ann-param="volume"></div>
-    <div class="control-group"><label>Frequency</label><input type="range" min="0.1" max="1" step="0.05" value="${announcementConfig.frequency}" data-ann-param="frequency"></div>
-    <div class="control-group"><label>Reverb</label><input type="range" min="0" max="1" step="0.05" value="${announcementConfig.reverb}" data-ann-param="reverb"></div>
-  `;
-  panelGrid.appendChild(annCard);
-
-  LINES.forEach(line => {
-    const card = document.createElement('div');
-    card.className = `synth-card ${line.muted ? 'muted' : ''}`;
-    card.id = `card-${line.id}`;
-    
-    let typeOptions = SYNTH_TYPES.map(t => `<option value="${t}" ${line.type === t ? 'selected' : ''}>${t}</option>`).join('');
-    let octaveOptions = OCTAVES.map(o => `<option value="${o}" ${line.octave === o ? 'selected' : ''}>Octave ${o}</option>`).join('');
-    let scaleOptions = SCALE_NAMES.map(s => `<option value="${s}" ${line.scale === s ? 'selected' : ''}>${s}</option>`).join('');
-    
-    const t = line.type;
-    const showHarmonic = ['FMSynth', 'AMSynth', 'MetalSynth', 'DuoSynth'].includes(t);
-    const showResonance = !['Synth', 'NoiseSynth', 'PolySynth'].includes(t);
-    const showCutoff = t !== 'NoiseSynth';
-    const showAttack = t !== 'PluckSynth';
-    const showDecay = t !== 'PluckSynth' && t !== 'NoiseSynth';
-    const showSustain = t !== 'PluckSynth' && t !== 'NoiseSynth' && t !== 'MetalSynth';
-    const showRelease = t !== 'PluckSynth';
-
-    card.innerHTML = `
-      <h3>
-        <span style="display:flex; align-items:center; gap:6px;">
-          <span class="swatch" style="background:${line.color}"></span>${line.name}
-        </span>
-        <div class="card-actions">
-          <button class="mute-btn ${line.muted ? 'active' : ''}" data-mute-line="${line.id}">${line.muted ? 'Unmute' : 'Mute'}</button>
-          <button class="test-btn" data-test-line="${line.id}">Test</button>
-        </div>
-      </h3>
-      <div class="control-group"><label>Synth Type</label><select data-line="${line.id}" data-param="type">${typeOptions}</select></div>
-      <div class="control-group"><label>Scale</label><select data-line="${line.id}" data-param="scale">${scaleOptions}</select></div>
-      <div class="control-group"><label>Octave</label><select data-line="${line.id}" data-param="octave">${octaveOptions}</select></div>
-      <div class="control-group"><label>Volume</label><input type="range" min="-30" max="6" step="1" value="${line.volume}" data-line="${line.id}" data-param="volume"></div>
-      ${showHarmonic ? `<div class="control-group"><label>Harmonic</label><input type="range" min="0.5" max="5" step="0.1" value="${line.harmonicity}" data-line="${line.id}" data-param="harmonicity"></div>` : ''}
-      ${showResonance ? `<div class="control-group"><label>Resonance</label><input type="range" min="10" max="5000" step="10" value="${line.resonance}" data-line="${line.id}" data-param="resonance"></div>` : ''}
-      ${showCutoff ? `<div class="control-group"><label>Cut-off</label><input type="range" min="200" max="8000" step="100" value="${line.cutoff}" data-line="${line.id}" data-param="cutoff"></div>` : ''}
-      ${showAttack ? `<div class="control-group"><label>Attack</label><input type="range" min="0.01" max="1.5" step="0.05" value="${line.attack}" data-line="${line.id}" data-param="attack"></div>` : ''}
-      ${showDecay ? `<div class="control-group"><label>Decay</label><input type="range" min="0.1" max="3" step="0.1" value="${line.decay}" data-line="${line.id}" data-param="decay"></div>` : ''}
-      ${showSustain ? `<div class="control-group"><label>Sustain</label><input type="range" min="0" max="1" step="0.05" value="${line.sustain}" data-line="${line.id}" data-param="sustain"></div>` : ''}
-      ${showRelease ? `<div class="control-group"><label>Release</label><input type="range" min="0.5" max="5" step="0.1" value="${line.release}" data-line="${line.id}" data-param="release"></div>` : ''}
-    `;
-    panelGrid.appendChild(card);
-  });
-  updateGlobalScaleSelectOptions();
-  attachControlListeners();
-}
-
-LINES.forEach(line => {
-  const row = document.createElement('div');
-  row.className = 'track';
-  row.setAttribute('data-category', line.category);
-  row.id = `track-${line.id}`;
-  
-  const resolvedLineColor = getResolvedColor(line.color);
-  row.innerHTML = `
-    <div class="track-info">
-      <div class="track-label"><span class="swatch" style="background:${line.color}"></span>${line.name}</div>
-      <div class="status-badge" id="status-${line.id}">Good Service<br>0 active</div>
-    </div>
-    <div class="rail" id="rail-${line.id}" style="color: ${resolvedLineColor};" title="Click to pluck line chord">
-      <div class="rail-line" style="color: ${resolvedLineColor};"></div>
-      <div class="station-node" style="color: ${resolvedLineColor};"></div>
-      <div class="station-node" style="color: ${resolvedLineColor};"></div>
-      <div class="station-node" style="color: ${resolvedLineColor};"></div>
-    </div>
-    <div class="note-out" id="note-${line.id}">–</div>
-  `;
-  board.appendChild(row);
-
-  setTimeout(() => {
-    const railElem = document.getElementById(`rail-${line.id}`);
-    if (railElem) {
-      railElem.addEventListener('click', () => {
-        if (!audioReady) {
-          alert('Please click "Start listening" first!');
-          return;
-        }
-        playNote(line, { stationName: line.name + Math.random() }, 1.2);
-      });
-    }
-  }, 0);
-});
-
-buildControlPanel();
-
-document.getElementById('toggleConfig').addEventListener('click', () => {
-  document.getElementById('synthPanel').classList.toggle('open');
-});
-
-// ---------- Multi-Select Network Filter & Dynamic Trimming ----------
-function toggleNetworkFilter(category) {
-  if (category === 'all') {
-    selectedFilters.clear();
-    selectedFilters.add('all');
-  } else {
-    selectedFilters.delete('all');
-    if (selectedFilters.has(category)) {
-      selectedFilters.delete(category);
-      if (selectedFilters.size === 0) {
-        selectedFilters.add('all');
+      // Fallback interaction: If no MIDI/Mic input, use mouse position to drive the fractal
+      if (!micActive && midiStatus.includes("Searching")) {
+        targetDelta = constrain(mouseX / width, 0.1, 1.0);
+        targetVariance = constrain(mouseY / height, 0.1, 1.0);
       }
-    } else {
-      selectedFilters.add(category);
-    }
-  }
-  
-  document.querySelectorAll('.filter-btn').forEach(btn => {
-    const btnCat = btn.getAttribute('data-filter');
-    if (selectedFilters.has(btnCat)) {
-      btn.classList.add('active');
-    } else {
-      btn.classList.remove('active');
-    }
-  });
 
-  LINES.forEach(line => {
-    const trackElem = document.getElementById(`track-${line.id}`);
-    const cardElem = document.getElementById(`card-${line.id}`);
-    if (!trackElem || !cardElem) return;
-
-    const matchesFilter = selectedFilters.has('all') || selectedFilters.has(line.category);
-
-    if (matchesFilter) {
-      trackElem.classList.remove('hidden-track');
-      cardElem.style.display = '';
-    } else {
-      trackElem.classList.add('hidden-track');
-      cardElem.style.display = 'none';
-    }
-
-    if (audioReady && line.volumeNode) {
-      const effectiveMuted = line.muted || !matchesFilter;
-      line.volumeNode.volume.rampTo(effectiveMuted ? -Infinity : line.volume, 0.2);
-    }
-  });
-
-  if (audioReady) {
-    pollAllData();
-  }
-}
-
-// ---------- Randomizer & Global Scale Functions ----------
-function randomizeVoices() {
-  LINES.forEach(line => {
-    line.type = SYNTH_TYPES[Math.floor(Math.random() * SYNTH_TYPES.length)];
-    if (audioReady) recreateSynth(line);
-  });
-  buildControlPanel();
-}
-
-function randomizeOctaves() {
-  LINES.forEach(line => {
-    line.octave = OCTAVES[Math.floor(Math.random() * OCTAVES.length)];
-  });
-  buildControlPanel();
-}
-
-function setGlobalScale(scaleName) {
-  if (MUSICAL_SCALES[scaleName]) {
-    currentGlobalScale = scaleName;
-    updateGlobalScaleSelectOptions();
-    LINES.forEach(line => {
-      line.scale = scaleName;
-    });
-    buildControlPanel();
-  }
-}
-
-function randomizeGlobalScale() {
-  setGlobalScale(SCALE_NAMES[Math.floor(Math.random() * SCALE_NAMES.length)]);
-}
-
-// ---------- Audio Setup & Runtime Control Bindings ----------
-let audioReady = false;
-document.getElementById('startBtn').addEventListener('click', async () => {
-  await Tone.start();
-  LINES.forEach(line => {
-    const nodeSet = createSynthInstance(line);
-    line.node = nodeSet.synth;
-    line.filter = nodeSet.filter;
-    line.volumeNode = nodeSet.volumeNode;
-  });
-
-  audioReady = true;
-  document.getElementById('startBtn').disabled = true;
-  document.getElementById('status').textContent = 'Listening — optimized dynamic polling active…';
-  
-  toggleNetworkFilter('all');
-  selectedFilters.clear();
-  selectedFilters.add('all');
-
-  pollAllData();
-  setInterval(pollAllData, 15000);
-});
-
-function manualRefreshFeed() {
-  if (!audioReady) {
-    alert('Please click "Start listening" first!');
-    return;
-  }
-  document.getElementById('status').textContent = 'Manually refreshing trimmed TfL feeds...';
-  pollAllData();
-}
-
-function recreateSynth(line) {
-  if (line.node) line.node.dispose();
-  if (line.filter) line.filter.dispose();
-  if (line.volumeNode) line.volumeNode.dispose();
-  
-  const nodeSet = createSynthInstance(line);
-  line.node = nodeSet.synth;
-  line.filter = nodeSet.filter;
-  line.volumeNode = nodeSet.volumeNode;
-}
-
-function updateLineStatusDisplay(line) {
-  const badgeElem = document.getElementById(`status-${line.id}`);
-  if (!badgeElem) return;
-
-  let alertClass = 'status-badge';
-  if (line.statusText === 'Severe Delays' || line.statusText === 'Suspended') {
-    alertClass = 'status-badge alert';
-  } else if (line.statusText === 'Minor Delays') {
-    alertClass = 'status-badge alert';
-  }
-  badgeElem.className = alertClass;
-  badgeElem.innerHTML = `${line.statusText}<br>${line.activeCount} active`;
-}
-
-function attachControlListeners() {
-  document.querySelectorAll('#card-announcements input, #card-announcements select').forEach(input => {
-    input.addEventListener('input', (e) => {
-      const param = e.target.getAttribute('data-ann-param');
-      announcementConfig[param] = e.target.type === 'select-one' ? e.target.value : parseFloat(e.target.value);
-    });
-  });
-
-  const annMuteBtn = document.querySelector('[data-mute-announcements]');
-  if (annMuteBtn) {
-    annMuteBtn.addEventListener('click', (e) => {
-      announcementConfig.muted = !announcementConfig.muted;
-      e.target.textContent = announcementConfig.muted ? 'Unmute' : 'Mute';
-      e.target.classList.toggle('active', announcementConfig.muted);
-      document.getElementById('card-announcements').classList.toggle('muted', announcementConfig.muted);
-    });
-  }
-
-  const annTestBtn = document.querySelector('[data-test-announcements]');
-  if (annTestBtn) {
-    annTestBtn.addEventListener('click', () => {
-      if (!audioReady) {
-        alert('Please click "Start listening" first!');
-        return;
+      // If microphone is active, map audio volume to variance and frequency to delta
+      if (micActive && mic) {
+        let level = mic.getLevel();
+        targetVariance = constrain(level * 5, 0.1, 1.0);
+        targetDelta = constrain(map(sin(frameCount * 0.05), -1, 1, 0.2, 0.9), 0.1, 1.0);
       }
-      let activeLineId = announcementConfig.targetLine;
-      let targetLineObj = null;
-      if (activeLineId === 'all') {
-        targetLineObj = LINES[Math.floor(Math.random() * LINES.length)];
-        activeLineId = targetLineObj.id;
+
+      smoothDelta = lerp(smoothDelta, targetDelta, 0.05);
+      smoothVariance = lerp(smoothVariance, targetVariance, 0.05);
+
+      document.getElementById('valDelta').innerText = smoothDelta.toFixed(2);
+      document.getElementById('valVariance').innerText = smoothVariance.toFixed(2);
+
+      translate(width / 2, height / 2);
+
+      let branches = floor(map(smoothVariance, 0, 1, 3, 7, true));
+      angleSpeed = map(smoothDelta, 0, 1, 0.002, 0.03);
+      let baseLength = map(smoothDelta, 0, 1, 80, 240, true);
+
+      noFill();
+      let layers = 4;
+      for (let i = 0; i < layers; i++) {
+        push();
+        rotate(frameCount * angleSpeed * (i % 2 === 0 ? 1 : -1) + (i * TWO_PI / layers));
+        
+        let hueVal = (160 + sin(frameCount * 0.02 + i) * 40) % 360;
+        let alphaVal = map(i, 0, layers, 60, 20);
+        
+        stroke(hueVal, 90, 90, alphaVal);
+        strokeWeight(map(i, 0, layers, 2.5, 0.8));
+
+        branch(baseLength, branches);
+        pop();
+      }
+    }
+
+    function branch(len, depth) {
+      if (depth === 0) return;
+
+      line(0, 0, 0, -len);
+      translate(0, -len);
+
+      let theta = map(smoothVariance, 0, 1, 0.2, 0.8);
+
+      push();
+      rotate(theta);
+      branch(len * 0.67, depth - 1);
+      pop();
+
+      push();
+      rotate(-theta);
+      branch(len * 0.67, depth - 1);
+      pop();
+    }
+
+    // Web MIDI Support for Hardware Devices over USB-C
+    function setupWebMIDI() {
+      if (navigator.requestMIDIAccess) {
+        navigator.requestMIDIAccess().then(onMIDISuccess, onMIDIFailure);
       } else {
-        targetLineObj = LINES.find(l => l.id === activeLineId) || LINES[0];
+        midiStatus = "Web MIDI not supported in this browser";
+        document.getElementById('inputMode').innerText = midiStatus;
       }
-      const text = `This is a ${targetLineObj.name} service. Please mind the gap.`;
-      
-      try {
-        delay.wet.value = announcementConfig.reverb;
-        synthAnnouncementChime.volume.value = (announcementConfig.volume > 0) ? -10 : -Infinity;
-        synthAnnouncementChime.triggerAttackRelease("C4", "2n");
-      } catch(e) {}
-
-      displayAnnouncementBanner(text, targetLineObj);
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.90;
-      utterance.volume = announcementConfig.volume;
-      utterance.pitch = 0.75;
-      
-      const chosenVoice = getSelectedVoice();
-      if (chosenVoice) utterance.voice = chosenVoice;
-
-      utterance.onend = () => {
-        setTimeout(hideAnnouncementBanner, 4000);
-      };
-
-      window.speechSynthesis.speak(utterance);
-    });
-  }
-
-  document.querySelectorAll('.synth-card:not(#card-announcements) input, .synth-card:not(#card-announcements) select').forEach(input => {
-    input.addEventListener('input', (e) => {
-      const lineId = e.target.getAttribute('data-line');
-      const param = e.target.getAttribute('data-param');
-      const val = e.target.type === 'select-one' ? (param === 'octave' ? parseInt(e.target.value) : e.target.value) : parseFloat(e.target.value);
-      
-      const line = LINES.find(l => l.id === lineId);
-      if (!line) return;
-      
-      line[param] = val;
-      
-      if (param === 'type') {
-        if (audioReady) recreateSynth(line);
-        buildControlPanel();
-        return;
-      }
-
-      if (!audioReady || !line.node) return;
-
-      try {
-        if (param === 'cutoff' && line.filter) {
-          line.filter.frequency.rampTo(val, 0.2);
-        } else if (param === 'resonance') {
-          if (line.node.resonance !== undefined) line.node.resonance.value = val;
-          else if (line.node.modulationIndex !== undefined) line.node.modulationIndex.value = val;
-          else if (line.node.dampening !== undefined) line.node.dampening = val;
-          else if (line.node.octaves !== undefined) line.node.octaves = val / 500;
-        } else if (param === 'volume' && line.volumeNode) {
-          line.volumeNode.volume.rampTo(line.muted ? -Infinity : val, 0.2);
-        } else if (param === 'harmonicity' && line.node.harmonicity) {
-          line.node.harmonicity.value = val;
-        } else if (['attack', 'decay', 'sustain', 'release'].includes(param)) {
-          if (line.node.envelope) line.node.envelope[param] = val;
-        }
-      } catch(err) {}
-    });
-  });
-
-  document.querySelectorAll('.synth-card:not(#card-announcements) .mute-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const lineId = e.target.getAttribute('data-mute-line');
-      const line = LINES.find(l => l.id === lineId);
-      if (!line) return;
-      
-      line.muted = !line.muted;
-      e.target.textContent = line.muted ? 'Unmute' : 'Mute';
-      e.target.classList.toggle('active', line.muted);
-      document.getElementById(`card-${line.id}`).classList.toggle('muted', line.muted);
-      
-      if (audioReady && line.volumeNode) {
-        const matchesFilter = selectedFilters.has('all') || selectedFilters.has(line.category);
-        const effectiveMuted = line.muted || !matchesFilter;
-        line.volumeNode.volume.rampTo(effectiveMuted ? -Infinity : line.volume, 0.2);
-      }
-    });
-  });
-
-  document.querySelectorAll('.synth-card:not(#card-announcements) .test-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const lineId = e.target.getAttribute('data-test-line');
-      const line = LINES.find(l => l.id === lineId);
-      if (!line || !audioReady || !line.node) {
-        alert('Please click "Start listening" first!');
-        return;
-      }
-      playNote(line, { stationName: 'Ambient Test' + Math.random() });
-    });
-  });
-}
-
-// ---------- Dynamic Trimmed API Fetching ----------
-function hashToIndex(str, mod){
-  let h = 0;
-  for (let i=0; i<str.length; i++){ h = (h*31 + str.charCodeAt(i)) >>> 0; }
-  return h % mod;
-}
-
-const activeTrainTracker = new Map();
-
-async function pollAllData() {
-  let activeLines = LINES;
-  if (!selectedFilters.has('all')) {
-    activeLines = LINES.filter(l => selectedFilters.has(l.category));
-  }
-  if (activeLines.length === 0) return;
-
-  const uniqueFeeds = [...new Set(activeLines.map(l => l.feedSource))].join(',');
-  
-  try {
-    const statusRes = await fetch(`https://api.tfl.gov.uk/Line/${uniqueFeeds}/Status`);
-    if (statusRes.ok) {
-      const statusData = await statusRes.json();
-      statusData.forEach(lineStatus => {
-        const targetLines = LINES.filter(l => l.feedSource === lineStatus.id);
-
-        targetLines.forEach(lineObj => {
-          if (lineStatus.lineStatuses && lineStatus.lineStatuses.length > 0) {
-            const statusObj = lineStatus.lineStatuses[0];
-            const statusDesc = statusObj.statusSeverityDescription;
-
-            let crowdingFactor = 1.0;
-            if (statusDesc === 'Severe Delays' || statusDesc === 'Suspended') {
-              crowdingFactor = 1.8;
-            } else if (statusDesc === 'Minor Delays') {
-              crowdingFactor = 1.3;
-            }
-
-            lineObj.statusText = statusDesc;
-            lineObj.crowdingFactor = crowdingFactor;
-            updateLineStatusDisplay(lineObj);
-
-            if (audioReady && lineObj.node && lineObj.node.envelope) {
-              lineObj.node.envelope.release = Math.max(0.4, 2.5 / crowdingFactor);
-            }
-          }
-        });
-      });
-    }
-  } catch(e) {}
-
-  try{
-    const res = await fetch(`https://api.tfl.gov.uk/Line/${uniqueFeeds}/Arrivals`);
-    if (!res.ok) throw new Error('API network failure');
-    const data = await res.json();
-    
-    latestArrivalsPool = data.filter(p => p.timeToStation != null && p.timeToStation > 5 && p.timeToStation < 300);
-
-    const feedCounts = {};
-    const uniqueFeedList = [...new Set(activeLines.map(l => l.feedSource))];
-    uniqueFeedList.forEach(f => { feedCounts[f] = new Set(); });
-
-    data.forEach(p => {
-      if (feedCounts[p.lineId]) {
-        const trainId = p.vehicleId || p.id || `${p.stationName}-${p.expectedArrival}`;
-        feedCounts[p.lineId].add(trainId);
-      }
-    });
-
-    activeLines.forEach(line => {
-      const countSet = feedCounts[line.feedSource];
-      line.activeCount = countSet ? countSet.size : Math.floor(Math.random() * 4) + 1;
-      updateLineStatusDisplay(line);
-    });
-
-    document.getElementById('status').textContent =
-      `Listening (${activeLines.length} active feeds) — ${data.length} records, updated ${new Date().toLocaleTimeString()}`;
-
-    const now = Date.now();
-    for (const [id, record] of activeTrainTracker.entries()) {
-      if (now - record.lastSeen > 180000) activeTrainTracker.delete(id);
     }
 
-    data.forEach(p => {
-      const vehicleId = p.vehicleId || p.id || `${p.lineId}-${p.stationName}-${p.expectedArrival}`;
-      if (p.timeToStation == null || p.timeToStation < 2 || p.timeToStation > 90) return;
+    function onMIDISuccess(midiAccess) {
+      midiStatus = "MIDI Connected";
+      document.getElementById('inputMode').innerText = midiStatus;
+      document.getElementById('inputMode').style.color = '#4af3a2';
 
-      const matchingLines = activeLines.filter(l => l.feedSource === p.lineId);
-      matchingLines.forEach(line => {
-        let trainRecord = activeTrainTracker.get(`${line.id}-${vehicleId}`);
-        if (!trainRecord) {
-          trainRecord = { id: `${line.id}-${vehicleId}`, lineId: line.id, totalTime: p.timeToStation, startTime: now, lastSeen: now, soundFired: false };
-          activeTrainTracker.set(`${line.id}-${vehicleId}`, trainRecord);
-          animateTrain(line, p.timeToStation, trainRecord);
-        } else {
-          trainRecord.lastSeen = now;
-        }
-      });
-    });
-
-  } catch(err) {
-    document.getElementById('status').textContent = 'Could not reach TfL API — retrying soon.';
-  }
-}
-
-function animateTrain(line, seconds, trainRecord){
-  const rail = document.getElementById(`rail-${line.id}`);
-  if (!rail) return;
-  
-  const dot = document.createElement('div');
-  dot.className = 'train';
-  rail.appendChild(dot);
-  
-  const adjustedSeconds = seconds / (line.crowdingFactor || 1.0);
-  const startTime = performance.now();
-  const durationMs = adjustedSeconds * 1000;
-
-  function step(currentTime) {
-    const elapsed = currentTime - startTime;
-    const progress = Math.min(1, elapsed / durationMs);
-
-    dot.style.left = `${progress * 100}%`;
-    dot.style.opacity = progress > 0.02 ? '1' : '0';
-
-    if (progress >= 1.0) {
-      if (!trainRecord.soundFired) {
-        trainRecord.soundFired = true;
-        playNote(line, { stationName: trainRecord.id + Math.random() }, 1.2);
+      for (let input of midiAccess.inputs.values()) {
+        input.onmidimessage = getMIDIMessage;
       }
-      dot.remove();
-      return;
     }
 
-    requestAnimationFrame(step);
-  }
-
-  requestAnimationFrame(step);
-}
-
-function playNote(line, prediction, intensity = 1.0){
-  if (!audioReady || !line.node || line.muted) return;
-  
-  const matchesFilter = selectedFilters.has('all') || selectedFilters.has(line.category);
-  if (!matchesFilter) return;
-  
-  lastSoundTime = Date.now();
-
-  const lineScaleName = line.scale || currentGlobalScale;
-  const currentScaleNotes = MUSICAL_SCALES[lineScaleName] || MUSICAL_SCALES["Major Pentatonic"];
-  const noteName = currentScaleNotes[hashToIndex(prediction.stationName || prediction.towards || Math.random().toString(), currentScaleNotes.length)];
-  const note = `${noteName}${line.octave}`;
-  
-  try{
-    if (line.type === 'NoiseSynth') {
-      line.node.triggerAttackRelease((line.release || 2.0) * intensity);
-    } else {
-      line.node.triggerAttackRelease(note, (line.release || 2.0) * intensity);
+    function onMIDIFailure() {
+      midiStatus = "MIDI access denied/unavailable";
     }
-  }catch(e){}
 
-  const out = document.getElementById(`note-${line.id}`);
-  if (out) {
-    out.textContent = line.type === 'NoiseSynth' ? 'WAVE' : note;
-    out.style.color = 'var(--ink)';
-    setTimeout(()=>{ out.style.color = ''; }, 400);
-  }
-}
-</script>
+    function getMIDIMessage(message) {
+      let [command, note, velocity] = message.data;
+      // Map incoming MIDI notes/velocity to fractal metrics
+      if (command === 144 && velocity > 0) { // Note On
+        targetDelta = map(note, 0, 127, 0.1, 1.0);
+        targetVariance = map(velocity, 0, 127, 0.1, 1.0);
+      }
+    }
+
+    function toggleMic() {
+      if (!micActive) {
+        mic = new p5.AudioIn();
+        mic.start();
+        userStartAudio();
+        micActive = true;
+        document.getElementById('micBtn').innerText = 'Disable Mic';
+        document.getElementById('inputMode').innerText = 'Microphone Audio Reactive';
+        document.getElementById('inputMode').style.color = '#4af3a2';
+      } else {
+        mic.stop();
+        micActive = false;
+        document.getElementById('micBtn').innerText = 'Enable Mic Reactivity';
+        document.getElementById('inputMode').innerText = 'Interactive (Move Mouse)';
+        document.getElementById('inputMode').style.color = '#ffde4a';
+      }
+    }
+
+    function windowResized() {
+      resizeCanvas(windowWidth, windowHeight);
+    }
+  </script>
 </body>
 </html>
