@@ -76,52 +76,57 @@
       background: #ffffff;
     }
 
-    /* Left Slide-out Drawer & Attached Handle Tab */
-    #configDrawer {
-      position: absolute;
-      top: 0;
-      left: -320px;
-      width: 320px;
-      height: 100vh;
-      background: rgba(10, 12, 18, 0.95);
-      border-right: 1px solid rgba(255, 255, 255, 0.2);
-      padding: 20px;
+    /* Modal Styling */
+    #configModal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(2, 4, 8, 0.8);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+    }
+    #configModal.open {
+      display: flex;
+    }
+    .modal-content {
+      background: #0e111a;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      width: 440px;
+      max-height: 85vh;
+      padding: 24px;
       box-sizing: border-box;
-      z-index: 15;
-      transition: left 0.3s ease;
       overflow-y: auto;
-      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.7);
     }
-    #configDrawer.open {
-      left: 0;
-    }
-    #configTab {
-      position: absolute;
-      top: 130px;
-      right: -45px;
-      background: #f4f2ee;
-      color: #020408;
-      padding: 10px 14px;
-      font-weight: bold;
-      font-size: 11px;
-      cursor: pointer;
-      border-top-right-radius: 6px;
-      border-bottom-right-radius: 6px;
-      box-shadow: 2px 0 10px rgba(0,0,0,0.5);
-    }
-    .drawer-title {
-      font-size: 13px;
-      font-weight: bold;
-      margin-bottom: 15px;
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       border-bottom: 1px solid rgba(255,255,255,0.2);
-      padding-bottom: 8px;
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+      font-weight: bold;
+      font-size: 13px;
       color: #ffde4a;
+    }
+    .close-btn {
+      background: transparent;
+      color: #f4f2ee;
+      font-size: 16px;
+      padding: 2px 8px;
+      cursor: pointer;
+    }
+    .close-btn:hover {
+      background: rgba(255,255,255,0.1);
     }
     .channel-box {
       background: rgba(255, 255, 255, 0.03);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 6px;
-      padding: 10px;
+      padding: 12px;
       margin-bottom: 12px;
     }
     .channel-header {
@@ -133,13 +138,13 @@
       gap: 6px;
     }
     .control-group {
-      margin-bottom: 8px;
+      margin-bottom: 10px;
       display: flex;
       flex-direction: column;
-      gap: 3px;
+      gap: 4px;
     }
     .control-group label {
-      font-size: 9px;
+      font-size: 10px;
       color: #a0a0ab;
       text-transform: uppercase;
     }
@@ -148,88 +153,108 @@
       background: #1a1c24;
       color: #f4f2ee;
       border: 1px solid rgba(255,255,255,0.2);
-      padding: 4px;
+      padding: 6px;
       border-radius: 4px;
-      font-size: 10px;
+      font-size: 11px;
     }
   </style>
 </head>
 <body>
 
-  <!-- Slide-out Drawer with Handle Tab Attached -->
-  <div id="configDrawer">
-    <div id="configTab" onclick="toggleConfigDrawer()">config</div>
-    <div class="drawer-title">MULTI-CHANNEL SYNTH CONFIG</div>
-    
-    <!-- Channel 1 Config -->
-    <div class="channel-box">
-      <div class="channel-header"><span class="color-dot" style="background:#ff3333;"></span>MIDI Channel 1 (Red Layer)</div>
-      <div class="control-group">
-        <label>Waveform</label>
-        <select id="ch1_wave" onchange="updateChannelParams()">
-          <option value="triangle">Triangle</option>
-          <option value="sine">Sine</option>
-          <option value="sawtooth">Sawtooth</option>
-          <option value="square">Square</option>
-        </select>
+  <!-- Config Modal Overlay -->
+  <div id="configModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <span>MULTI-CHANNEL AUDIO CONFIG</span>
+        <button class="close-btn" onclick="toggleConfigModal()">×</button>
       </div>
-      <div class="control-group">
-        <label>Release Tail: <span id="lbl_ch1_rel">3.5</span>s</label>
-        <input type="range" id="ch1_release" min="0.5" max="6.0" step="0.2" value="3.5" oninput="updateChannelParams()">
+      
+      <!-- Global Filters -->
+      <div class="channel-box">
+        <div class="channel-header" style="color: #ffde4a;">Global Master Controls</div>
+        <div class="control-group">
+          <label>Filter Resonance (Q): <span id="lbl_resonance">4.0</span></label>
+          <input type="range" id="global_resonance" min="1" max="20" step="0.5" value="4.0" oninput="updateGlobalParams()">
+        </div>
+        <div class="control-group">
+          <label>Arpeggio Mode</label>
+          <select id="global_arp" onchange="updateGlobalParams()">
+            <option value="off">Single Tone</option>
+            <option value="cascade">Harmonic Cascade</option>
+          </select>
+        </div>
       </div>
-    </div>
 
-    <!-- Channel 2 Config -->
-    <div class="channel-box">
-      <div class="channel-header"><span class="color-dot" style="background:#ff9933;"></span>MIDI Channel 2 (Orange Layer)</div>
-      <div class="control-group">
-        <label>Waveform</label>
-        <select id="ch2_wave" onchange="updateChannelParams()">
-          <option value="sine">Sine</option>
-          <option value="triangle" selected>Triangle</option>
-          <option value="sawtooth">Sawtooth</option>
-          <option value="square">Square</option>
-        </select>
+      <!-- Channel 1 Config -->
+      <div class="channel-box">
+        <div class="channel-header"><span class="color-dot" style="background:#ff3333;"></span>MIDI Channel 1 (Red Layer)</div>
+        <div class="control-group">
+          <label>Waveform</label>
+          <select id="ch1_wave" onchange="updateChannelParams()">
+            <option value="triangle">Triangle</option>
+            <option value="sine">Sine</option>
+            <option value="sawtooth">Sawtooth</option>
+            <option value="square">Square</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>Release Tail: <span id="lbl_ch1_rel">3.5</span>s</label>
+          <input type="range" id="ch1_release" min="0.5" max="6.0" step="0.2" value="3.5" oninput="updateChannelParams()">
+        </div>
       </div>
-      <div class="control-group">
-        <label>Release Tail: <span id="lbl_ch2_rel">3.5</span>s</label>
-        <input type="range" id="ch2_release" min="0.5" max="6.0" step="0.2" value="3.5" oninput="updateChannelParams()">
-      </div>
-    </div>
 
-    <!-- Channel 3 Config -->
-    <div class="channel-box">
-      <div class="channel-header"><span class="color-dot" style="background:#ffff33;"></span>MIDI Channel 3 (Yellow Layer)</div>
-      <div class="control-group">
-        <label>Waveform</label>
-        <select id="ch3_wave" onchange="updateChannelParams()">
-          <option value="sawtooth" selected>Sawtooth</option>
-          <option value="triangle">Triangle</option>
-          <option value="sine">Sine</option>
-          <option value="square">Square</option>
-        </select>
+      <!-- Channel 2 Config -->
+      <div class="channel-box">
+        <div class="channel-header"><span class="color-dot" style="background:#ff9933;"></span>MIDI Channel 2 (Orange Layer)</div>
+        <div class="control-group">
+          <label>Waveform</label>
+          <select id="ch2_wave" onchange="updateChannelParams()">
+            <option value="sine">Sine</option>
+            <option value="triangle" selected>Triangle</option>
+            <option value="sawtooth">Sawtooth</option>
+            <option value="square">Square</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>Release Tail: <span id="lbl_ch2_rel">3.5</span>s</label>
+          <input type="range" id="ch2_release" min="0.5" max="6.0" step="0.2" value="3.5" oninput="updateChannelParams()">
+        </div>
       </div>
-      <div class="control-group">
-        <label>Release Tail: <span id="lbl_ch3_rel">3.5</span>s</label>
-        <input type="range" id="ch3_release" min="0.5" max="6.0" step="0.2" value="3.5" oninput="updateChannelParams()">
-      </div>
-    </div>
 
-    <!-- Channel 4 Config -->
-    <div class="channel-box">
-      <div class="channel-header"><span class="color-dot" style="background:#33cc33;"></span>MIDI Channel 4+ (Green/Other)</div>
-      <div class="control-group">
-        <label>Waveform</label>
-        <select id="ch4_wave" onchange="updateChannelParams()">
-          <option value="square" selected>Square</option>
-          <option value="triangle">Triangle</option>
-          <option value="sine">Sine</option>
-          <option value="sawtooth">Sawtooth</option>
-        </select>
+      <!-- Channel 3 Config -->
+      <div class="channel-box">
+        <div class="channel-header"><span class="color-dot" style="background:#ffff33;"></span>MIDI Channel 3 (Yellow Layer)</div>
+        <div class="control-group">
+          <label>Waveform</label>
+          <select id="ch3_wave" onchange="updateChannelParams()">
+            <option value="sawtooth" selected>Sawtooth</option>
+            <option value="triangle">Triangle</option>
+            <option value="sine">Sine</option>
+            <option value="square">Square</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>Release Tail: <span id="lbl_ch3_rel">3.5</span>s</label>
+          <input type="range" id="ch3_release" min="0.5" max="6.0" step="0.2" value="3.5" oninput="updateChannelParams()">
+        </div>
       </div>
-      <div class="control-group">
-        <label>Release Tail: <span id="lbl_ch4_rel">3.5</span>s</label>
-        <input type="range" id="ch4_release" min="0.5" max="6.0" step="0.2" value="3.5" oninput="updateChannelParams()">
+
+      <!-- Channel 4 Config -->
+      <div class="channel-box">
+        <div class="channel-header"><span class="color-dot" style="background:#33cc33;"></span>MIDI Channel 4+ (Green/Other)</div>
+        <div class="control-group">
+          <label>Waveform</label>
+          <select id="ch4_wave" onchange="updateChannelParams()">
+            <option value="square" selected>Square</option>
+            <option value="triangle">Triangle</option>
+            <option value="sine">Sine</option>
+            <option value="sawtooth">Sawtooth</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>Release Tail: <span id="lbl_ch4_rel">3.5</span>s</label>
+          <input type="range" id="ch4_release" min="0.5" max="6.0" step="0.2" value="3.5" oninput="updateChannelParams()">
+        </div>
       </div>
     </div>
   </div>
@@ -253,6 +278,7 @@
   <div class="control-buttons">
     <button id="audioBtn" onclick="toggleAudioEngine()">Start Audio Soundscape</button>
     <button id="micBtn" onclick="toggleMic()">Enable Mic Reactivity</button>
+    <button onclick="toggleConfigModal()">Config Audio</button>
   </div>
 
   <script>
@@ -267,7 +293,11 @@
 
     let audioCtx, masterGain, mainFilter, audioActive = false;
     
-    // Independent Channel Configurations
+    let globalConfig = {
+      resonance: 4.0,
+      arp: 'off'
+    };
+
     let channelConfigs = {
       1: { wave: 'triangle', release: 3.5 },
       2: { wave: 'triangle', release: 3.5 },
@@ -275,9 +305,19 @@
       4: { wave: 'square', release: 3.5 }
     };
 
-    function toggleConfigDrawer() {
-      const drawer = document.getElementById('configDrawer');
-      drawer.classList.toggle('open');
+    function toggleConfigModal() {
+      const modal = document.getElementById('configModal');
+      modal.classList.toggle('open');
+    }
+
+    function updateGlobalParams() {
+      globalConfig.resonance = parseFloat(document.getElementById('global_resonance').value);
+      globalConfig.arp = document.getElementById('global_arp').value;
+      document.getElementById('lbl_resonance').innerText = globalConfig.resonance.toFixed(1);
+
+      if (mainFilter && audioCtx) {
+        mainFilter.Q.setValueAtTime(globalConfig.resonance, audioCtx.currentTime);
+      }
     }
 
     function updateChannelParams() {
@@ -439,7 +479,7 @@
         mainFilter = audioCtx.createBiquadFilter();
         mainFilter.type = 'lowpass';
         mainFilter.frequency.setValueAtTime(1000, audioCtx.currentTime);
-        mainFilter.Q.setValueAtTime(4.0, audioCtx.currentTime);
+        mainFilter.Q.setValueAtTime(globalConfig.resonance, audioCtx.currentTime);
 
         mainFilter.connect(masterGain);
         masterGain.connect(audioCtx.destination);
@@ -455,20 +495,17 @@
       }
     }
 
-    // Play tone using specific channel configurations
-    function playChannelTone(freq, velocity = 0.8, channel = 1) {
+    function playChannelTone(freq, velocity = 0.8, channel = 1, delayOffset = 0) {
       if (!audioActive || !audioCtx) return;
       
-      // Map channel number to config (defaults to channel 4 if higher)
       let cfg = channelConfigs[channel] || channelConfigs[4];
-
       let osc = audioCtx.createOscillator();
       let noteGain = audioCtx.createGain();
 
       osc.type = cfg.wave;
-      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delayOffset);
 
-      let now = audioCtx.currentTime;
+      let now = audioCtx.currentTime + delayOffset;
       let peakGain = map(velocity, 0, 127, 0.03, 0.25);
 
       noteGain.gain.setValueAtTime(0, now);
@@ -482,13 +519,20 @@
       osc.stop(now + cfg.release + 0.1);
     }
 
+    function triggerVoiceCluster(baseFreq, velocity, channel) {
+      playChannelTone(baseFreq, velocity, channel, 0);
+      if (globalConfig.arp === 'cascade') {
+        playChannelTone(baseFreq * 1.25, velocity * 0.8, channel, 0.15);
+        playChannelTone(baseFreq * 1.5, velocity * 0.6, channel, 0.3);
+      }
+    }
+
     function mousePressed() {
-      if (mouseX < 320 && document.getElementById('configDrawer').classList.contains('open')) return;
+      if (document.getElementById('configModal').classList.contains('open')) return;
 
       if (audioActive && mouseY < height - 60) {
         let freq = map(mouseX, 0, width, 110, 880);
-        // Default mouse click triggers channel 1
-        playChannelTone(freq, 100, 1);
+        triggerVoiceCluster(freq, 100, 1);
       }
     }
 
@@ -515,20 +559,18 @@
     function getMIDIMessage(message) {
       let statusByte = message.data[0];
       let command = statusByte & 0xF0;
-      let channel = (statusByte & 0x0F) + 1; // MIDI channels 1-16
+      let channel = (statusByte & 0x0F) + 1;
       let note = message.data[1];
       let velocity = message.data[2];
 
-      if (command === 144 && velocity > 0) { // Note On
+      if (command === 144 && velocity > 0) {
         targetDelta = map(note, 0, 127, 0.1, 1.0);
         targetVariance = map(velocity, 0, 127, 0.1, 1.0);
         inputParamX = note / 127;
         inputParamY = velocity / 127;
 
         let freq = 440 * Math.pow(2, (note - 69) / 12);
-        
-        // Route sound to its specific MIDI channel configuration!
-        playChannelTone(freq, velocity, channel);
+        triggerVoiceCluster(freq, velocity, channel);
       }
     }
 
