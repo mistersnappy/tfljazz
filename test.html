@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dynamic Rainbow Plant Bio-Signal Visualizer</title>
+  <title>Trippy Organic Rainbow Plant Visualizer</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
   <style>
@@ -25,6 +25,7 @@
       pointer-events: none;
       font-size: 11px;
       line-height: 1.5;
+      z-index: 10;
     }
     #legend {
       position: absolute;
@@ -37,6 +38,7 @@
       pointer-events: none;
       font-size: 11px;
       width: 250px;
+      z-index: 10;
     }
     .legend-item {
       display: flex;
@@ -58,6 +60,7 @@
       display: flex;
       gap: 10px;
       pointer-events: auto;
+      z-index: 10;
     }
     button {
       background: #f4f2ee;
@@ -82,17 +85,17 @@
   </div>
 
   <div id="legend">
-    <strong style="display:block; margin-bottom:8px; border-bottom:1px solid #444; padding-bottom:4px;">RAINBOW DYNAMIC MAPPING</strong>
-    <div class="legend-item"><span><span class="color-dot" style="background:#ff3333;"></span>Red (Variance pulse)</span><span id="legRed">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#ff9933;"></span>Orange (Delta drift)</span><span id="legOrange">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#ffff33;"></span>Yellow (Orbital Spin)</span><span id="legYellow">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#33cc33;"></span>Green (Organic Wave)</span><span id="legGreen">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#3399ff;"></span>Blue (Breathing Radiance)</span><span id="legBlue">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#9933ff;"></span>Indigo (Phase Harmonic)</span><span id="legIndigo">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#cc33ff;"></span>Violet (Total Energy)</span><span id="legViolet">0.00</span></div>
+    <strong style="display:block; margin-bottom:8px; border-bottom:1px solid #444; padding-bottom:4px;">TRIPPY ORGANIC MAPPING</strong>
+    <div class="legend-item"><span><span class="color-dot" style="background:#ff3333;"></span>Red (Outer Halo Pulse)</span><span id="legRed">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#ff9933;"></span>Orange (Spiraling Tendril)</span><span id="legOrange">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#ffff33;"></span>Yellow (Alien Bloom Petals)</span><span id="legYellow">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#33cc33;"></span>Green (Fluid Wave Ring)</span><span id="legGreen">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#3399ff;"></span>Blue (Psychedelic Vortex)</span><span id="legBlue">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#9933ff;"></span>Indigo (Geometric Web)</span><span id="legIndigo">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#cc33ff;"></span>Violet (Core Singularity)</span><span id="legViolet">0.00</span></div>
   </div>
 
-  <div class="control-buttons">
+    <div class="control-buttons">
     <button id="audioBtn" onclick="toggleAudioEngine()">Start Audio Soundscape</button>
     <button id="micBtn" onclick="toggleMic()">Enable Mic Reactivity</button>
   </div>
@@ -116,7 +119,8 @@
     }
 
     function draw() {
-      background(2, 4, 8, 25);
+      // Deep trance trailing background
+      background(2, 4, 8, 35);
 
       if (!micActive && midiStatus.includes("Searching")) {
         targetDelta = constrain(mouseX / width, 0.1, 1.0);
@@ -141,10 +145,8 @@
         mainFilter.frequency.setTargetAtTime(targetCutoff, audioCtx.currentTime, 0.1);
       }
 
-      // --- DYNAMICALLY DRIVEN SIGNAL ASPECTS ---
-      // We blend user/plant input with rich mathematical wave modifiers (sin/cos/noise) 
-      // so every single color layer has continuous, independent motion.
-      let time = frameCount * 0.03;
+      // Dynamic signal aspects mixed with organic noise & sine waves
+      let time = frameCount * 0.025;
 
       let sigRed    = constrain(smoothVariance * 0.7 + (sin(time * 0.8) + 1) * 0.15, 0, 1);
       let sigOrange = constrain(smoothDelta * 0.7 + (cos(time * 0.6) + 1) * 0.15, 0, 1);
@@ -167,81 +169,133 @@
 
       translate(width / 2, height / 2);
 
-      // --- RENDER 7 DYNAMIC RAINBOW FRACTAL LAYERS ---
+      // Enable additive color blending for deep psychedelic glow
+      blendMode(ADD);
       noFill();
-      
-      // 1. RED Layer (Variance pulse -> size and depth)
+
+      // 1. RED Layer: Outer Pulsing Noise Halo
       push();
-      stroke(255, 51, 51, 160);
-      strokeWeight(map(sigRed, 0, 1, 1, 3.5));
-      rotate(frameCount * 0.004);
-      drawFractalBranch(map(sigRed, 0, 1, 40, 180), floor(map(sigRed, 0, 1, 2, 5)));
+      stroke(255, 40, 40, 140);
+      strokeWeight(map(sigRed, 0, 1, 1, 3));
+      drawOrganicBlobRing(map(sigRed, 0, 1, 180, 320), 6, time * 0.5);
       pop();
 
-      // 2. ORANGE Layer (Delta drift -> branch angle)
+      // 2. ORANGE Layer: Spiraling Organic Tendril
       push();
-      stroke(255, 153, 51, 160);
-      strokeWeight(1.5);
-      rotate(-frameCount * 0.007);
-      drawCustomBranch(110, 4, map(sigOrange, 0, 1, 0.15, 0.85));
-      pop();
-
-      // 3. YELLOW Layer (Orbital Spin -> driven by Yellow signal)
-      push();
-      stroke(255, 255, 51, 150);
+      stroke(255, 140, 30, 160);
       strokeWeight(2);
-      rotate(sigYellow * TWO_PI + (frameCount * 0.01));
-      drawFractalBranch(90, 4);
+      rotate(time * 0.3);
+      drawSpiralingTendril(map(sigOrange, 0, 1, 80, 250));
       pop();
 
-      // 4. GREEN Layer (Organic Wave -> thickness and reach)
+      // 3. YELLOW Layer: Alien Bloom Petals (Mandala)
       push();
-      stroke(51, 204, 51, 170);
-      strokeWeight(map(sigGreen, 0, 1, 0.5, 4));
-      rotate(frameCount * 0.01 + sin(frameCount * 0.05) * 0.2);
-      drawFractalBranch(map(sigGreen, 0, 1, 50, 190), 3);
+      stroke(255, 240, 50, 150);
+      strokeWeight(1.5);
+      rotate(-time * 0.4);
+      drawMandalaPetals(8, map(sigYellow, 0, 1, 100, 220), time);
       pop();
 
-      // 5. BLUE Layer (Breathing Radiance -> expanding scale)
+      // 4. GREEN Layer: Fluid Wave Ring
       push();
-      stroke(51, 153, 255, 160);
+      stroke(40, 230, 80, 170);
+      strokeWeight(2.5);
+      rotate(time * 0.2);
+      drawOrganicBlobRing(map(sigGreen, 0, 1, 120, 240), 8, -time);
+      pop();
+
+      // 5. BLUE Layer: Psychedelic Interference Vortex
+      push();
+      stroke(30, 160, 255, 150);
       strokeWeight(1.2);
-      rotate(-frameCount * 0.005);
-      drawFractalBranch(map(sigBlue, 0, 1, 70, 210), 5);
+      rotate(time * 0.6);
+      drawLissajousWeb(map(sigBlue, 0, 1, 90, 200));
       pop();
 
-      // 6. INDIGO Layer (Phase Harmonic -> swirling rotation)
+      // 6. INDIGO Layer: Geometric Trippy Starburst
       push();
-      stroke(153, 51, 255, 150);
-      strokeWeight(1.8);
-      rotate(sigIndigo * PI - (frameCount * 0.008));
-      drawCustomBranch(130, 4, 0.45);
+      stroke(160, 40, 255, 160);
+      strokeWeight(2);
+      rotate(-time * 0.5);
+      drawStarburstPolygon(6, map(sigIndigo, 0, 1, 60, 180));
       pop();
 
-      // 7. VIOLET Layer (Total Energy -> pulsing crown)
+      // 7. VIOLET Layer: Core Singularity Pulse
       push();
-      stroke(204, 51, 255, 190);
-      strokeWeight(map(sigViolet, 0, 1, 1, 3.5));
-      rotate(frameCount * 0.012);
-      drawFractalBranch(map(sigViolet, 0, 1, 60, 170), 4);
+      stroke(220, 50, 255, 200);
+      strokeWeight(map(sigViolet, 0, 1, 1.5, 4));
+      drawOrganicBlobRing(map(sigViolet, 0, 1, 20, 100), 5, time * 2);
       pop();
+
+      blendMode(BLEND); // Reset blend mode
     }
 
-    function drawFractalBranch(len, depth) {
-      if (depth === 0) return;
-      line(0, 0, 0, -len);
-      translate(0, -len);
-      push(); rotate(0.4); drawFractalBranch(len * 0.67, depth - 1); pop();
-      push(); rotate(-0.4); drawFractalBranch(len * 0.67, depth - 1); pop();
+    // --- ORGANIC & TRIPPY DRAWING FUNCTIONS ---
+
+    function drawOrganicBlobRing(baseRadius, points, phase) {
+      beginShape();
+      for (let i = 0; i < TWO_PI; i += TWO_PI / 100) {
+        let n = noise(cos(i) + 1, sin(i) + 1, phase);
+        let r = baseRadius + map(n, 0, 1, -40, 40);
+        let x = r * cos(i * points / 2);
+        let y = r * sin(i * points / 2);
+        curveVertex(x, y);
+      }
+      endShape(CLOSE);
     }
 
-    function drawCustomBranch(len, depth, theta) {
-      if (depth === 0) return;
-      line(0, 0, 0, -len);
-      translate(0, -len);
-      push(); rotate(theta); drawCustomBranch(len * 0.67, depth - 1, theta); pop();
-      push(); rotate(-theta); drawCustomBranch(len * 0.67, depth - 1, theta); pop();
+    function drawSpiralingTendril(maxR) {
+      beginShape();
+      let angle = 0;
+      for (let r = 10; r < maxR; r += 2) {
+        angle += 0.1;
+        let x = r * cos(angle + frameCount * 0.02);
+        let y = r * sin(angle + frameCount * 0.02);
+        curveVertex(x, y);
+      }
+      endShape();
     }
+
+    function drawMandalaPetals(count, radius, t) {
+      for (let i = 0; i < count; i++) {
+        push();
+        rotate((TWO_PI / count) * i);
+        beginShape();
+        for (let a = 0; a < PI; a += 0.1) {
+          let r = radius * sin(a) * (0.8 + 0.2 * sin(t * 3));
+          let x = r * cos(a);
+          let y = r * sin(a) - radius * 0.5;
+          curveVertex(x, y);
+        }
+        endShape();
+        pop();
+      }
+    }
+
+    function drawLissajousWeb(size) {
+      beginShape();
+      let a = frameCount * 0.03;
+      for (let theta = 0; theta < TWO_PI; theta += 0.05) {
+        let x = size * sin(3 * theta + a);
+        let y = size * sin(2 * theta);
+        curveVertex(x, y);
+      }
+      endShape(CLOSE);
+    }
+
+    function drawStarburstPolygon(sides, radius) {
+      beginShape();
+      for (let i = 0; i < sides; i++) {
+        let angle = (TWO_PI / sides) * i + (frameCount * 0.01);
+        let r = radius * (i % 2 === 0 ? 1 : 0.5);
+        let x = r * cos(angle);
+        let y = r * sin(angle);
+        curveVertex(x, y);
+      }
+      endShape(CLOSE);
+    }
+
+    // --- AUDIO & MIDI ENGINE ---
 
     function toggleAudioEngine() {
       if (!audioActive) {
@@ -252,7 +306,7 @@
         mainFilter = audioCtx.createBiquadFilter();
         mainFilter.type = 'lowpass';
         mainFilter.frequency.setValueAtTime(1000, audioCtx.currentTime);
-        mainFilter.Q.setValueAtTime(3, audioCtx.currentTime);
+        mainFilter.Q.setValueAtTime(4, audioCtx.currentTime);
 
         mainFilter.connect(masterGain);
         masterGain.connect(audioCtx.destination);
@@ -280,14 +334,14 @@
       let peakGain = map(velocity, 0, 127, 0.05, 0.3);
 
       noteGain.gain.setValueAtTime(0, now);
-      noteGain.gain.linearRampToValueAtTime(peakGain, now + 0.2);
-      noteGain.gain.exponentialRampToValueAtTime(0.0001, now + 3.0);
+      noteGain.gain.linearRampToValueAtTime(peakGain, now + 0.3);
+      noteGain.gain.exponentialRampToValueAtTime(0.0001, now + 3.5);
 
       osc.connect(noteGain);
       noteGain.connect(mainFilter);
 
       osc.start(now);
-      osc.stop(now + 3.1);
+      osc.stop(now + 3.6);
     }
 
     function mousePressed() {
