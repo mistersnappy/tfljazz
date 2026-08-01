@@ -504,7 +504,7 @@
 <div class="board" id="board"></div>
 
 <footer>
-  Data: <a href="https://api.tfl.gov.uk" target="_blank">api.tfl.gov.uk</a> Unified API, polled every 18s. 
+  Data: <a href="https://api.tfl.gov.uk" target="_blank">api.tfl.gov.uk</a> Unified API, polled every 18s via CORS Proxy. 
   Concept inspired by <a href="https://www.trainjazz.com" target="_blank">trainjazz.com</a>.
 </footer>
 
@@ -883,7 +883,6 @@ function toggleNetworkFilter(category) {
     }
   }
   
-  // Update button active classes
   document.querySelectorAll('.filter-btn').forEach(btn => {
     const btnCat = btn.getAttribute('data-filter');
     if (selectedFilters.has(btnCat)) {
@@ -961,7 +960,6 @@ document.getElementById('startBtn').addEventListener('click', async () => {
   document.getElementById('startBtn').disabled = true;
   document.getElementById('status').textContent = 'Listening — ambient soundscape & announcements active…';
   
-  // Enforce filter muting state upon start
   toggleNetworkFilter('all');
   selectedFilters.clear();
   selectedFilters.add('all');
@@ -1133,7 +1131,7 @@ function attachControlListeners() {
   });
 }
 
-// ---------- Live API Fetching (Arrivals & Line Status) ----------
+// ---------- Live API Fetching via CORS Proxy ----------
 function hashToIndex(str, mod){
   let h = 0;
   for (let i=0; i<str.length; i++){ h = (h*31 + str.charCodeAt(i)) >>> 0; }
@@ -1146,7 +1144,8 @@ async function pollAllData() {
   const uniqueFeeds = [...new Set(LINES.map(l => l.feedSource))].join(',');
   
   try {
-    const statusRes = await fetch(`https://api.tfl.gov.uk/Line/${uniqueFeeds}/Status`);
+    const rawStatusUrl = `https://api.tfl.gov.uk/Line/${uniqueFeeds}/Status`;
+    const statusRes = await fetch(`https://corsproxy.io/?${encodeURIComponent(rawStatusUrl)}`);
     if (statusRes.ok) {
       const statusData = await statusRes.json();
       statusData.forEach(lineStatus => {
@@ -1178,7 +1177,8 @@ async function pollAllData() {
   } catch(e) {}
 
   try{
-    const res = await fetch(`https://api.tfl.gov.uk/Line/${uniqueFeeds}/Arrivals`);
+    const rawArrivalsUrl = `https://api.tfl.gov.uk/Line/${uniqueFeeds}/Arrivals`;
+    const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(rawArrivalsUrl)}`);
     if (!res.ok) throw new Error('API network failure');
     const data = await res.json();
     
@@ -1227,7 +1227,7 @@ async function pollAllData() {
     });
 
   } catch(err) {
-    document.getElementById('status').textContent = 'Could not reach TfL API — retrying soon.';
+    document.getElementById('status').textContent = 'Could not reach TfL API via CORS proxy — retrying soon.';
   }
 }
 
