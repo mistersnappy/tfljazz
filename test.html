@@ -161,7 +161,7 @@
 </head>
 <body>
 
-  <!-- Config Modal Overlay (All 7 Channels Fully Represented) -->
+  <!-- Config Modal Overlay -->
   <div id="configModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -169,7 +169,6 @@
         <button class="close-btn" onclick="toggleConfigModal()">×</button>
       </div>
       
-      <!-- Global Master Controls -->
       <div class="channel-box">
         <div class="channel-header" style="color: #ffde4a;">Global Master Parameters</div>
         <div class="control-group">
@@ -185,7 +184,6 @@
         </div>
       </div>
 
-      <!-- Channel Configurations (1 through 7) -->
       <div id="modalChannelContainer"></div>
     </div>
   </div>
@@ -224,22 +222,21 @@
     let midiStatus = "Searching for MIDI...";
 
     let audioCtx, masterGain, mainFilter, audioActive = false;
-    let viewMode = 'visualizer'; // 'visualizer' or 'oscilloscope'
+    let viewMode = 'visualizer';
     
     let globalConfig = {
       resonance: 4.0,
       arp: 'off'
     };
 
-    // 7 Complete Independent Channel Configs & Colors
     const channelData = [
-      { id: 1, name: "Channel 1 (Red - Variance)", color: "#ff3333", wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8 },
-      { id: 2, name: "Channel 2 (Orange - Delta)", color: "#ff9933", wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8 },
-      { id: 3, name: "Channel 3 (Yellow - Pitch/X)", color: "#ffff33", wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8 },
-      { id: 4, name: "Channel 4 (Green - Velocity/Y)", color: "#33cc33", wave: "square", attack: 0.1, release: 3.5, volume: 0.8 },
-      { id: 5, name: "Channel 5 (Blue - Pulse)", color: "#3399ff", wave: "sine", attack: 0.2, release: 4.0, volume: 0.8 },
-      { id: 6, name: "Channel 6 (Indigo - Harmonic)", color: "#9933ff", wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8 },
-      { id: 7, name: "Channel 7 (Violet - Energy)", color: "#cc33ff", wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8 }
+      { id: 1, name: "Channel 1 (Red - Variance)", color: "#ff3333", wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 130.81, envelope: 0 },
+      { id: 2, name: "Channel 2 (Orange - Delta)", color: "#ff9933", wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 164.81, envelope: 0 },
+      { id: 3, name: "Channel 3 (Yellow - Pitch/X)", color: "#ffff33", wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 196.00, envelope: 0 },
+      { id: 4, name: "Channel 4 (Green - Velocity/Y)", color: "#33cc33", wave: "square", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 220.00, envelope: 0 },
+      { id: 5, name: "Channel 5 (Blue - Pulse)", color: "#3399ff", wave: "sine", attack: 0.2, release: 4.0, volume: 0.8, activeFreq: 261.63, envelope: 0 },
+      { id: 6, name: "Channel 6 (Indigo - Harmonic)", color: "#9933ff", wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 329.63, envelope: 0 },
+      { id: 7, name: "Channel 7 (Violet - Energy)", color: "#cc33ff", wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 392.00, envelope: 0 }
     ];
 
     function setup() {
@@ -320,7 +317,7 @@
     }
 
     function draw() {
-      background(2, 4, 8, 35);
+      background(2, 4, 8, 40);
 
       if (!micActive && midiStatus.includes("Searching")) {
         targetDelta = constrain(mouseX / width, 0.1, 1.0);
@@ -344,6 +341,11 @@
         let targetCutoff = map(smoothVariance, 0, 1, 200, 4000);
         mainFilter.frequency.setTargetAtTime(targetCutoff, audioCtx.currentTime, 0.1);
       }
+
+      // Decay channel envelopes smoothly over time
+      channelData.forEach(ch => {
+        ch.envelope = max(0, ch.envelope - 0.03);
+      });
 
       let time = frameCount * 0.025;
 
@@ -377,33 +379,52 @@
         push(); stroke(51, 204, 51, 170); strokeWeight(2.5); rotate(time * 0.2); drawOrganicBlobRing(map(sigGreen, 0, 1, 120, 240), 8, -time); pop();
         push(); stroke(51, 153, 255, 150); strokeWeight(1.2); rotate(time * 0.6); drawLissajousWeb(map(sigBlue, 0, 1, 90, 200)); pop();
         push(); stroke(153, 51, 255, 160); strokeWeight(2); rotate(-time * 0.5); drawStarburstPolygon(6, map(sigIndigo, 0, 1, 60, 180)); pop();
-        push(); stroke(204, 51, 255, 200); strokeWeight(map(sigViolet, 0, 1, 1.5, 4)); drawOrganicBlobRing(map(sigViolet, 0, 1, 20, 100), 5, time * 2); pop();
+        push(); stroke(220, 50, 255, 200); strokeWeight(map(sigViolet, 0, 1, 1.5, 4)); drawOrganicBlobRing(map(sigViolet, 0, 1, 20, 100), 5, time * 2); pop();
 
         blendMode(BLEND);
       } else {
-        // --- MULTI-CHANNEL OSCILLOSCOPE OUTPUT MODE ---
+        // --- TRADITIONAL OSCILLOSCOPE CRT MODE ---
         push();
-        translate(0, height / 2);
-        strokeWeight(2);
-        noFill();
+        // CRT phosphor scanline aesthetic grid overlay
+        stroke(20, 50, 30, 80);
+        strokeWeight(1);
+        for (let x = 0; x < width; x += 60) line(x, 0, x, height);
+        for (let y = 0; y < height; y += 60) line(0, y, width, y);
 
         let slice = height / 8;
         channelData.forEach((ch, index) => {
-          let yOffset = (index - 3) * slice;
-          stroke(ch.color);
-          beginShape();
-          let freqStep = map(index, 0, 6, 0.02, 0.1);
-          for (let x = 0; x < width; x += 5) {
-            let waveVal = 0;
-            let currentWave = ch.wave;
-            let phase = frameCount * freqStep + index;
-            
-            if (currentWave === 'sine') waveVal = sin(x * 0.01 + phase);
-            else if (currentWave === 'triangle') waveVal = asin(sin(x * 0.01 + phase)) * (2 / PI);
-            else if (currentWave === 'sawtooth') waveVal = (x * 0.01 + phase) % TWO_PI / PI - 1;
-            else if (currentWave === 'square') waveVal = sin(x * 0.01 + phase) > 0 ? 0.8 : -0.8;
+          let yCenter = (index + 1) * slice;
+          
+          // Center baseline graticule tick
+          stroke(40, 90, 50, 120);
+          line(0, yCenter, width, yCenter);
 
-            let y = yOffset + waveVal * (slice * 0.6 * smoothVariance);
+          // Oscilloscope trace line with bloom glow
+          stroke(ch.color);
+          strokeWeight(2);
+          noFill();
+
+          beginShape();
+          let freqMultiplier = map(ch.activeFreq, 60, 1000, 0.005, 0.08);
+          // Amplitude responds to active envelope trigger and data variance
+          let amp = (slice * 0.45) * (0.3 + ch.envelope * 0.7) * (0.5 + smoothVariance * 0.5);
+
+          for (let x = 0; x < width; x += 3) {
+            let waveVal = 0;
+            let phase = frameCount * 0.05 + index * 1.5;
+            let currentWave = ch.wave;
+
+            if (currentWave === 'sine') {
+              waveVal = sin(x * freqMultiplier + phase);
+            } else if (currentWave === 'triangle') {
+              waveVal = asin(sin(x * freqMultiplier + phase)) * (2 / PI);
+            } else if (currentWave === 'sawtooth') {
+              waveVal = ((x * freqMultiplier + phase) % TWO_PI) / PI - 1;
+            } else if (currentWave === 'square') {
+              waveVal = sin(x * freqMultiplier + phase) > 0 ? 1 : -1;
+            }
+
+            let y = yCenter - (waveVal * amp);
             vertex(x, y);
           }
           endShape();
@@ -504,6 +525,9 @@
       if (!audioActive || !audioCtx) return;
       
       let ch = channelData[channelIndex % channelData.length];
+      ch.activeFreq = freq;
+      ch.envelope = 1.0; // Trigger oscilloscope trace spike/flash
+
       let osc = audioCtx.createOscillator();
       let noteGain = audioCtx.createGain();
 
