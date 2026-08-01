@@ -27,18 +27,30 @@
       line-height: 1.5;
       z-index: 10;
     }
-    #legend {
+    #legend-container {
       position: absolute;
       top: 20px;
       right: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      z-index: 10;
+      pointer-events: none;
+    }
+    #legend {
       background: rgba(2, 4, 8, 0.85);
       padding: 14px 18px;
       border-radius: 6px;
       border: 1px solid rgba(255, 255, 255, 0.2);
-      pointer-events: none;
       font-size: 11px;
       width: 250px;
-      z-index: 10;
+      margin-bottom: 6px;
+    }
+    #lastUpdated {
+      font-size: 9px;
+      color: #888d9c;
+      letter-spacing: 0.5px;
+      padding-right: 4px;
     }
     .legend-item {
       display: flex;
@@ -76,7 +88,6 @@
       background: #ffffff;
     }
 
-    /* Modal Styling */
     #configModal {
       display: none;
       position: fixed;
@@ -161,7 +172,6 @@
 </head>
 <body>
 
-  <!-- Config Modal Overlay -->
   <div id="configModal">
     <div class="modal-content">
       <div class="modal-header">
@@ -193,15 +203,18 @@
     Raw Delta: <span id="valDelta">0.50</span> | Raw Variance: <span id="valVariance">0.50</span>
   </div>
 
-  <div id="legend">
-    <strong style="display:block; margin-bottom:8px; border-bottom:1px solid #444; padding-bottom:4px;">7-CHANNEL MAPPING</strong>
-    <div class="legend-item"><span><span class="color-dot" style="background:#ff3333;"></span>Red (Ch 1)</span><span id="legRed">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#ff9933;"></span>Orange (Ch 2)</span><span id="legOrange">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#ffff33;"></span>Yellow (Ch 3)</span><span id="legYellow">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#33cc33;"></span>Green (Ch 4)</span><span id="legGreen">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#3399ff;"></span>Blue (Ch 5)</span><span id="legBlue">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#9933ff;"></span>Indigo (Ch 6)</span><span id="legIndigo">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#cc33ff;"></span>Violet (Ch 7)</span><span id="legViolet">0.00</span></div>
+  <div id="legend-container">
+    <div id="legend">
+      <strong style="display:block; margin-bottom:8px; border-bottom:1px solid #444; padding-bottom:4px;">7-CHANNEL MAPPING</strong>
+      <div class="legend-item"><span><span class="color-dot" style="background:#ff3333;"></span>Red (Ch 1)</span><span id="legRed">0.00</span></div>
+      <div class="legend-item"><span><span class="color-dot" style="background:#ff9933;"></span>Orange (Ch 2)</span><span id="legOrange">0.00</span></div>
+      <div class="legend-item"><span><span class="color-dot" style="background:#ffff33;"></span>Yellow (Ch 3)</span><span id="legYellow">0.00</span></div>
+      <div class="legend-item"><span><span class="color-dot" style="background:#33cc33;"></span>Green (Ch 4)</span><span id="legGreen">0.00</span></div>
+      <div class="legend-item"><span><span class="color-dot" style="background:#3399ff;"></span>Blue (Ch 5)</span><span id="legBlue">0.00</span></div>
+      <div class="legend-item"><span><span class="color-dot" style="background:#9933ff;"></span>Indigo (Ch 6)</span><span id="legIndigo">0.00</span></div>
+      <div class="legend-item"><span><span class="color-dot" style="background:#cc33ff;"></span>Violet (Ch 7)</span><span id="legViolet">0.00</span></div>
+    </div>
+    <div id="lastUpdated">Last updated: <span id="timestamp">--:--:--</span></div>
   </div>
 
   <div class="control-buttons">
@@ -230,13 +243,13 @@
     };
 
     const channelData = [
-      { id: 1, name: "Channel 1 (Red - Variance)", color: "#ff3333", wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 130.81, envelope: 0 },
-      { id: 2, name: "Channel 2 (Orange - Delta)", color: "#ff9933", wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 164.81, envelope: 0 },
-      { id: 3, name: "Channel 3 (Yellow - Pitch/X)", color: "#ffff33", wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 196.00, envelope: 0 },
-      { id: 4, name: "Channel 4 (Green - Velocity/Y)", color: "#33cc33", wave: "square", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 220.00, envelope: 0 },
-      { id: 5, name: "Channel 5 (Blue - Pulse)", color: "#3399ff", wave: "sine", attack: 0.2, release: 4.0, volume: 0.8, activeFreq: 261.63, envelope: 0 },
-      { id: 6, name: "Channel 6 (Indigo - Harmonic)", color: "#9933ff", wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 329.63, envelope: 0 },
-      { id: 7, name: "Channel 7 (Violet - Energy)", color: "#cc33ff", wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 392.00, envelope: 0 }
+      { id: 1, name: "Channel 1 (Red - Variance)", color: "#ff3333", wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 130.81, envelope: 0.4 },
+      { id: 2, name: "Channel 2 (Orange - Delta)", color: "#ff9933", wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 164.81, envelope: 0.4 },
+      { id: 3, name: "Channel 3 (Yellow - Pitch/X)", color: "#ffff33", wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 196.00, envelope: 0.4 },
+      { id: 4, name: "Channel 4 (Green - Velocity/Y)", color: "#33cc33", wave: "square", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 220.00, envelope: 0.4 },
+      { id: 5, name: "Channel 5 (Blue - Pulse)", color: "#3399ff", wave: "sine", attack: 0.2, release: 4.0, volume: 0.8, activeFreq: 261.63, envelope: 0.4 },
+      { id: 6, name: "Channel 6 (Indigo - Harmonic)", color: "#9933ff", wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 329.63, envelope: 0.4 },
+      { id: 7, name: "Channel 7 (Violet - Energy)", color: "#cc33ff", wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 392.00, envelope: 0.4 }
     ];
 
     function setup() {
@@ -244,6 +257,13 @@
       colorMode(RGB, 255);
       buildConfigModalUI();
       setupWebMIDI();
+      updateTimestamp();
+      setInterval(updateTimestamp, 1000);
+    }
+
+    function updateTimestamp() {
+      let now = new Date();
+      document.getElementById('timestamp').innerText = now.toLocaleTimeString();
     }
 
     function buildConfigModalUI() {
@@ -342,9 +362,10 @@
         mainFilter.frequency.setTargetAtTime(targetCutoff, audioCtx.currentTime, 0.1);
       }
 
-      // Decay channel envelopes smoothly over time
-      channelData.forEach(ch => {
-        ch.envelope = max(0, ch.envelope - 0.03);
+      // Keep all channel traces breathing organically even when quiet
+      channelData.forEach((ch, idx) => {
+        ch.envelope = max(0.2, ch.envelope - 0.015);
+        ch.activeFreq += sin(frameCount * 0.05 + idx) * 0.2;
       });
 
       let time = frameCount * 0.025;
@@ -368,7 +389,6 @@
       document.getElementById('legViolet').innerText = sigViolet.toFixed(2);
 
       if (viewMode === 'visualizer') {
-        // --- 7-CHANNEL ORGANIC VISUALIZER MODE ---
         translate(width / 2, height / 2);
         blendMode(ADD);
         noFill();
@@ -383,9 +403,7 @@
 
         blendMode(BLEND);
       } else {
-        // --- TRADITIONAL OSCILLOSCOPE CRT MODE ---
         push();
-        // CRT phosphor scanline aesthetic grid overlay
         stroke(20, 50, 30, 80);
         strokeWeight(1);
         for (let x = 0; x < width; x += 60) line(x, 0, x, height);
@@ -395,19 +413,16 @@
         channelData.forEach((ch, index) => {
           let yCenter = (index + 1) * slice;
           
-          // Center baseline graticule tick
           stroke(40, 90, 50, 120);
           line(0, yCenter, width, yCenter);
 
-          // Oscilloscope trace line with bloom glow
           stroke(ch.color);
           strokeWeight(2);
           noFill();
 
           beginShape();
           let freqMultiplier = map(ch.activeFreq, 60, 1000, 0.005, 0.08);
-          // Amplitude responds to active envelope trigger and data variance
-          let amp = (slice * 0.45) * (0.3 + ch.envelope * 0.7) * (0.5 + smoothVariance * 0.5);
+          let amp = (slice * 0.45) * (0.4 + ch.envelope * 0.6) * (0.5 + smoothVariance * 0.5);
 
           for (let x = 0; x < width; x += 3) {
             let waveVal = 0;
@@ -526,7 +541,7 @@
       
       let ch = channelData[channelIndex % channelData.length];
       ch.activeFreq = freq;
-      ch.envelope = 1.0; // Trigger oscilloscope trace spike/flash
+      ch.envelope = 1.0; // Flares up the oscilloscope trace for this channel
 
       let osc = audioCtx.createOscillator();
       let noteGain = audioCtx.createGain();
@@ -551,9 +566,13 @@
     function triggerVoiceCluster(baseFreq, velocity, channel) {
       let chIndex = (channel - 1) % channelData.length;
       playChannelTone(baseFreq, velocity, chIndex, 0);
+      
+      // Polyphonic ripple: gently wake up neighboring channels so all traces dance together
+      playChannelTone(baseFreq * 1.25, velocity * 0.7, (chIndex + 1) % channelData.length, 0.1);
+      playChannelTone(baseFreq * 1.5, velocity * 0.5, (chIndex + 2) % channelData.length, 0.2);
+
       if (globalConfig.arp === 'cascade') {
-        playChannelTone(baseFreq * 1.25, velocity * 0.8, (chIndex + 1) % channelData.length, 0.15);
-        playChannelTone(baseFreq * 1.5, velocity * 0.6, (chIndex + 2) % channelData.length, 0.3);
+        playChannelTone(baseFreq * 1.75, velocity * 0.4, (chIndex + 3) % channelData.length, 0.3);
       }
     }
 
@@ -562,7 +581,7 @@
 
       if (audioActive && mouseY < height - 60) {
         let freq = map(mouseX, 0, width, 110, 880);
-        triggerVoiceCluster(freq, 100, 1);
+        triggerVoiceCluster(freq, 100, Math.floor(random(1, 8)));
       }
     }
 
