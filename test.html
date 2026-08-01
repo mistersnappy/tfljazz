@@ -28,9 +28,6 @@
     --line-elizabeth: #6950A1;
     --line-dlr: #00AFAD;
     --line-overground: #E86A10;
-    --line-tram: #84B817;
-    --line-river: #0085C7;
-    --line-cable: #E61C24;
   }
 
   [data-theme="light"] {
@@ -448,7 +445,7 @@
 
 <header>
   <h1><span class="roundel"></span>TfL Jazz: Ambient Multi-Network Soundscape</h1>
-  <p class="sub">Live London Underground, Overground, Elizabeth Line, DLR, Tram, River Bus & Cable Car soundscape.</p>
+  <p class="sub">Live London Underground, Overground, Elizabeth Line & DLR soundscape.</p>
   
   <div class="actions-wrapper">
     <div class="actions">
@@ -479,9 +476,6 @@
     <button class="filter-btn" data-filter="overground" onclick="toggleNetworkFilter('overground')">Overground</button>
     <button class="filter-btn" data-filter="elizabeth" onclick="toggleNetworkFilter('elizabeth')">Elizabeth Line</button>
     <button class="filter-btn" data-filter="dlr" onclick="toggleNetworkFilter('dlr')">DLR</button>
-    <button class="filter-btn" data-filter="tram" onclick="toggleNetworkFilter('tram')">Tram</button>
-    <button class="filter-btn" data-filter="river" onclick="toggleNetworkFilter('river')">River Bus</button>
-    <button class="filter-btn" data-filter="cable" onclick="toggleNetworkFilter('cable')">Cable Car</button>
   </div>
 
   <div id="status">Audio is off. Click start (browsers require a user gesture before playing sound).</div>
@@ -559,16 +553,7 @@ const LINES = [
   { id:'elizabeth',       name:'Elizabeth Line',  category:'elizabeth', feedSource:'elizabeth', type:'Synth',         octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:2200, attack:0.3, decay:0.7, sustain:0.6, release:2.5, volume:-8, muted:false, color:'var(--line-elizabeth)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
 
   /* DLR */
-  { id:'dlr',             name:'DLR',             category:'dlr', feedSource:'dlr', type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2000, cutoff:2500, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, color:'var(--line-dlr)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-
-  /* Tram */
-  { id:'tram',            name:'Tram',            category:'tram', feedSource:'tram', type:'AMSynth', octave:2, scale: 'Major Pentatonic', harmonicity:1.5, resonance:4, cutoff:1400, attack:0.2, decay:0.7, sustain:0.5, release:2.0, volume:-8, muted:false, color:'var(--line-tram)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-
-  /* River Bus */
-  { id:'river',           name:'River Bus',       category:'river', feedSource:'river-bus', type:'MonoSynth', octave:2, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2, cutoff:1200, attack:0.5, decay:1.2, sustain:0.7, release:3.0, volume:-7, muted:false, color:'var(--line-river)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' },
-
-  /* Cable Car */
-  { id:'cable',           name:'Cable Car',       category:'cable', feedSource:'cable-car', type:'MetalSynth', octave:3, scale: 'Major Pentatonic', harmonicity:2.0, resonance:400, cutoff:2000, attack:0.1, decay:0.5, sustain:0.3, release:2.0, volume:-8, muted:false, color:'var(--line-cable)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' }
+  { id:'dlr',             name:'DLR',             category:'dlr', feedSource:'dlr', type:'PluckSynth',    octave:3, scale: 'Major Pentatonic', harmonicity:1.0, resonance:2000, cutoff:2500, attack:0.05, decay:0.6, sustain:0.3, release:2.2, volume:-8, muted:false, color:'var(--line-dlr)', crowdingFactor: 1.0, activeCount: 0, statusText: 'Good Service' }
 ];
 
 let announcementConfig = {
