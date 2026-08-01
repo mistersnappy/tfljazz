@@ -62,7 +62,7 @@
       pointer-events: auto;
       z-index: 10;
     }
-    button {
+    button, select {
       background: #f4f2ee;
       color: #020408;
       border: none;
@@ -72,12 +72,114 @@
       cursor: pointer;
       font-family: monospace;
     }
-    button:hover {
+    button:hover, select:hover {
       background: #ffffff;
+    }
+
+    /* Left Slide-out Config Drawer & Tab */
+    #configTab {
+      position: absolute;
+      top: 130px;
+      left: 0;
+      background: #f4f2ee;
+      color: #020408;
+      padding: 10px 14px;
+      font-weight: bold;
+      font-size: 11px;
+      cursor: pointer;
+      border-top-right-radius: 6px;
+      border-bottom-right-radius: 6px;
+      z-index: 20;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.5);
+      transition: left 0.3s ease;
+    }
+    #configDrawer {
+      position: absolute;
+      top: 0;
+      left: -320px;
+      width: 280px;
+      height: 100vh;
+      background: rgba(10, 12, 18, 0.95);
+      border-right: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 20px;
+      box-sizing: border-box;
+      z-index: 15;
+      transition: left 0.3s ease;
+      overflow-y: auto;
+      backdrop-filter: blur(10px);
+    }
+    #configDrawer.open {
+      left: 0;
+    }
+    .drawer-title {
+      font-size: 13px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+      padding-bottom: 8px;
+      color: #ffde4a;
+    }
+    .control-group {
+      margin-bottom: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .control-group label {
+      font-size: 10px;
+      color: #a0a0ab;
+      text-transform: uppercase;
+    }
+    .control-group select, .control-group input[type="range"] {
+      width: 100%;
+      background: #1a1c24;
+      color: #f4f2ee;
+      border: 1px solid rgba(255,255,255,0.2);
+      padding: 6px;
+      border-radius: 4px;
     }
   </style>
 </head>
 <body>
+
+  <!-- Slide-out Tab and Drawer -->
+  <div id="configTab" onclick="toggleConfigDrawer()">config</div>
+  <div id="configDrawer">
+    <div class="drawer-title">SYNTHESIZER CONFIG</div>
+    
+    <div class="control-group">
+      <label>Oscillator Waveform</label>
+      <select id="synthWaveform" onchange="updateSynthParams()">
+        <option value="triangle">Triangle (Warm & Wood)</option>
+        <option value="sine">Sine (Pure & Ambient)</option>
+        <option value="sawtooth">Sawtooth (Bright & Rich)</option>
+        <option value="square">Square (Chiptune / Hollow)</option>
+      </select>
+    </div>
+
+    <div class="control-group">
+      <label>Attack Time (Swell): <span id="lblAttack">0.3</span>s</label>
+      <input type="range" id="synthAttack" min="0.01" max="1.5" step="0.05" value="0.3" oninput="updateSynthParams()">
+    </div>
+
+    <div class="control-group">
+      <label>Release Time (Tail): <span id="lblRelease">3.5</span>s</label>
+      <input type="range" id="synthRelease" min="0.5" max="6.0" step="0.2" value="3.5" oninput="updateSynthParams()">
+    </div>
+
+    <div class="control-group">
+      <label>Filter Resonance (Q): <span id="lblResonance">4.0</span></label>
+      <input type="range" id="synthResonance" min="1" max="20" step="0.5" value="4.0" oninput="updateSynthParams()">
+    </div>
+
+    <div class="control-group">
+      <label>Arpeggio Mode</label>
+      <select id="synthArp" onchange="updateSynthParams()">
+        <option value="off">Single Tone</option>
+        <option value="cascade">Harmonic Cascade</option>
+      </select>
+    </div>
+  </div>
 
   <div id="info">
     SIGNAL SOURCE: <span id="inputMode" style="color: #ffde4a;">Interactive (Move Mouse / Mic)</span><br>
@@ -95,7 +197,7 @@
     <div class="legend-item"><span><span class="color-dot" style="background:#cc33ff;"></span>Violet (Core Singularity)</span><span id="legViolet">0.00</span></div>
   </div>
 
-    <div class="control-buttons">
+  <div class="control-buttons">
     <button id="audioBtn" onclick="toggleAudioEngine()">Start Audio Soundscape</button>
     <button id="micBtn" onclick="toggleMic()">Enable Mic Reactivity</button>
   </div>
@@ -111,6 +213,36 @@
     let midiStatus = "Searching for MIDI...";
 
     let audioCtx, masterGain, mainFilter, audioActive = false;
+    
+    // Configurable Synth Settings
+    let synthConfig = {
+      waveform: 'triangle',
+      attack: 0.3,
+      release: 3.5,
+      resonance: 4.0,
+      arp: 'off'
+    };
+
+    function toggleConfigDrawer() {
+      const drawer = document.getElementById('configDrawer');
+      drawer.classList.toggle('open');
+    }
+
+    function updateSynthParams() {
+      synthConfig.waveform = document.getElementById('synthWaveform').value;
+      synthConfig.attack = parseFloat(document.getElementById('synthAttack').value);
+      synthConfig.release = parseFloat(document.getElementById('synthRelease').value);
+      synthConfig.resonance = parseFloat(document.getElementById('synthResonance').value);
+      synthConfig.arp = document.getElementById('synthArp').value;
+
+      document.getElementById('lblAttack').innerText = synthConfig.attack.toFixed(2);
+      document.getElementById('lblRelease').innerText = synthConfig.release.toFixed(1);
+      document.getElementById('lblResonance').innerText = synthConfig.resonance.toFixed(1);
+
+      if (mainFilter && audioCtx) {
+        mainFilter.Q.setValueAtTime(synthConfig.resonance, audioCtx.currentTime);
+      }
+    }
 
     function setup() {
       createCanvas(windowWidth, windowHeight);
@@ -119,7 +251,6 @@
     }
 
     function draw() {
-      // Deep trance trailing background
       background(2, 4, 8, 35);
 
       if (!micActive && midiStatus.includes("Searching")) {
@@ -145,7 +276,6 @@
         mainFilter.frequency.setTargetAtTime(targetCutoff, audioCtx.currentTime, 0.1);
       }
 
-      // Dynamic signal aspects mixed with organic noise & sine waves
       let time = frameCount * 0.025;
 
       let sigRed    = constrain(smoothVariance * 0.7 + (sin(time * 0.8) + 1) * 0.15, 0, 1);
@@ -156,7 +286,6 @@
       let sigIndigo = abs(sin(smoothDelta * PI + time * 0.7)); 
       let sigViolet = constrain((smoothDelta * smoothVariance) + (sin(time * 0.4) + 1) * 0.2, 0, 1);
 
-      // Update HUD & Side Legend Text
       document.getElementById('valDelta').innerText = smoothDelta.toFixed(2);
       document.getElementById('valVariance').innerText = smoothVariance.toFixed(2);
       document.getElementById('legRed').innerText = sigRed.toFixed(2);
@@ -169,68 +298,19 @@
 
       translate(width / 2, height / 2);
 
-      // Enable additive color blending for deep psychedelic glow
       blendMode(ADD);
       noFill();
 
-      // 1. RED Layer: Outer Pulsing Noise Halo
-      push();
-      stroke(255, 40, 40, 140);
-      strokeWeight(map(sigRed, 0, 1, 1, 3));
-      drawOrganicBlobRing(map(sigRed, 0, 1, 180, 320), 6, time * 0.5);
-      pop();
+      push(); stroke(255, 40, 40, 140); strokeWeight(map(sigRed, 0, 1, 1, 3)); drawOrganicBlobRing(map(sigRed, 0, 1, 180, 320), 6, time * 0.5); pop();
+      push(); stroke(255, 140, 30, 160); strokeWeight(2); rotate(time * 0.3); drawSpiralingTendril(map(sigOrange, 0, 1, 80, 250)); pop();
+      push(); stroke(255, 240, 50, 150); strokeWeight(1.5); rotate(-time * 0.4); drawMandalaPetals(8, map(sigYellow, 0, 1, 100, 220), time); pop();
+      push(); stroke(40, 230, 80, 170); strokeWeight(2.5); rotate(time * 0.2); drawOrganicBlobRing(map(sigGreen, 0, 1, 120, 240), 8, -time); pop();
+      push(); stroke(30, 160, 255, 150); strokeWeight(1.2); rotate(time * 0.6); drawLissajousWeb(map(sigBlue, 0, 1, 90, 200)); pop();
+      push(); stroke(160, 40, 255, 160); strokeWeight(2); rotate(-time * 0.5); drawStarburstPolygon(6, map(sigIndigo, 0, 1, 60, 180)); pop();
+      push(); stroke(220, 50, 255, 200); strokeWeight(map(sigViolet, 0, 1, 1.5, 4)); drawOrganicBlobRing(map(sigViolet, 0, 1, 20, 100), 5, time * 2); pop();
 
-      // 2. ORANGE Layer: Spiraling Organic Tendril
-      push();
-      stroke(255, 140, 30, 160);
-      strokeWeight(2);
-      rotate(time * 0.3);
-      drawSpiralingTendril(map(sigOrange, 0, 1, 80, 250));
-      pop();
-
-      // 3. YELLOW Layer: Alien Bloom Petals (Mandala)
-      push();
-      stroke(255, 240, 50, 150);
-      strokeWeight(1.5);
-      rotate(-time * 0.4);
-      drawMandalaPetals(8, map(sigYellow, 0, 1, 100, 220), time);
-      pop();
-
-      // 4. GREEN Layer: Fluid Wave Ring
-      push();
-      stroke(40, 230, 80, 170);
-      strokeWeight(2.5);
-      rotate(time * 0.2);
-      drawOrganicBlobRing(map(sigGreen, 0, 1, 120, 240), 8, -time);
-      pop();
-
-      // 5. BLUE Layer: Psychedelic Interference Vortex
-      push();
-      stroke(30, 160, 255, 150);
-      strokeWeight(1.2);
-      rotate(time * 0.6);
-      drawLissajousWeb(map(sigBlue, 0, 1, 90, 200));
-      pop();
-
-      // 6. INDIGO Layer: Geometric Trippy Starburst
-      push();
-      stroke(160, 40, 255, 160);
-      strokeWeight(2);
-      rotate(-time * 0.5);
-      drawStarburstPolygon(6, map(sigIndigo, 0, 1, 60, 180));
-      pop();
-
-      // 7. VIOLET Layer: Core Singularity Pulse
-      push();
-      stroke(220, 50, 255, 200);
-      strokeWeight(map(sigViolet, 0, 1, 1.5, 4));
-      drawOrganicBlobRing(map(sigViolet, 0, 1, 20, 100), 5, time * 2);
-      pop();
-
-      blendMode(BLEND); // Reset blend mode
+      blendMode(BLEND);
     }
-
-    // --- ORGANIC & TRIPPY DRAWING FUNCTIONS ---
 
     function drawOrganicBlobRing(baseRadius, points, phase) {
       beginShape();
@@ -295,8 +375,6 @@
       endShape(CLOSE);
     }
 
-    // --- AUDIO & MIDI ENGINE ---
-
     function toggleAudioEngine() {
       if (!audioActive) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -306,7 +384,7 @@
         mainFilter = audioCtx.createBiquadFilter();
         mainFilter.type = 'lowpass';
         mainFilter.frequency.setValueAtTime(1000, audioCtx.currentTime);
-        mainFilter.Q.setValueAtTime(4, audioCtx.currentTime);
+        mainFilter.Q.setValueAtTime(synthConfig.resonance, audioCtx.currentTime);
 
         mainFilter.connect(masterGain);
         masterGain.connect(audioCtx.destination);
@@ -322,32 +400,44 @@
       }
     }
 
-    function playNativeSynthTone(freq, velocity = 0.8) {
+    function playNativeSynthTone(freq, velocity = 0.8, delayOffset = 0) {
       if (!audioActive || !audioCtx) return;
       let osc = audioCtx.createOscillator();
       let noteGain = audioCtx.createGain();
 
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      osc.type = synthConfig.waveform;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delayOffset);
 
-      let now = audioCtx.currentTime;
-      let peakGain = map(velocity, 0, 127, 0.05, 0.3);
+      let now = audioCtx.currentTime + delayOffset;
+      let peakGain = map(velocity, 0, 127, 0.03, 0.25);
 
       noteGain.gain.setValueAtTime(0, now);
-      noteGain.gain.linearRampToValueAtTime(peakGain, now + 0.3);
-      noteGain.gain.exponentialRampToValueAtTime(0.0001, now + 3.5);
+      noteGain.gain.linearRampToValueAtTime(peakGain, now + synthConfig.attack);
+      noteGain.gain.exponentialRampToValueAtTime(0.0001, now + synthConfig.release);
 
       osc.connect(noteGain);
       noteGain.connect(mainFilter);
 
       osc.start(now);
-      osc.stop(now + 3.6);
+      osc.stop(now + synthConfig.release + 0.1);
+    }
+
+    function triggerVoiceCluster(baseFreq, velocity) {
+      playNativeSynthTone(baseFreq, velocity, 0);
+      if (synthConfig.arp === 'cascade') {
+        // Play gentle harmonic intervals above the root note
+        playNativeSynthTone(baseFreq * 1.25, velocity * 0.8, 0.15); // Major 3rd
+        playNativeSynthTone(baseFreq * 1.5, velocity * 0.6, 0.3);   // Perfect 5th
+      }
     }
 
     function mousePressed() {
+      // Don't trigger sound if clicking inside the slide-out config drawer
+      if (mouseX < 300 && document.getElementById('configDrawer').classList.contains('open')) return;
+
       if (audioActive && mouseY < height - 60) {
         let freq = map(mouseX, 0, width, 110, 880);
-        playNativeSynthTone(freq, 100);
+        triggerVoiceCluster(freq, 100);
       }
     }
 
@@ -380,7 +470,7 @@
         inputParamY = velocity / 127;
 
         let freq = 440 * Math.pow(2, (note - 69) / 12);
-        playNativeSynthTone(freq, velocity);
+        triggerVoiceCluster(freq, velocity);
       }
     }
 
