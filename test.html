@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trippy Organic Rainbow Plant Visualizer</title>
+  <title>Multi-Channel MIDI Organic Plant Visualizer</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
   <style>
@@ -80,8 +80,8 @@
     #configDrawer {
       position: absolute;
       top: 0;
-      left: -280px;
-      width: 280px;
+      left: -320px;
+      width: 320px;
       height: 100vh;
       background: rgba(10, 12, 18, 0.95);
       border-right: 1px solid rgba(255, 255, 255, 0.2);
@@ -112,19 +112,34 @@
     .drawer-title {
       font-size: 13px;
       font-weight: bold;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
       border-bottom: 1px solid rgba(255,255,255,0.2);
       padding-bottom: 8px;
       color: #ffde4a;
     }
+    .channel-box {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 12px;
+    }
+    .channel-header {
+      font-weight: bold;
+      font-size: 11px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
     .control-group {
-      margin-bottom: 15px;
+      margin-bottom: 8px;
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 3px;
     }
     .control-group label {
-      font-size: 10px;
+      font-size: 9px;
       color: #a0a0ab;
       text-transform: uppercase;
     }
@@ -133,8 +148,9 @@
       background: #1a1c24;
       color: #f4f2ee;
       border: 1px solid rgba(255,255,255,0.2);
-      padding: 6px;
+      padding: 4px;
       border-radius: 4px;
+      font-size: 10px;
     }
   </style>
 </head>
@@ -143,39 +159,78 @@
   <!-- Slide-out Drawer with Handle Tab Attached -->
   <div id="configDrawer">
     <div id="configTab" onclick="toggleConfigDrawer()">config</div>
-    <div class="drawer-title">SYNTHESIZER CONFIG</div>
+    <div class="drawer-title">MULTI-CHANNEL SYNTH CONFIG</div>
     
-    <div class="control-group">
-      <label>Oscillator Waveform</label>
-      <select id="synthWaveform" onchange="updateSynthParams()">
-        <option value="triangle">Triangle (Warm & Wood)</option>
-        <option value="sine">Sine (Pure & Ambient)</option>
-        <option value="sawtooth">Sawtooth (Bright & Rich)</option>
-        <option value="square">Square (Chiptune / Hollow)</option>
-      </select>
+    <!-- Channel 1 Config -->
+    <div class="channel-box">
+      <div class="channel-header"><span class="color-dot" style="background:#ff3333;"></span>MIDI Channel 1 (Red Layer)</div>
+      <div class="control-group">
+        <label>Waveform</label>
+        <select id="ch1_wave" onchange="updateChannelParams()">
+          <option value="triangle">Triangle</option>
+          <option value="sine">Sine</option>
+          <option value="sawtooth">Sawtooth</option>
+          <option value="square">Square</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Release Tail: <span id="lbl_ch1_rel">3.5</span>s</label>
+        <input type="range" id="ch1_release" min="0.5" max="6.0" step="0.2" value="3.5" oninput="updateChannelParams()">
+      </div>
     </div>
 
-    <div class="control-group">
-      <label>Attack Time (Swell): <span id="lblAttack">0.3</span>s</label>
-      <input type="range" id="synthAttack" min="0.01" max="1.5" step="0.05" value="0.3" oninput="updateSynthParams()">
+    <!-- Channel 2 Config -->
+    <div class="channel-box">
+      <div class="channel-header"><span class="color-dot" style="background:#ff9933;"></span>MIDI Channel 2 (Orange Layer)</div>
+      <div class="control-group">
+        <label>Waveform</label>
+        <select id="ch2_wave" onchange="updateChannelParams()">
+          <option value="sine">Sine</option>
+          <option value="triangle" selected>Triangle</option>
+          <option value="sawtooth">Sawtooth</option>
+          <option value="square">Square</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Release Tail: <span id="lbl_ch2_rel">3.5</span>s</label>
+        <input type="range" id="ch2_release" min="0.5" max="6.0" step="0.2" value="3.5" oninput="updateChannelParams()">
+      </div>
     </div>
 
-    <div class="control-group">
-      <label>Release Time (Tail): <span id="lblRelease">3.5</span>s</label>
-      <input type="range" id="synthRelease" min="0.5" max="6.0" step="0.2" value="3.5" oninput="updateSynthParams()">
+    <!-- Channel 3 Config -->
+    <div class="channel-box">
+      <div class="channel-header"><span class="color-dot" style="background:#ffff33;"></span>MIDI Channel 3 (Yellow Layer)</div>
+      <div class="control-group">
+        <label>Waveform</label>
+        <select id="ch3_wave" onchange="updateChannelParams()">
+          <option value="sawtooth" selected>Sawtooth</option>
+          <option value="triangle">Triangle</option>
+          <option value="sine">Sine</option>
+          <option value="square">Square</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Release Tail: <span id="lbl_ch3_rel">3.5</span>s</label>
+        <input type="range" id="ch3_release" min="0.5" max="6.0" step="0.2" value="3.5" oninput="updateChannelParams()">
+      </div>
     </div>
 
-    <div class="control-group">
-      <label>Filter Resonance (Q): <span id="lblResonance">4.0</span></label>
-      <input type="range" id="synthResonance" min="1" max="20" step="0.5" value="4.0" oninput="updateSynthParams()">
-    </div>
-
-    <div class="control-group">
-      <label>Arpeggio Mode</label>
-      <select id="synthArp" onchange="updateSynthParams()">
-        <option value="off">Single Tone</option>
-        <option value="cascade">Harmonic Cascade</option>
-      </select>
+    <!-- Channel 4 Config -->
+    <div class="channel-box">
+      <div class="channel-header"><span class="color-dot" style="background:#33cc33;"></span>MIDI Channel 4+ (Green/Other)</div>
+      <div class="control-group">
+        <label>Waveform</label>
+        <select id="ch4_wave" onchange="updateChannelParams()">
+          <option value="square" selected>Square</option>
+          <option value="triangle">Triangle</option>
+          <option value="sine">Sine</option>
+          <option value="sawtooth">Sawtooth</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>Release Tail: <span id="lbl_ch4_rel">3.5</span>s</label>
+        <input type="range" id="ch4_release" min="0.5" max="6.0" step="0.2" value="3.5" oninput="updateChannelParams()">
+      </div>
     </div>
   </div>
 
@@ -186,13 +241,13 @@
 
   <div id="legend">
     <strong style="display:block; margin-bottom:8px; border-bottom:1px solid #444; padding-bottom:4px;">TRIPPY ORGANIC MAPPING</strong>
-    <div class="legend-item"><span><span class="color-dot" style="background:#ff3333;"></span>Red (Outer Halo Pulse)</span><span id="legRed">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#ff9933;"></span>Orange (Spiraling Tendril)</span><span id="legOrange">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#ffff33;"></span>Yellow (Alien Bloom Petals)</span><span id="legYellow">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#33cc33;"></span>Green (Fluid Wave Ring)</span><span id="legGreen">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#3399ff;"></span>Blue (Psychedelic Vortex)</span><span id="legBlue">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#9933ff;"></span>Indigo (Geometric Web)</span><span id="legIndigo">0.00</span></div>
-    <div class="legend-item"><span><span class="color-dot" style="background:#cc33ff;"></span>Violet (Core Singularity)</span><span id="legViolet">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#ff3333;"></span>Red (Ch 1)</span><span id="legRed">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#ff9933;"></span>Orange (Ch 2)</span><span id="legOrange">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#ffff33;"></span>Yellow (Ch 3)</span><span id="legYellow">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#33cc33;"></span>Green (Ch 4)</span><span id="legGreen">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#3399ff;"></span>Blue (Activity)</span><span id="legBlue">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#9933ff;"></span>Indigo (Phase)</span><span id="legIndigo">0.00</span></div>
+    <div class="legend-item"><span><span class="color-dot" style="background:#cc33ff;"></span>Violet (Energy)</span><span id="legViolet">0.00</span></div>
   </div>
 
   <div class="control-buttons">
@@ -212,12 +267,12 @@
 
     let audioCtx, masterGain, mainFilter, audioActive = false;
     
-    let synthConfig = {
-      waveform: 'triangle',
-      attack: 0.3,
-      release: 3.5,
-      resonance: 4.0,
-      arp: 'off'
+    // Independent Channel Configurations
+    let channelConfigs = {
+      1: { wave: 'triangle', release: 3.5 },
+      2: { wave: 'triangle', release: 3.5 },
+      3: { wave: 'sawtooth', release: 3.5 },
+      4: { wave: 'square', release: 3.5 }
     };
 
     function toggleConfigDrawer() {
@@ -225,20 +280,23 @@
       drawer.classList.toggle('open');
     }
 
-    function updateSynthParams() {
-      synthConfig.waveform = document.getElementById('synthWaveform').value;
-      synthConfig.attack = parseFloat(document.getElementById('synthAttack').value);
-      synthConfig.release = parseFloat(document.getElementById('synthRelease').value);
-      synthConfig.resonance = parseFloat(document.getElementById('synthResonance').value);
-      synthConfig.arp = document.getElementById('synthArp').value;
+    function updateChannelParams() {
+      channelConfigs[1].wave = document.getElementById('ch1_wave').value;
+      channelConfigs[1].release = parseFloat(document.getElementById('ch1_release').value);
 
-      document.getElementById('lblAttack').innerText = synthConfig.attack.toFixed(2);
-      document.getElementById('lblRelease').innerText = synthConfig.release.toFixed(1);
-      document.getElementById('lblResonance').innerText = synthConfig.resonance.toFixed(1);
+      channelConfigs[2].wave = document.getElementById('ch2_wave').value;
+      channelConfigs[2].release = parseFloat(document.getElementById('ch2_release').value);
 
-      if (mainFilter && audioCtx) {
-        mainFilter.Q.setValueAtTime(synthConfig.resonance, audioCtx.currentTime);
-      }
+      channelConfigs[3].wave = document.getElementById('ch3_wave').value;
+      channelConfigs[3].release = parseFloat(document.getElementById('ch3_release').value);
+
+      channelConfigs[4].wave = document.getElementById('ch4_wave').value;
+      channelConfigs[4].release = parseFloat(document.getElementById('ch4_release').value);
+
+      document.getElementById('lbl_ch1_rel').innerText = channelConfigs[1].release.toFixed(1);
+      document.getElementById('lbl_ch2_rel').innerText = channelConfigs[2].release.toFixed(1);
+      document.getElementById('lbl_ch3_rel').innerText = channelConfigs[3].release.toFixed(1);
+      document.getElementById('lbl_ch4_rel').innerText = channelConfigs[4].release.toFixed(1);
     }
 
     function setup() {
@@ -362,7 +420,7 @@
 
     function drawStarburstPolygon(sides, radius) {
       beginShape();
-      for (let i = 0; i < sides; i++) {
+      for (let i = sides; i > 0; i--) {
         let angle = (TWO_PI / sides) * i + (frameCount * 0.01);
         let r = radius * (i % 2 === 0 ? 1 : 0.5);
         let x = r * cos(angle);
@@ -381,7 +439,7 @@
         mainFilter = audioCtx.createBiquadFilter();
         mainFilter.type = 'lowpass';
         mainFilter.frequency.setValueAtTime(1000, audioCtx.currentTime);
-        mainFilter.Q.setValueAtTime(synthConfig.resonance, audioCtx.currentTime);
+        mainFilter.Q.setValueAtTime(4.0, audioCtx.currentTime);
 
         mainFilter.connect(masterGain);
         masterGain.connect(audioCtx.destination);
@@ -397,40 +455,40 @@
       }
     }
 
-    function playNativeSynthTone(freq, velocity = 0.8, delayOffset = 0) {
+    // Play tone using specific channel configurations
+    function playChannelTone(freq, velocity = 0.8, channel = 1) {
       if (!audioActive || !audioCtx) return;
+      
+      // Map channel number to config (defaults to channel 4 if higher)
+      let cfg = channelConfigs[channel] || channelConfigs[4];
+
       let osc = audioCtx.createOscillator();
       let noteGain = audioCtx.createGain();
 
-      osc.type = synthConfig.waveform;
-      osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delayOffset);
+      osc.type = cfg.wave;
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
 
-      let now = audioCtx.currentTime + delayOffset;
+      let now = audioCtx.currentTime;
       let peakGain = map(velocity, 0, 127, 0.03, 0.25);
 
       noteGain.gain.setValueAtTime(0, now);
-      noteGain.gain.linearRampToValueAtTime(peakGain, now + synthConfig.attack);
-      noteGain.gain.exponentialRampToValueAtTime(0.0001, now + synthConfig.release);
+      noteGain.gain.linearRampToValueAtTime(peakGain, now + 0.2);
+      noteGain.gain.exponentialRampToValueAtTime(0.0001, now + cfg.release);
 
       osc.connect(noteGain);
       noteGain.connect(mainFilter);
 
       osc.start(now);
-      osc.stop(now + synthConfig.release + 0.1);
-    }
-
-    function triggerVoiceCluster(baseFreq, velocity) {
-      playNativeSynthTone(baseFreq, velocity, 0);
-      if (synthConfig.arp === 'cascade') {
-        playNativeSynthTone(baseFreq * 1.25, velocity * 0.8, 0.15);
-        playNativeSynthTone(baseFreq * 1.5, velocity * 0.6, 0.3);
-      }
+      osc.stop(now + cfg.release + 0.1);
     }
 
     function mousePressed() {
+      if (mouseX < 320 && document.getElementById('configDrawer').classList.contains('open')) return;
+
       if (audioActive && mouseY < height - 60) {
         let freq = map(mouseX, 0, width, 110, 880);
-        triggerVoiceCluster(freq, 100);
+        // Default mouse click triggers channel 1
+        playChannelTone(freq, 100, 1);
       }
     }
 
@@ -443,7 +501,7 @@
     }
 
     function onMIDISuccess(midiAccess) {
-      document.getElementById('inputMode').innerText = "MIDI Connected (Hardware Active)";
+      document.getElementById('inputMode').innerText = "MIDI Connected (Multi-Channel Active)";
       document.getElementById('inputMode').style.color = '#4af3a2';
       for (let input of midiAccess.inputs.values()) {
         input.onmidimessage = getMIDIMessage;
@@ -455,15 +513,22 @@
     }
 
     function getMIDIMessage(message) {
-      let [command, note, velocity] = message.data;
-      if (command === 144 && velocity > 0) {
+      let statusByte = message.data[0];
+      let command = statusByte & 0xF0;
+      let channel = (statusByte & 0x0F) + 1; // MIDI channels 1-16
+      let note = message.data[1];
+      let velocity = message.data[2];
+
+      if (command === 144 && velocity > 0) { // Note On
         targetDelta = map(note, 0, 127, 0.1, 1.0);
         targetVariance = map(velocity, 0, 127, 0.1, 1.0);
         inputParamX = note / 127;
         inputParamY = velocity / 127;
 
         let freq = 440 * Math.pow(2, (note - 69) / 12);
-        triggerVoiceCluster(freq, velocity);
+        
+        // Route sound to its specific MIDI channel configuration!
+        playChannelTone(freq, velocity, channel);
       }
     }
 
