@@ -274,7 +274,6 @@
   <div id="previewModal">
     <div class="modal-content-wrapper">
       <div style="color:#00ffcc; font-weight:bold; margin-bottom:10px;">LOOP PREVIEW (10s Continuous Loop)</div>
-      <!-- Added loop attribute here -->
       <video id="previewVideo" controls loop autoplay></video>
       <div class="modal-buttons">
         <button onclick="discardLoop()">Discard</button>
@@ -521,6 +520,11 @@
           let blob = new Blob(recordedChunks, { type: mimeType });
           currentLoopBlobUrl = URL.createObjectURL(blob);
           
+          // Automatically stop live soundscape so only the preview loop is heard
+          if (audioActive) {
+            toggleAudioEngine();
+          }
+
           let previewVideo = document.getElementById('previewVideo');
           previewVideo.src = currentLoopBlobUrl;
           document.getElementById('previewModal').classList.add('open');
@@ -556,6 +560,9 @@
 
     function discardLoop() {
       document.getElementById('previewModal').classList.remove('open');
+      let previewVideo = document.getElementById('previewVideo');
+      previewVideo.pause();
+      previewVideo.src = "";
       if (currentLoopBlobUrl) {
         URL.revokeObjectURL(currentLoopBlobUrl);
         currentLoopBlobUrl = null;
