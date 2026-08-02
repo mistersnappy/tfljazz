@@ -211,10 +211,8 @@
 
   <div id="legend-container">
     <div id="legend">
-      <strong style="display:block; margin-bottom:8px; border-bottom:1px solid #00ffcc; padding-bottom:4px;">ACTIVE CHANNEL ACTIVITY</strong>
-      <div id="activeLegendList">
-        <div style="font-size:10px; color:#008866; font-style:italic;">Awaiting MIDI input...</div>
-      </div>
+      <strong style="display:block; margin-bottom:8px; border-bottom:1px solid #00ffcc; padding-bottom:4px;">CHANNEL ACTIVITY</strong>
+      <div id="activeLegendList"></div>
     </div>
     <div id="lastUpdated">Code updated: <span id="timestamp">--/--/---- --:--:--</span></div>
   </div>
@@ -240,15 +238,14 @@
       arp: 'off'
     };
 
-    // Full 7-Channel Bank definition
     const allChannels = [
-      { id: 1, name: "Channel 1 (Red)", color: "#ff3333", rgb: [255, 51, 51], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
-      { id: 2, name: "Channel 2 (Orange)", color: "#ff9933", rgb: [255, 153, 51], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
-      { id: 3, name: "Channel 3 (Yellow)", color: "#ffff33", rgb: [255, 255, 51], wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
-      { id: 4, name: "Channel 4 (Green)", color: "#33cc33", rgb: [51, 204, 51], wave: "square", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
-      { id: 5, name: "Channel 5 (Blue)", color: "#3399ff", rgb: [51, 153, 255], wave: "sine", attack: 0.2, release: 4.0, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
-      { id: 6, name: "Channel 6 (Indigo)", color: "#9933ff", rgb: [153, 51, 255], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
-      { id: 7, name: "Channel 7 (Violet)", color: "#cc33ff", rgb: [204, 51, 255], wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 }
+      { id: 1, name: "Ch 1 (Red)", color: "#ff3333", rgb: [255, 51, 51], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 2, name: "Ch 2 (Orange)", color: "#ff9933", rgb: [255, 153, 51], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 3, name: "Ch 3 (Yellow)", color: "#ffff33", rgb: [255, 255, 51], wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 4, name: "Ch 4 (Green)", color: "#33cc33", rgb: [51, 204, 51], wave: "square", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 5, name: "Ch 5 (Blue)", color: "#3399ff", rgb: [51, 153, 255], wave: "sine", attack: 0.2, release: 4.0, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 6, name: "Ch 6 (Indigo)", color: "#9933ff", rgb: [153, 51, 255], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 7, name: "Ch 7 (Violet)", color: "#cc33ff", rgb: [204, 51, 255], wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 }
     ];
 
     let lightParticles = [];
@@ -333,7 +330,7 @@
 
     function spawnLightBurst(px, py, chIndex, velocity, note) {
       let ch = allChannels[chIndex % allChannels.length];
-      ch.envelope = 1.0; // Mark channel as active
+      ch.envelope = 1.0; 
       
       ch.spawnX = lerp(ch.spawnX, map(note, 0, 127, width * 0.1, width * 0.9), 0.4);
       ch.spawnY = lerp(ch.spawnY, py, 0.4);
@@ -389,23 +386,17 @@
         mainFilter.frequency.setTargetAtTime(targetCutoff, audioCtx.currentTime, 0.1);
       }
 
-      // Decay envelopes & update active legend panel dynamically
+      // Decay channel envelopes and render all 7 channels permanently in the panel
       let activeListHTML = "";
       allChannels.forEach((ch) => {
         ch.envelope = max(0.0, ch.envelope - 0.03);
-        if (ch.envelope > 0.01) {
-          activeListHTML += `
-            <div class="legend-item">
-              <span><span class="color-dot" style="background:${ch.color};"></span>${ch.name}</span>
-              <span>${ch.envelope.toFixed(2)}</span>
-            </div>
-          `;
-        }
+        activeListHTML += `
+          <div class="legend-item">
+            <span><span class="color-dot" style="background:${ch.color};"></span>${ch.name}</span>
+            <span>${ch.envelope.toFixed(2)}</span>
+          </div>
+        `;
       });
-
-      if (activeListHTML === "") {
-        activeListHTML = `<div style="font-size:10px; color:#008866; font-style:italic;">Awaiting MIDI input...</div>`;
-      }
       document.getElementById('activeLegendList').innerHTML = activeListHTML;
 
       document.getElementById('valDelta').innerText = smoothDelta.toFixed(2);
