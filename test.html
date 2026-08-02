@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sansevieria Trifasciata Advanced Synth & Render Styles</title>
+  <title>Sansevieria Laser & Psychedelia Synth Engine</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
   <style>
@@ -180,24 +180,10 @@
   <div id="configModal">
     <div class="modal-content">
       <div class="modal-header">
-        <span>RENDER STYLES & SOUND CONFIG</span>
+        <span>PER-CHANNEL SOUND & LFO CONFIG</span>
         <button class="close-btn" onclick="toggleConfigModal()">✕</button>
       </div>
       
-      <!-- Visualizer Style Selector -->
-      <div class="channel-box">
-        <div class="channel-header" style="color: #ffde4a;">Plant Visualization Style</div>
-        <div class="control-group">
-          <label>Select Render Option</label>
-          <select id="plant_style_select" onchange="updatePlantStyle()">
-            <option value="veins">Option A: Bioluminescent Sap Veins</option>
-            <option value="glitch">Option B: Chromatic Aberration & VHS Glitch</option>
-            <option value="spores">Option C: Particle Spore Aura & Magnetic Field</option>
-            <option value="sway">Option D: Organic Wind-Sway Physics</option>
-          </select>
-        </div>
-      </div>
-
       <div class="channel-box">
         <div class="channel-header" style="color: #ffde4a;">Global Master Parameters</div>
         <div class="control-group">
@@ -218,7 +204,7 @@
   </div>
 
   <div id="info">
-    SANSEVIERIA LASER SYNTH<br>
+    SYNTH ENGINE<br>
     Source: <span id="inputMode" style="color: #ffff00;">Interactive (Mouse / MIDI / Mic)</span><br>
     Note/Delta: <span id="valDelta">0.50</span> | Velocity/Variance: <span id="valVariance">0.50</span>
   </div>
@@ -235,6 +221,7 @@
     <button id="audioBtn" onclick="toggleAudioEngine()">Start Soundscape</button>
     <button id="micBtn" onclick="toggleMic()">Enable Mic</button>
     <button onclick="toggleConfigModal()">Config Audio</button>
+    <button id="modeBtn" onclick="toggleViewMode()">Switch Mode: Psychedelia</button>
     <button id="fxBtn" onclick="toggleWeatherFX()">Weather FX: OFF</button>
   </div>
 
@@ -247,7 +234,7 @@
     let midiStatus = "Searching for MIDI...";
 
     let audioCtx, masterGain, mainFilter, audioActive = false;
-    let plantRenderStyle = 'veins'; // Default to Option A
+    let viewMode = 'sansevieria'; // 'sansevieria' or 'psychedelia'
     let weatherFxEnabled = false;
     
     let globalConfig = {
@@ -256,7 +243,6 @@
     };
 
     let ambientSporeDust = [];
-    let plantSpores = [];
 
     const allChannels = [
       { id: 1, name: "Ch 1 (Red)", color: "#ff3333", rgb: [255, 51, 51], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, pan: -0.7, lfoRate: 1.0, lfoDepth: 0.3, envelope: 0, spawnX: 0, spawnY: 0 },
@@ -289,18 +275,6 @@
           vx: random(-0.3, 0.3),
           size: random(1.5, 3.5),
           alpha: random(50, 150)
-        });
-      }
-
-      // Initialize plant aura spores for Option C
-      for(let i=0; i<50; i++) {
-        plantSpores.push({
-          x: width/2 + random(-150, 150),
-          y: height/2 + random(-100, 100),
-          vx: random(-1, 1),
-          vy: random(-1, 1),
-          size: random(2, 5),
-          chIdx: floor(random(7))
         });
       }
 
@@ -361,8 +335,15 @@
       document.getElementById('configModal').classList.toggle('open');
     }
 
-    function updatePlantStyle() {
-      plantRenderStyle = document.getElementById('plant_style_select').value;
+    function toggleViewMode() {
+      lightParticles = [];
+      if (viewMode === 'sansevieria') {
+        viewMode = 'psychedelia';
+        document.getElementById('modeBtn').innerText = 'Switch Mode: Laser Plant';
+      } else {
+        viewMode = 'sansevieria';
+        document.getElementById('modeBtn').innerText = 'Switch Mode: Psychedelia';
+      }
     }
 
     function toggleWeatherFX() {
@@ -504,166 +485,109 @@
         pop();
       }
 
-      // --- SANSEVIERIA TRIFASCIATA LASER SYNTH & POT MODE ---
-      push();
-      let potBaseX = width / 2;
-      let potBaseY = height / 2 + 220;
+      if (viewMode === 'psychedelia') {
+        // --- PSYCHEDELIA LIGHT SYNTH MODE (4-Way Symmetry Particle Engine) ---
+        noStroke();
+        for (let i = lightParticles.length - 1; i >= 0; i--) {
+          let p = lightParticles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.life -= p.decay;
 
-      // Draw Plant Pot
-      fill(25, 30, 40);
-      stroke(50, 65, 80);
-      strokeWeight(2);
-      
-      beginShape();
-      vertex(potBaseX - 90, potBaseY - 140);
-      vertex(potBaseX + 90, potBaseY - 140);
-      vertex(potBaseX + 70, potBaseY + 60);
-      vertex(potBaseX - 70, potBaseY + 60);
-      endShape(CLOSE);
-
-      noFill();
-      stroke(70, 90, 110);
-      strokeWeight(3);
-      ellipse(potBaseX, potBaseY - 140, 180, 20);
-
-      fill(15, 12, 10);
-      noStroke();
-      ellipse(potBaseX, potBaseY - 140, 172, 14);
-
-      translate(potBaseX, potBaseY - 140);
-      noFill();
-
-      let leafOffsets = [-70, -48, -25, 0, 25, 48, 70];
-      let leafHeights = [280, 330, 370, 410, 370, 330, 280];
-
-      allChannels.forEach((ch, idx) => {
-        let intensity = ch.envelope;
-        let chLfoVal = sin(millis() * 0.001 * ch.lfoRate * TWO_PI) * ch.lfoDepth;
-        let baseHeight = leafHeights[idx];
-        let xBase = leafOffsets[idx];
-
-        // --- RENDER OPTION C: PARTICLE SPORE AURA ---
-        if (plantRenderStyle === 'spores') {
-          // Draw subtle leaf outline
-          stroke(ch.rgb[0], ch.rgb[1], ch.rgb[2], 120);
-          strokeWeight(1.5);
-          line(xBase, 0, xBase, -baseHeight);
-
-          // Render reactive aura spores magnetically pulling or exploding based on channel intensity
-          plantSpores.forEach(sp => {
-            if (sp.chIdx === idx) {
-              let targetX = xBase;
-              let targetY = -baseHeight * 0.5;
-              sp.x = lerp(sp.x, potBaseX + targetX, 0.05);
-              sp.y = lerp(sp.y, (potBaseY - 140) + targetY, 0.05);
-              
-              if (intensity > 0.1) {
-                sp.x += random(-intensity * 15, intensity * 15);
-                sp.y += random(-intensity * 15, intensity * 15);
-              }
-
-              push();
-              noStroke();
-              fill(ch.rgb[0], ch.rgb[1], ch.rgb[2], 180);
-              ellipse(sp.x - potBaseX, sp.y - (potBaseY - 140), sp.size * (1 + intensity * 2));
-              pop();
-            }
-          });
-        }
-
-        // --- RENDER OPTION B: CHROMATIC ABERRATION & VHS GLITCH ---
-        if (plantRenderStyle === 'glitch') {
-          let glitchOffset = intensity * 12;
-          
-          if (intensity > 0.05) {
-            // Red Channel Shift Left
-            stroke(255, 0, 0, 200);
-            strokeWeight(2);
-            drawLeafShape(xBase - glitchOffset, 0, baseHeight, idx, 0, chLfoVal);
-
-            // Blue Channel Shift Right
-            stroke(0, 0, 255, 200);
-            strokeWeight(2);
-            drawLeafShape(xBase + glitchOffset, 0, baseHeight, idx, 0, chLfoVal);
+          if (p.life <= 0) {
+            lightParticles.splice(i, 1);
+            continue;
           }
 
-          // Main Center Channel
-          stroke(ch.rgb[0], ch.rgb[1], ch.rgb[2], 240);
-          strokeWeight(2.5);
-          drawLeafShape(xBase, 0, baseHeight, idx, intensity, chLfoVal);
-        } 
-        
-        // --- RENDER OPTION A: BIOLUMINESCENT SAP VEINS ---
-        else if (plantRenderStyle === 'veins') {
-          stroke(ch.rgb[0], ch.rgb[1], ch.rgb[2], 220);
-          strokeWeight(2.5);
-          drawLeafShape(xBase, 0, baseHeight, idx, intensity, chLfoVal);
+          fill(p.color[0], p.color[1], p.color[2], p.life);
+          rect(p.x, p.y, p.size, p.size);
 
-          // Glowing central sap stream vein
-          stroke(255, 255, 255, 180 + intensity * 75);
-          strokeWeight(1.5);
-          line(xBase, 0, xBase, -baseHeight * (0.4 + intensity * 0.6));
+          let mirrorX = width - p.x;
+          let mirrorY = height - p.y;
+          rect(mirrorX, p.y, p.size, p.size);
+          rect(p.x, mirrorY, p.size, p.size);
+          rect(mirrorX, mirrorY, p.size, p.size);
         }
+      } else {
+        // --- SANSEVIERIA TRIFASCIATA LASER SYNTH & POT MODE ---
+        push();
+        let potBaseX = width / 2;
+        let potBaseY = height / 2 + 220;
 
-        // --- RENDER OPTION D: ORGANIC WIND-SWAY PHYSICS ---
-        else if (plantRenderStyle === 'sway') {
+        fill(25, 30, 40);
+        stroke(50, 65, 80);
+        strokeWeight(2);
+        
+        beginShape();
+        vertex(potBaseX - 90, potBaseY - 140);
+        vertex(potBaseX + 90, potBaseY - 140);
+        vertex(potBaseX + 70, potBaseY + 60);
+        vertex(potBaseX - 70, potBaseY + 60);
+        endShape(CLOSE);
+
+        noFill();
+        stroke(70, 90, 110);
+        strokeWeight(3);
+        ellipse(potBaseX, potBaseY - 140, 180, 20);
+
+        fill(15, 12, 10);
+        noStroke();
+        ellipse(potBaseX, potBaseY - 140, 172, 14);
+
+        translate(potBaseX, potBaseY - 140);
+        noFill();
+
+        let leafOffsets = [-70, -48, -25, 0, 25, 48, 70];
+        let leafHeights = [280, 330, 370, 410, 370, 330, 280];
+
+        allChannels.forEach((ch, idx) => {
           stroke(ch.rgb[0], ch.rgb[1], ch.rgb[2], 230);
           strokeWeight(2.5);
 
           beginShape();
-          let swayAngle = sin(frameCount * 0.04 + idx) * (0.1 + smoothVariance * 0.2 + intensity * 0.3);
-          for (let y = 0; y <= baseHeight; y += 15) {
+          let baseHeight = leafHeights[idx];
+          let xBase = leafOffsets[idx];
+
+          let intensity = ch.envelope;
+          let chLfoVal = sin(millis() * 0.001 * ch.lfoRate * TWO_PI) * ch.lfoDepth;
+          let glitchJitter = intensity * 25 * (1.0 + chLfoVal);
+          let shearFactor = (idx - 3) * smoothDelta * 0.4;
+
+          for (let y = 0; y <= baseHeight; y += 12) {
             let progress = y / baseHeight;
             let widthMod = sin(progress * PI) * 20;
-            let currX = xBase + sin(swayAngle * progress) * 40;
-            let currY = -y;
-            vertex(currX - widthMod, currY);
+            
+            let glitchX = 0;
+            if (intensity > 0.05) {
+              if (idx % 3 === 0) {
+                glitchX = random(-glitchJitter, glitchJitter) * sin(y * 0.1);
+              } else if (idx % 3 === 1) {
+                glitchX = sin(y * 0.05 + frameCount * 0.5) * glitchJitter * 1.5;
+              } else {
+                glitchX = (random() > 0.7 ? random(-glitchJitter * 2, glitchJitter * 2) : 0);
+              }
+            }
+
+            let px = xBase + glitchX + (progress * shearFactor * 50);
+            let py = -y;
+            vertex(px - widthMod, py);
           }
-          for (let y = baseHeight; y >= 0; y -= 15) {
+
+          for (let y = baseHeight; y >= 0; y -= 12) {
             let progress = y / baseHeight;
             let widthMod = sin(progress * PI) * 20;
-            let currX = xBase + sin(swayAngle * progress) * 40;
-            let currY = -y;
-            vertex(currX + widthMod, currY);
+            let glitchX = 0;
+            if (intensity > 0.05) {
+              glitchX = random(-glitchJitter, glitchJitter) * cos(y * 0.1);
+            }
+            let px = xBase + glitchX + (progress * shearFactor * 50);
+            let py = -y;
+            vertex(px + widthMod, py);
           }
           endShape(CLOSE);
-        }
-      });
-      pop();
-    }
-
-    // Helper function for drawing standard leaf geometry with LFO/glitch adjustments
-    function drawLeafShape(xBase, yStart, baseHeight, idx, intensity, chLfoVal) {
-      beginShape();
-      let glitchJitter = intensity * 25 * (1.0 + chLfoVal);
-      let shearFactor = (idx - 3) * smoothDelta * 0.4;
-
-      for (let y = yStart; y <= baseHeight; y += 12) {
-        let progress = y / baseHeight;
-        let widthMod = sin(progress * PI) * 20;
-        let glitchX = 0;
-        if (intensity > 0.05) {
-          if (idx % 3 === 0) glitchX = random(-glitchJitter, glitchJitter) * sin(y * 0.1);
-          else if (idx % 3 === 1) glitchX = sin(y * 0.05 + frameCount * 0.5) * glitchJitter * 1.5;
-          else glitchX = (random() > 0.7 ? random(-glitchJitter * 2, glitchJitter * 2) : 0);
-        }
-        let px = xBase + glitchX + (progress * shearFactor * 50);
-        let py = -y;
-        vertex(px - widthMod, py);
+        });
+        pop();
       }
-
-      for (let y = baseHeight; y >= yStart; y -= 12) {
-        let progress = y / baseHeight;
-        let widthMod = sin(progress * PI) * 20;
-        let glitchX = 0;
-        if (intensity > 0.05) {
-          glitchX = random(-glitchJitter, glitchJitter) * cos(y * 0.1);
-        }
-        let px = xBase + glitchX + (progress * shearFactor * 50);
-        let py = -y;
-        vertex(px + widthMod, py);
-      }
-      endShape(CLOSE);
     }
 
     function toggleAudioEngine() {
