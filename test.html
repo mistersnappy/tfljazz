@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sansevieria Bio-Rhythm Synth & MP4 Loop Station</title>
+  <title>Sansevieria Bio-Rhythm Synth & Looping MP4 Station</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
   <style>
@@ -122,7 +122,7 @@
       100% { opacity: 0.6; }
     }
 
-    /* Modal Styles for Preview */
+    /* Modal Styles for Looping Preview */
     #previewModal {
       display: none;
       position: fixed;
@@ -270,11 +270,12 @@
     </div>
   </div>
 
-  <!-- Preview Modal -->
+  <!-- Looping Preview Modal -->
   <div id="previewModal">
     <div class="modal-content-wrapper">
-      <div style="color:#00ffcc; font-weight:bold; margin-bottom:10px;">LOOP PREVIEW (10s)</div>
-      <video id="previewVideo" controls></video>
+      <div style="color:#00ffcc; font-weight:bold; margin-bottom:10px;">LOOP PREVIEW (10s Continuous Loop)</div>
+      <!-- Added loop attribute here -->
+      <video id="previewVideo" controls loop autoplay></video>
       <div class="modal-buttons">
         <button onclick="discardLoop()">Discard</button>
         <button onclick="downloadLoopBlob()" style="background: #00ffcc; color: #000000;">Download Loop</button>
@@ -319,7 +320,6 @@
     let viewMode = 'sansevieria'; 
     let weatherFxEnabled = false;
 
-    // Loop Station Recording variables
     let mediaRecorder;
     let recordedChunks = [];
     let isRecording = false;
@@ -469,7 +469,6 @@
       }
     }
 
-    // --- LOOP STATION RECORDING (MP4 Support with WebM Fallback) ---
     function toggleRecordLoop() {
       if (!isRecording) {
         let canvasElem = document.querySelector('canvas');
