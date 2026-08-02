@@ -3,25 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Multi-Channel MIDI Organic Plant Visualizer & Oscilloscope</title>
+  <title>Psychedelia Light Synthesizer & MIDI Engine</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
   <style>
     body {
       margin: 0;
-      background-color: #020408;
+      background-color: #000000;
       overflow: hidden;
       font-family: monospace;
-      color: #f4f2ee;
+      color: #00ffcc;
     }
     #info {
       position: absolute;
       top: 20px;
       left: 20px;
-      background: rgba(2, 4, 8, 0.85);
+      background: rgba(0, 10, 5, 0.85);
       padding: 12px 16px;
-      border-radius: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      border: 1px solid #00ffcc;
       pointer-events: none;
       font-size: 11px;
       line-height: 1.5;
@@ -38,17 +38,17 @@
       pointer-events: none;
     }
     #legend {
-      background: rgba(2, 4, 8, 0.85);
+      background: rgba(0, 10, 5, 0.85);
       padding: 14px 18px;
-      border-radius: 6px;
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      border: 1px solid #00ffcc;
       font-size: 11px;
       width: 250px;
       margin-bottom: 6px;
     }
     #lastUpdated {
       font-size: 9px;
-      color: #888d9c;
+      color: #008866;
       letter-spacing: 0.5px;
       padding-right: 4px;
     }
@@ -75,9 +75,9 @@
       z-index: 10;
     }
     button, select {
-      background: #f4f2ee;
-      color: #020408;
-      border: none;
+      background: #000000;
+      color: #00ffcc;
+      border: 1px solid #00ffcc;
       padding: 8px 14px;
       border-radius: 4px;
       font-weight: bold;
@@ -85,15 +85,16 @@
       font-family: monospace;
     }
     button:hover, select:hover {
-      background: #ffffff;
+      background: #00ffcc;
+      color: #000000;
     }
 
     #configModal {
       display: none;
       position: fixed;
       top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(2, 4, 8, 0.85);
-      backdrop-filter: blur(8px);
+      background: rgba(0, 0, 0, 0.9);
+      backdrop-filter: blur(6px);
       z-index: 100;
       justify-content: center;
       align-items: center;
@@ -102,41 +103,38 @@
       display: flex;
     }
     .modal-content {
-      background: #0e111a;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 8px;
+      background: #05080f;
+      border: 1px solid #00ffcc;
+      border-radius: 6px;
       width: 480px;
       max-height: 85vh;
       padding: 24px;
       box-sizing: border-box;
       overflow-y: auto;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+      box-shadow: 0 0 20px rgba(0,255,204,0.3);
     }
     .modal-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 1px solid rgba(255,255,255,0.2);
+      border-bottom: 1px solid #00ffcc;
       padding-bottom: 12px;
       margin-bottom: 16px;
       font-weight: bold;
       font-size: 13px;
-      color: #ffde4a;
+      color: #00ffcc;
     }
     .close-btn {
       background: transparent;
-      color: #f4f2ee;
+      color: #00ffcc;
+      border: none;
       font-size: 16px;
-      padding: 2px 8px;
       cursor: pointer;
     }
-    .close-btn:hover {
-      background: rgba(255,255,255,0.1);
-    }
     .channel-box {
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 6px;
+      background: rgba(0, 255, 204, 0.03);
+      border: 1px solid rgba(0, 255, 204, 0.2);
+      border-radius: 4px;
       padding: 12px;
       margin-bottom: 12px;
     }
@@ -156,14 +154,14 @@
     }
     .control-group label {
       font-size: 10px;
-      color: #a0a0ab;
+      color: #008866;
       text-transform: uppercase;
     }
     .control-group select, .control-group input[type="range"] {
       width: 100%;
-      background: #1a1c24;
-      color: #f4f2ee;
-      border: 1px solid rgba(255,255,255,0.2);
+      background: #000;
+      color: #00ffcc;
+      border: 1px solid #00ffcc;
       padding: 6px;
       border-radius: 4px;
       font-size: 11px;
@@ -172,11 +170,12 @@
 </head>
 <body>
 
+  <!-- Config Modal -->
   <div id="configModal">
     <div class="modal-content">
       <div class="modal-header">
-        <span>7-CHANNEL COMPLETE SOUND CONFIG</span>
-        <button class="close-btn" onclick="toggleConfigModal()">×</button>
+        <span>7-CHANNEL LIGHT-SYNTH CONFIG</span>
+        <button class="close-btn" onclick="toggleConfigModal()">✕</button>
       </div>
       
       <div class="channel-box">
@@ -199,20 +198,21 @@
   </div>
 
   <div id="info">
-    SIGNAL SOURCE: <span id="inputMode" style="color: #ffde4a;">Interactive (Move Mouse / Mic)</span><br>
-    Raw Delta: <span id="valDelta">0.50</span> | Raw Variance: <span id="valVariance">0.50</span>
+    PSYCHEDELIA LIGHT-SYNTH<br>
+    Source: <span id="inputMode" style="color: #ffff00;">Interactive (Mouse / MIDI / Mic)</span><br>
+    Delta: <span id="valDelta">0.50</span> | Variance: <span id="valVariance">0.50</span>
   </div>
 
   <div id="legend-container">
     <div id="legend">
-      <strong style="display:block; margin-bottom:8px; border-bottom:1px solid #444; padding-bottom:4px;">7-CHANNEL MAPPING</strong>
-      <div class="legend-item"><span><span class="color-dot" style="background:#ff3333;"></span>Red (Ch 1)</span><span id="legRed">0.00</span></div>
-      <div class="legend-item"><span><span class="color-dot" style="background:#ff9933;"></span>Orange (Ch 2)</span><span id="legOrange">0.00</span></div>
-      <div class="legend-item"><span><span class="color-dot" style="background:#ffff33;"></span>Yellow (Ch 3)</span><span id="legYellow">0.00</span></div>
-      <div class="legend-item"><span><span class="color-dot" style="background:#33cc33;"></span>Green (Ch 4)</span><span id="legGreen">0.00</span></div>
-      <div class="legend-item"><span><span class="color-dot" style="background:#3399ff;"></span>Blue (Ch 5)</span><span id="legBlue">0.00</span></div>
-      <div class="legend-item"><span><span class="color-dot" style="background:#9933ff;"></span>Indigo (Ch 6)</span><span id="legIndigo">0.00</span></div>
-      <div class="legend-item"><span><span class="color-dot" style="background:#cc33ff;"></span>Violet (Ch 7)</span><span id="legViolet">0.00</span></div>
+      <strong style="display:block; margin-bottom:8px; border-bottom:1px solid #00ffcc; padding-bottom:4px;">CHANNEL COLORS</strong>
+      <div class="legend-item"><span><span class="color-dot" style="background:#ff3333;"></span>Ch 1 (Red)</span><span id="legRed">0.00</span></div>
+      <div class="legend-item"><span><span class="color-dot" style="background:#ff9933;"></span>Ch 2 (Orange)</span><span id="legOrange">0.00</span></div>
+      <div class="legend-item"><span><span class="color-dot" style="background:#ffff33;"></span>Ch 3 (Yellow)</span><span id="legYellow">0.00</span></div>
+      <div class="legend-item"><span><span class="color-dot" style="background:#33cc33;"></span>Ch 4 (Green)</span><span id="legGreen">0.00</span></div>
+      <div class="legend-item"><span><span class="color-dot" style="background:#3399ff;"></span>Ch 5 (Blue)</span><span id="legBlue">0.00</span></div>
+      <div class="legend-item"><span><span class="color-dot" style="background:#9933ff;"></span>Ch 6 (Indigo)</span><span id="legIndigo">0.00</span></div>
+      <div class="legend-item"><span><span class="color-dot" style="background:#cc33ff;"></span>Ch 7 (Violet)</span><span id="legViolet">0.00</span></div>
     </div>
     <div id="lastUpdated">Last updated: <span id="timestamp">--:--:--</span></div>
   </div>
@@ -229,28 +229,30 @@
     let targetVariance = 0.5;
     let smoothDelta = 0.5;
     let smoothVariance = 0.5;
-    let inputParamX = 0.5; 
-    let inputParamY = 0.5; 
     let mic, micActive = false;
     let midiStatus = "Searching for MIDI...";
 
     let audioCtx, masterGain, mainFilter, audioActive = false;
-    let viewMode = 'visualizer';
+    let viewMode = 'psychedelia'; // 'psychedelia' or 'oscilloscope'
     
     let globalConfig = {
       resonance: 4.0,
       arp: 'off'
     };
 
+    // 7 Channels matching C64 Psychedelia color palette ideas
     const channelData = [
-      { id: 1, name: "Channel 1 (Red - Variance)", color: "#ff3333", wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 130.81, envelope: 0.4 },
-      { id: 2, name: "Channel 2 (Orange - Delta)", color: "#ff9933", wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 164.81, envelope: 0.4 },
-      { id: 3, name: "Channel 3 (Yellow - Pitch/X)", color: "#ffff33", wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 196.00, envelope: 0.4 },
-      { id: 4, name: "Channel 4 (Green - Velocity/Y)", color: "#33cc33", wave: "square", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 220.00, envelope: 0.4 },
-      { id: 5, name: "Channel 5 (Blue - Pulse)", color: "#3399ff", wave: "sine", attack: 0.2, release: 4.0, volume: 0.8, activeFreq: 261.63, envelope: 0.4 },
-      { id: 6, name: "Channel 6 (Indigo - Harmonic)", color: "#9933ff", wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 329.63, envelope: 0.4 },
-      { id: 7, name: "Channel 7 (Violet - Energy)", color: "#cc33ff", wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 392.00, envelope: 0.4 }
+      { id: 1, name: "Channel 1 (Red)", color: "#ff3333", rgb: [255, 51, 51], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 130.81, envelope: 0.4 },
+      { id: 2, name: "Channel 2 (Orange)", color: "#ff9933", rgb: [255, 153, 51], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 164.81, envelope: 0.4 },
+      { id: 3, name: "Channel 3 (Yellow)", color: "#ffff33", rgb: [255, 255, 51], wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 196.00, envelope: 0.4 },
+      { id: 4, name: "Channel 4 (Green)", color: "#33cc33", rgb: [51, 204, 51], wave: "square", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 220.00, envelope: 0.4 },
+      { id: 5, name: "Channel 5 (Blue)", color: "#3399ff", rgb: [51, 153, 255], wave: "sine", attack: 0.2, release: 4.0, volume: 0.8, activeFreq: 261.63, envelope: 0.4 },
+      { id: 6, name: "Channel 6 (Indigo)", color: "#9933ff", rgb: [153, 51, 255], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 329.63, envelope: 0.4 },
+      { id: 7, name: "Channel 7 (Violet)", color: "#cc33ff", rgb: [204, 51, 255], wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, activeFreq: 392.00, envelope: 0.4 }
     ];
+
+    // Psychedelia Light-Synth Particle Engine Arrays
+    let lightParticles = [];
 
     function setup() {
       createCanvas(windowWidth, windowHeight);
@@ -305,11 +307,11 @@
     }
 
     function toggleViewMode() {
-      if (viewMode === 'visualizer') {
+      if (viewMode === 'psychedelia') {
         viewMode = 'oscilloscope';
-        document.getElementById('modeBtn').innerText = 'Switch to Visualizer';
+        document.getElementById('modeBtn').innerText = 'Switch to Psychedelia Light-Synth';
       } else {
-        viewMode = 'visualizer';
+        viewMode = 'psychedelia';
         document.getElementById('modeBtn').innerText = 'Switch to Oscilloscope';
       }
     }
@@ -336,22 +338,49 @@
       document.getElementById(`lbl_ch${id}_vol`).innerText = ch.volume.toFixed(1);
     }
 
+    // Spawn burst of light pixels mapped to Psychedelia C64 principles
+    function spawnLightBurst(px, py, chIndex, intensity = 1.0) {
+      let ch = channelData[chIndex % channelData.length];
+      let count = floor(map(intensity, 0, 1, 6, 24));
+      
+      for (let i = 0; i < count; i++) {
+        let angle = random(TWO_PI);
+        let speed = random(1, 6) * (smoothDelta + 0.5);
+        lightParticles.push({
+          x: px,
+          y: py,
+          vx: cos(angle) * speed,
+          vy: sin(angle) * speed,
+          color: ch.rgb,
+          life: 255,
+          decay: random(3, 8),
+          size: random(3, 8)
+        });
+      }
+    }
+
     function draw() {
-      background(2, 4, 8, 40);
+      background(0, 0, 0, 40); // Retro motion blur trail
 
       if (!micActive && midiStatus.includes("Searching")) {
         targetDelta = constrain(mouseX / width, 0.1, 1.0);
         targetVariance = constrain(mouseY / height, 0.1, 1.0);
-        inputParamX = constrain(mouseX / width, 0.05, 1.0);
-        inputParamY = constrain(mouseY / height, 0.05, 1.0);
+        
+        // Continuous auto-spawning light trails if mouse moves
+        if (mouseIsPressed && mouseY < height - 60) {
+          spawnLightBurst(mouseX, mouseY, floor(random(7)), targetVariance);
+        }
       }
 
       if (micActive && mic) {
         let level = mic.getLevel();
         targetVariance = constrain(level * 6, 0.1, 1.0);
         targetDelta = constrain(map(sin(frameCount * 0.04), -1, 1, 0.2, 0.9), 0.1, 1.0);
-        inputParamX = constrain(level * 10, 0.05, 1.0);
-        inputParamY = constrain(abs(sin(frameCount * 0.1)), 0.05, 1.0);
+        
+        // Mic drives automatic generative light bursts across screen center
+        if (level > 0.02) {
+          spawnLightBurst(width / 2 + random(-200, 200), height / 2 + random(-200, 200), frameCount % 7, level * 5);
+        }
       }
 
       smoothDelta = lerp(smoothDelta, targetDelta, 0.05);
@@ -362,47 +391,48 @@
         mainFilter.frequency.setTargetAtTime(targetCutoff, audioCtx.currentTime, 0.1);
       }
 
-      // Keep all channel traces breathing organically even when quiet
       channelData.forEach((ch, idx) => {
         ch.envelope = max(0.2, ch.envelope - 0.015);
-        ch.activeFreq += sin(frameCount * 0.05 + idx) * 0.2;
       });
 
-      let time = frameCount * 0.025;
-
-      let sigRed    = constrain(smoothVariance * 0.7 + (sin(time * 0.8) + 1) * 0.15, 0, 1);
-      let sigOrange = constrain(smoothDelta * 0.7 + (cos(time * 0.6) + 1) * 0.15, 0, 1);
-      let sigYellow = constrain(inputParamX * 0.5 + (sin(time * 1.2) + 1) * 0.25, 0, 1);
-      let sigGreen  = constrain(inputParamY * 0.5 + (cos(time * 0.9) + 1) * 0.25, 0, 1);
-      let sigBlue   = (sin(time * 0.5) + 1) / 2;          
-      let sigIndigo = abs(sin(smoothDelta * PI + time * 0.7)); 
-      let sigViolet = constrain((smoothDelta * smoothVariance) + (sin(time * 0.4) + 1) * 0.2, 0, 1);
-
+      // Update HUD values
       document.getElementById('valDelta').innerText = smoothDelta.toFixed(2);
       document.getElementById('valVariance').innerText = smoothVariance.toFixed(2);
-      document.getElementById('legRed').innerText = sigRed.toFixed(2);
-      document.getElementById('legOrange').innerText = sigOrange.toFixed(2);
-      document.getElementById('legYellow').innerText = sigYellow.toFixed(2);
-      document.getElementById('legGreen').innerText = sigGreen.toFixed(2);
-      document.getElementById('legBlue').innerText = sigBlue.toFixed(2);
-      document.getElementById('legIndigo').innerText = sigIndigo.toFixed(2);
-      document.getElementById('legViolet').innerText = sigViolet.toFixed(2);
+      document.getElementById('legRed').innerText = channelData[0].envelope.toFixed(2);
+      document.getElementById('legOrange').innerText = channelData[1].envelope.toFixed(2);
+      document.getElementById('legYellow').innerText = channelData[2].envelope.toFixed(2);
+      document.getElementById('legGreen').innerText = channelData[3].envelope.toFixed(2);
+      document.getElementById('legBlue').innerText = channelData[4].envelope.toFixed(2);
+      document.getElementById('legIndigo').innerText = channelData[5].envelope.toFixed(2);
+      document.getElementById('legViolet').innerText = channelData[6].envelope.toFixed(2);
 
-      if (viewMode === 'visualizer') {
-        translate(width / 2, height / 2);
-        blendMode(ADD);
-        noFill();
+      if (viewMode === 'psychedelia') {
+        // --- PSYCHEDELIA LIGHT-SYNTH PARTICLE RENDERER ---
+        noStroke();
+        for (let i = lightParticles.length - 1; i >= 0; i--) {
+          let p = lightParticles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.life -= p.decay;
 
-        push(); stroke(255, 51, 51, 140); strokeWeight(map(sigRed, 0, 1, 1, 3)); drawOrganicBlobRing(map(sigRed, 0, 1, 180, 320), 6, time * 0.5); pop();
-        push(); stroke(255, 153, 51, 160); strokeWeight(2); rotate(time * 0.3); drawSpiralingTendril(map(sigOrange, 0, 1, 80, 250)); pop();
-        push(); stroke(255, 255, 51, 150); strokeWeight(1.5); rotate(-time * 0.4); drawMandalaPetals(8, map(sigYellow, 0, 1, 100, 220), time); pop();
-        push(); stroke(51, 204, 51, 170); strokeWeight(2.5); rotate(time * 0.2); drawOrganicBlobRing(map(sigGreen, 0, 1, 120, 240), 8, -time); pop();
-        push(); stroke(51, 153, 255, 150); strokeWeight(1.2); rotate(time * 0.6); drawLissajousWeb(map(sigBlue, 0, 1, 90, 200)); pop();
-        push(); stroke(153, 51, 255, 160); strokeWeight(2); rotate(-time * 0.5); drawStarburstPolygon(6, map(sigIndigo, 0, 1, 60, 180)); pop();
-        push(); stroke(220, 50, 255, 200); strokeWeight(map(sigViolet, 0, 1, 1.5, 4)); drawOrganicBlobRing(map(sigViolet, 0, 1, 20, 100), 5, time * 2); pop();
+          if (p.life <= 0) {
+            lightParticles.splice(i, 1);
+            continue;
+          }
 
-        blendMode(BLEND);
+          fill(p.color[0], p.color[1], p.color[2], p.life);
+          // Classic blocky retro pixel style square or circular particles
+          rect(p.x, p.y, p.size, p.size);
+
+          // 4-way symmetrical mirroring (classic Minter symmetry mode)
+          let mirrorX = width - p.x;
+          let mirrorY = height - p.y;
+          rect(mirrorX, p.y, p.size, p.size);
+          rect(p.x, mirrorY, p.size, p.size);
+          rect(mirrorX, mirrorY, p.size, p.size);
+        }
       } else {
+        // --- TRADITIONAL OSCILLOSCOPE CRT MODE ---
         push();
         stroke(20, 50, 30, 80);
         strokeWeight(1);
@@ -448,69 +478,6 @@
       }
     }
 
-    function drawOrganicBlobRing(baseRadius, points, phase) {
-      beginShape();
-      for (let i = 0; i < TWO_PI; i += TWO_PI / 100) {
-        let n = noise(cos(i) + 1, sin(i) + 1, phase);
-        let r = baseRadius + map(n, 0, 1, -40, 40);
-        let x = r * cos(i * points / 2);
-        let y = r * sin(i * points / 2);
-        curveVertex(x, y);
-      }
-      endShape(CLOSE);
-    }
-
-    function drawSpiralingTendril(maxR) {
-      beginShape();
-      let angle = 0;
-      for (let r = 10; r < maxR; r += 2) {
-        angle += 0.1;
-        let x = r * cos(angle + frameCount * 0.02);
-        let y = r * sin(angle + frameCount * 0.02);
-        curveVertex(x, y);
-      }
-      endShape();
-    }
-
-    function drawMandalaPetals(count, radius, t) {
-      for (let i = 0; i < count; i++) {
-        push();
-        rotate((TWO_PI / count) * i);
-        beginShape();
-        for (let a = 0; a < PI; a += 0.1) {
-          let r = radius * sin(a) * (0.8 + 0.2 * sin(t * 3));
-          let x = r * cos(a);
-          let y = r * sin(a) - radius * 0.5;
-          curveVertex(x, y);
-        }
-        endShape();
-        pop();
-      }
-    }
-
-    function drawLissajousWeb(size) {
-      beginShape();
-      let a = frameCount * 0.03;
-      for (let theta = 0; theta < TWO_PI; theta += 0.05) {
-        let x = size * sin(3 * theta + a);
-        let y = size * sin(2 * theta);
-        curveVertex(x, y);
-      }
-      endShape(CLOSE);
-    }
-
-    function drawStarburstPolygon(sides, radius) {
-      beginShape();
-      for (let i = sides; i > 0; i--) {
-        let angle = (TWO_PI / sides) * i + (frameCount * 0.01);
-        let r = radius * (i % 2 === 0 ? 1 : 0.5);
-        let x = r * cos(angle);
-        let y = r * sin(angle);
-        curveVertex(x, y);
-      }
-      endShape(CLOSE);
-    }
-
     function toggleAudioEngine() {
       if (!audioActive) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -527,12 +494,14 @@
 
         audioActive = true;
         document.getElementById('audioBtn').innerText = 'Stop Soundscape';
-        document.getElementById('audioBtn').style.background = '#4af3a2';
+        document.getElementById('audioBtn').style.background = '#00ffcc';
+        document.getElementById('audioBtn').style.color = '#000000';
       } else {
         if (audioCtx) audioCtx.close();
         audioActive = false;
         document.getElementById('audioBtn').innerText = 'Start Soundscape';
-        document.getElementById('audioBtn').style.background = '#f4f2ee';
+        document.getElementById('audioBtn').style.background = '#000000';
+        document.getElementById('audioBtn').style.color = '#00ffcc';
       }
     }
 
@@ -541,7 +510,7 @@
       
       let ch = channelData[channelIndex % channelData.length];
       ch.activeFreq = freq;
-      ch.envelope = 1.0; // Flares up the oscilloscope trace for this channel
+      ch.envelope = 1.0;
 
       let osc = audioCtx.createOscillator();
       let noteGain = audioCtx.createGain();
@@ -566,13 +535,13 @@
     function triggerVoiceCluster(baseFreq, velocity, channel) {
       let chIndex = (channel - 1) % channelData.length;
       playChannelTone(baseFreq, velocity, chIndex, 0);
-      
-      // Polyphonic ripple: gently wake up neighboring channels so all traces dance together
-      playChannelTone(baseFreq * 1.25, velocity * 0.7, (chIndex + 1) % channelData.length, 0.1);
-      playChannelTone(baseFreq * 1.5, velocity * 0.5, (chIndex + 2) % channelData.length, 0.2);
+
+      // Trigger a light burst explosion on screen corresponding to the MIDI note channel!
+      spawnLightBurst(random(width * 0.2, width * 0.8), random(height * 0.2, height * 0.8), chIndex, velocity / 127);
 
       if (globalConfig.arp === 'cascade') {
-        playChannelTone(baseFreq * 1.75, velocity * 0.4, (chIndex + 3) % channelData.length, 0.3);
+        playChannelTone(baseFreq * 1.25, velocity * 0.8, (chIndex + 1) % channelData.length, 0.15);
+        playChannelTone(baseFreq * 1.5, velocity * 0.6, (chIndex + 2) % channelData.length, 0.3);
       }
     }
 
@@ -581,7 +550,9 @@
 
       if (audioActive && mouseY < height - 60) {
         let freq = map(mouseX, 0, width, 110, 880);
-        triggerVoiceCluster(freq, 100, Math.floor(random(1, 8)));
+        let chChoice = floor(random(7));
+        triggerVoiceCluster(freq, 100, chChoice + 1);
+        spawnLightBurst(mouseX, mouseY, chChoice, 1.0);
       }
     }
 
@@ -594,8 +565,8 @@
     }
 
     function onMIDISuccess(midiAccess) {
-      document.getElementById('inputMode').innerText = "MIDI Connected (7-Channel Active)";
-      document.getElementById('inputMode').style.color = '#4af3a2';
+      document.getElementById('inputMode').innerText = "MIDI Connected (Psychedelia Active)";
+      document.getElementById('inputMode').style.color = '#00ffcc';
       for (let input of midiAccess.inputs.values()) {
         input.onmidimessage = getMIDIMessage;
       }
@@ -631,13 +602,13 @@
         micActive = true;
         document.getElementById('micBtn').innerText = 'Disable Mic';
         document.getElementById('inputMode').innerText = 'Microphone Audio Reactive';
-        document.getElementById('inputMode').style.color = '#4af3a2';
+        document.getElementById('inputMode').style.color = '#00ffcc';
       } else {
         mic.stop();
         micActive = false;
         document.getElementById('micBtn').innerText = 'Enable Mic';
-        document.getElementById('inputMode').innerText = 'Interactive (Move Mouse)';
-        document.getElementById('inputMode').style.color = '#ffde4a';
+        document.getElementById('inputMode').innerText = 'Interactive (Mouse / MIDI)';
+        document.getElementById('inputMode').style.color = '#ffff00';
       }
     }
 
