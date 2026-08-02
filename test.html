@@ -214,7 +214,7 @@
       <div class="legend-item"><span><span class="color-dot" style="background:#9933ff;"></span>Ch 6 (Indigo)</span><span id="legIndigo">0.00</span></div>
       <div class="legend-item"><span><span class="color-dot" style="background:#cc33ff;"></span>Violet (Ch 7)</span><span id="legViolet">0.00</span></div>
     </div>
-    <div id="lastUpdated">Last updated: <span id="timestamp">--:--:--</span></div>
+    <div id="lastUpdated">Code updated: <span id="timestamp">--/--/---- --:--:--</span></div>
   </div>
 
   <div class="control-buttons">
@@ -238,7 +238,6 @@
       arp: 'off'
     };
 
-    // 7 Channels matching C64 Psychedelia color palette
     const channelData = [
       { id: 1, name: "Channel 1 (Red)", color: "#ff3333", rgb: [255, 51, 51], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0.4, spawnX: 0, spawnY: 0 },
       { id: 2, name: "Channel 2 (Orange)", color: "#ff9933", rgb: [255, 153, 51], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0.4, spawnX: 0, spawnY: 0 },
@@ -250,12 +249,12 @@
     ];
 
     let lightParticles = [];
+    let midiActivityCounter = 0;
 
     function setup() {
       createCanvas(windowWidth, windowHeight);
       colorMode(RGB, 255);
       
-      // Initialize channel coordinate anchors around the center
       channelData.forEach((ch, idx) => {
         let angle = (TWO_PI / 7) * idx;
         ch.spawnX = width / 2 + cos(angle) * 150;
@@ -264,13 +263,10 @@
 
       buildConfigModalUI();
       setupWebMIDI();
-      updateTimestamp();
-      setInterval(updateTimestamp, 1000);
-    }
-
-    function updateTimestamp() {
-      let now = new Date();
-      document.getElementById('timestamp').innerText = now.toLocaleTimeString();
+      
+      // Set static load timestamp (Date and Time when code/page initialized)
+      let loadTime = new Date();
+      document.getElementById('timestamp').innerText = loadTime.toLocaleString();
     }
 
     function buildConfigModalUI() {
@@ -333,16 +329,14 @@
       document.getElementById(`lbl_ch${id}_vol`).innerText = ch.volume.toFixed(1);
     }
 
-    // Spawn burst of light particles driven directly by incoming MIDI data or interaction
     function spawnLightBurst(px, py, chIndex, velocity, note) {
       let ch = channelData[chIndex % channelData.length];
       
-      // Update channel anchor to spread the visuals dynamically based on note pitch
-      ch.spawnX = lerp(ch.spawnX, map(note, 0, 127, width * 0.1, width * 0.9), 0.3);
-      ch.spawnY = lerp(ch.spawnY, py, 0.3);
+      ch.spawnX = lerp(ch.spawnX, map(note, 0, 127, width * 0.1, width * 0.9), 0.4);
+      ch.spawnY = lerp(ch.spawnY, py, 0.4);
 
-      let count = floor(map(velocity, 0, 127, 8, 30));
-      let spreadSpeed = map(velocity, 0, 127, 2, 8);
+      let count = floor(map(velocity, 0, 127, 10, 35));
+      let spreadSpeed = map(velocity, 0, 127, 2, 9);
 
       for (let i = 0; i < count; i++) {
         let angle = random(TWO_PI);
@@ -355,20 +349,22 @@
           color: ch.rgb,
           life: 255,
           decay: random(3, 7),
-          size: random(3, 8)
+          size: random(3, 9)
         });
       }
     }
 
     function draw() {
-      background(0, 0, 0, 45); // Psychedelia light-synth trail blur
+      background(0, 0, 0, 45);
 
       if (!micActive && midiStatus.includes("Searching")) {
         targetDelta = constrain(mouseX / width, 0.1, 1.0);
         targetVariance = constrain(mouseY / height, 0.1, 1.0);
         
         if (mouseIsPressed && mouseY < height - 60) {
-          spawnLightBurst(mouseX, mouseY, floor(random(7)), 100, 60);
+          // Distribute mouse clicks across all channels sequentially so testing lights up all colors
+          midiActivityCounter++;
+          spawnLightBurst(mouseX, mouseY, midiActivityCounter, 100, map(mouseX, 0, width, 20, 100));
         }
       }
 
@@ -378,7 +374,8 @@
         targetDelta = constrain(map(sin(frameCount * 0.04), -1, 1, 0.2, 0.9), 0.1, 1.0);
         
         if (level > 0.02) {
-          spawnLightBurst(width / 2 + random(-150, 150), height / 2 + random(-150, 150), frameCount % 7, level * 127, 60);
+          midiActivityCounter++;
+          spawnLightBurst(width * 0.5 + random(-200, 200), height * 0.5 + random(-200, 200), midiActivityCounter, level * 127, 60);
         }
       }
 
@@ -390,12 +387,10 @@
         mainFilter.frequency.setTargetAtTime(targetCutoff, audioCtx.currentTime, 0.1);
       }
 
-      // Decay envelopes
       channelData.forEach((ch) => {
         ch.envelope = max(0.0, ch.envelope - 0.04);
       });
 
-      // Update HUD elements
       document.getElementById('valDelta').innerText = smoothDelta.toFixed(2);
       document.getElementById('valVariance').innerText = smoothVariance.toFixed(2);
       document.getElementById('legRed').innerText = channelData[0].envelope.toFixed(2);
@@ -406,7 +401,6 @@
       document.getElementById('legIndigo').innerText = channelData[5].envelope.toFixed(2);
       document.getElementById('legViolet').innerText = channelData[6].envelope.toFixed(2);
 
-      // --- RENDER PSYCHEDELIA LIGHT SYNTH PARTICLES WITH 4-WAY SYMMETRY ---
       noStroke();
       for (let i = lightParticles.length - 1; i >= 0; i--) {
         let p = lightParticles[i];
@@ -422,7 +416,6 @@
         fill(p.color[0], p.color[1], p.color[2], p.life);
         rect(p.x, p.y, p.size, p.size);
 
-        // Classic Llamasoft Psychedelia 4-Way Symmetry Mirroring
         let mirrorX = width - p.x;
         let mirrorY = height - p.y;
         rect(mirrorX, p.y, p.size, p.size);
@@ -484,21 +477,17 @@
       osc.stop(now + ch.release + 0.1);
     }
 
-    // Direct MIDI to Psychedelia Light-Synth trigger mapping
     function triggerVoiceCluster(baseFreq, velocity, channel, note) {
-      let chIndex = (channel - 1) % channelData.length;
+      // Map incoming MIDI channel (1-16) across our 7 visual channels evenly if in single-channel mode,
+      // or match directly if multi-channel mode is active on the Pocket SCÍON.
+      let chIndex = (channel === 1) ? (Math.floor(note / 18) % 7) : ((channel - 1) % channelData.length);
       
-      // 1. Trigger Audio Synth Tone
       playChannelTone(baseFreq, velocity, chIndex, 0);
-
-      // 2. Drive Psychedelia Light Visualizer directly from MIDI Note & Velocity
-      let targetX = map(note, 20, 100, width * 0.1, width * 0.9, true);
-      let targetY = map(velocity, 0, 127, height * 0.8, height * 0.2, true);
-      spawnLightBurst(targetX, targetY, chIndex, velocity, note);
+      spawnLightBurst(map(note, 20, 100, width * 0.1, width * 0.9, true), map(velocity, 0, 127, height * 0.8, height * 0.2, true), chIndex, velocity, note);
 
       if (globalConfig.arp === 'cascade') {
         playChannelTone(baseFreq * 1.25, velocity * 0.8, (chIndex + 1) % channelData.length, 0.15);
-        playChannelTone(baseFreq * 1.5, velocity * 0.6, (chIndex + 2) % channelData.length, 0.3);
+        playChannelTone(baseRefreq = baseFreq * 1.5, velocity * 0.6, (chIndex + 2) % channelData.length, 0.3);
       }
     }
 
@@ -507,8 +496,8 @@
 
       if (audioActive && mouseY < height - 60) {
         let freq = map(mouseX, 0, width, 110, 880);
-        let chChoice = floor(random(7));
-        triggerVoiceCluster(freq, 100, chChoice + 1, map(mouseX, 0, width, 30, 90));
+        midiActivityCounter++;
+        triggerVoiceCluster(freq, 100, midiActivityCounter, map(mouseX, 0, width, 30, 90));
       }
     }
 
@@ -535,11 +524,10 @@
     function getMIDIMessage(message) {
       let statusByte = message.data[0];
       let command = statusByte & 0xF0;
-      let channel = (statusByte & 0x0F) + 1;
+      let channel = (statusByte & 0X0F) + 1;
       let note = message.data[1];
       let velocity = message.data[2];
 
-      // Standard MIDI Note On message triggers visual bursts & sound
       if (command === 144 && velocity > 0) {
         targetDelta = map(note, 0, 127, 0.1, 1.0);
         targetVariance = map(velocity, 0, 127, 0.1, 1.0);
