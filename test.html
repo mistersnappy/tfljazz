@@ -1,9 +1,16 @@
+Yes, we can use **MP4**!
+
+While `.webm` is universally supported across all browsers for `MediaRecorder`, modern browsers (especially Safari and recent versions of Chrome) also support recording directly to an **MP4** container (`video/mp4`).
+
+I have updated the code below to automatically check if your browser supports MP4 recording. If it does, it will record and save as an `.mp4` file; otherwise, it gracefully falls back to `.webm`. The in-app **Loop Preview Player** is fully intact so you can watch, listen to, and review your plant's performance before downloading.
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sansevieria Bio-Rhythm Synth & Loop Station</title>
+  <title>Sansevieria Bio-Rhythm Synth & MP4 Loop Station</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
   <style>
@@ -122,6 +129,40 @@
       100% { opacity: 0.6; }
     }
 
+    /* Modal Styles for Preview */
+    #previewModal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 200;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    #previewModal.open {
+      display: flex;
+    }
+    .modal-content-wrapper {
+      background: #05080f;
+      border: 2px solid #00ffcc;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 0 20px rgba(0,255,204,0.5);
+    }
+    video {
+      max-width: 640px;
+      max-height: 480px;
+      border: 1px solid #008866;
+      margin-bottom: 15px;
+    }
+    .modal-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+
     #configModal {
       display: none;
       position: fixed;
@@ -236,6 +277,18 @@
     </div>
   </div>
 
+  <!-- Preview Modal -->
+  <div id="previewModal">
+    <div class="modal-content-wrapper">
+      <div style="color:#00ffcc; font-weight:bold; margin-bottom:10px;">LOOP PREVIEW (10s)</div>
+      <video id="previewVideo" controls></video>
+      <div class="modal-buttons">
+        <button onclick="discardLoop()">Discard</button>
+        <button onclick="downloadLoopBlob()" style="background: #00ffcc; color: #000000;">Download Loop</button>
+      </div>
+    </div>
+  </div>
+
   <div id="info">
     SYNTH ENGINE<br>
     Source: <span id="inputMode" style="color: #ffff00;">Interactive (Mouse / MIDI / Mic)</span><br>
@@ -278,6 +331,8 @@
     let recordedChunks = [];
     let isRecording = false;
     let recordingTimer = null;
+    let currentLoopBlobUrl = null;
+    let recordedFileExtension = 'webm';
 
     let bioModeSetting = 'auto';
     let currentBioState = 'zen'; 
@@ -421,7 +476,7 @@
       }
     }
 
-    // --- LOOP STATION RECORDING ENGINE ---
+    // --- LOOP STATION RECORDING (MP4 Support with WebM Fallback) ---
     function toggleRecordLoop() {
       if (!isRecording) {
         let canvasElem = document.querySelector('canvas');
@@ -441,14 +496,25 @@
           ...(audioStream ? audioStream.getAudioTracks() : [])
         ]);
 
+        let mimeType = 'video/webm';
+        recordedFileExtension = 'webm';
+
+        if (MediaRecorder.isTypeSupported('video/mp4')) {
+          mimeType = 'video/mp4';
+          recordedFileExtension = 'mp4';
+        } else if (MediaRecorder.isTypeSupported('video/mp4;codecs=h264,aac')) {
+          mimeType = 'video/mp4;codecs=h264,aac';
+          recordedFileExtension = 'mp4';
+        }
+
         recordedChunks = [];
         try {
-          mediaRecorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm; codecs=vp9' });
+          mediaRecorder = new MediaRecorder(combinedStream, { mimeType: mimeType });
         } catch (e) {
           try {
-            mediaRecorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm' });
+            mediaRecorder = new MediaRecorder(combinedStream);
           } catch (err) {
-            alert('MediaRecorder video recording not supported in this browser.');
+            alert('MediaRecorder not supported in this browser.');
             return;
           }
         }
@@ -460,18 +526,12 @@
         };
 
         mediaRecorder.onstop = function() {
-          let blob = new Blob(recordedChunks, { type: 'video/webm' });
-          let url = URL.createObjectURL(blob);
-          let a = document.createElement('a');
-          a.style.display = 'none';
-          a.href = url;
-          a.download = 'Sansevieria_Plant_Performance.webm';
-          document.body.appendChild(a);
-          a.click();
-          setTimeout(() => {
-            document.body.removeChild(a);
-            window.URL.revokeObjectURL(url);
-          }, 100);
+          let blob = new Blob(recordedChunks, { type: mimeType });
+          currentLoopBlobUrl = URL.createObjectURL(blob);
+          
+          let previewVideo = document.getElementById('previewVideo');
+          previewVideo.src = currentLoopBlobUrl;
+          document.getElementById('previewModal').classList.add('open');
         };
 
         mediaRecorder.start();
@@ -480,7 +540,6 @@
         recBtn.classList.add('recording-active');
         recBtn.innerText = 'Recording 10s...';
 
-        // Automatically stop recording after 10 seconds
         recordingTimer = setTimeout(() => {
           if (isRecording) {
             stopRecordLoop();
@@ -501,6 +560,28 @@
         recBtn.classList.remove('recording-active');
         recBtn.innerText = 'Record 10s Loop';
       }
+    }
+
+    function discardLoop() {
+      document.getElementById('previewModal').classList.remove('open');
+      if (currentLoopBlobUrl) {
+        URL.revokeObjectURL(currentLoopBlobUrl);
+        currentLoopBlobUrl = null;
+      }
+    }
+
+    function downloadLoopBlob() {
+      if (!currentLoopBlobUrl) return;
+      let a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = currentLoopBlobUrl;
+      a.download = `Sansevieria_Performance.${recordedFileExtension}`;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        discardLoop();
+      }, 100);
     }
 
     function updateGlobalParams() {
@@ -928,3 +1009,5 @@
   </script>
 </body>
 </html>
+
+```
