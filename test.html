@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Psychedelia Light Synthesizer & MIDI Engine</title>
+  <title>Sansevieria Trifasciata Laser Synthesizer</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
   <style>
@@ -180,7 +180,7 @@
   <div id="configModal">
     <div class="modal-content">
       <div class="modal-header">
-        <span>ACTIVE CHANNEL SOUND CONFIG</span>
+        <span>SANSEVIERIA SOUND CONFIG</span>
         <button class="close-btn" onclick="toggleConfigModal()">✕</button>
       </div>
       
@@ -204,7 +204,7 @@
   </div>
 
   <div id="info">
-    PSYCHEDELIA LIGHT-SYNTH<br>
+    SANSEVIERIA LASER SYNTH<br>
     Source: <span id="inputMode" style="color: #ffff00;">Interactive (Mouse / MIDI / Mic)</span><br>
     Note/Delta: <span id="valDelta">0.50</span> | Velocity/Variance: <span id="valVariance">0.50</span>
   </div>
@@ -221,6 +221,7 @@
     <button id="audioBtn" onclick="toggleAudioEngine()">Start Soundscape</button>
     <button id="micBtn" onclick="toggleMic()">Enable Mic</button>
     <button onclick="toggleConfigModal()">Config Audio</button>
+    <button id="modeBtn" onclick="toggleViewMode()">Switch Mode: Laser Plant</button>
   </div>
 
   <script>
@@ -232,6 +233,7 @@
     let midiStatus = "Searching for MIDI...";
 
     let audioCtx, masterGain, mainFilter, audioActive = false;
+    let viewMode = 'psychedelia'; // 'psychedelia' or 'sansevieria'
     
     let globalConfig = {
       resonance: 4.0,
@@ -304,6 +306,16 @@
 
     function toggleConfigModal() {
       document.getElementById('configModal').classList.toggle('open');
+    }
+
+    function toggleViewMode() {
+      if (viewMode === 'psychedelia') {
+        viewMode = 'sansevieria';
+        document.getElementById('modeBtn').innerText = 'Switch Mode: Psychedelia';
+      } else {
+        viewMode = 'psychedelia';
+        document.getElementById('modeBtn').innerText = 'Switch Mode: Laser Plant';
+      }
     }
 
     function updateGlobalParams() {
@@ -386,7 +398,6 @@
         mainFilter.frequency.setTargetAtTime(targetCutoff, audioCtx.currentTime, 0.1);
       }
 
-      // Decay channel envelopes and render all 7 channels permanently in the panel
       let activeListHTML = "";
       allChannels.forEach((ch) => {
         ch.envelope = max(0.0, ch.envelope - 0.03);
@@ -402,26 +413,92 @@
       document.getElementById('valDelta').innerText = smoothDelta.toFixed(2);
       document.getElementById('valVariance').innerText = smoothVariance.toFixed(2);
 
-      noStroke();
-      for (let i = lightParticles.length - 1; i >= 0; i--) {
-        let p = lightParticles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life -= p.decay;
+      if (viewMode === 'psychedelia') {
+        // --- PSYCHEDELIA LIGHT SYNTH MODE ---
+        noStroke();
+        for (let i = lightParticles.length - 1; i >= 0; i--) {
+          let p = lightParticles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.life -= p.decay;
 
-        if (p.life <= 0) {
-          lightParticles.splice(i, 1);
-          continue;
+          if (p.life <= 0) {
+            lightParticles.splice(i, 1);
+            continue;
+          }
+
+          fill(p.color[0], p.color[1], p.color[2], p.life);
+          rect(p.x, p.y, p.size, p.size);
+
+          let mirrorX = width - p.x;
+          let mirrorY = height - p.y;
+          rect(mirrorX, p.y, p.size, p.size);
+          rect(p.x, mirrorY, p.size, p.size);
+          rect(mirrorX, mirrorY, p.size, p.size);
         }
+      } else {
+        // --- SANSEVIERIA TRIFASCIATA LASER SYNTH MODE ---
+        push();
+        translate(width / 2, height / 2 + 100);
+        noFill();
+        
+        // Render 7 rigid, upright succulent leaves representing Sansevieria Trifasciata
+        // Each channel powers a distinct glitch characteristic responding to its active envelope/signal
+        let leafOffsets = [-140, -95, -50, 0, 50, 95, 140];
+        let leafHeights = [320, 380, 420, 460, 420, 380, 320];
 
-        fill(p.color[0], p.color[1], p.color[2], p.life);
-        rect(p.x, p.y, p.size, p.size);
+        allChannels.forEach((ch, idx) => {
+          stroke(ch.rgb[0], ch.rgb[1], ch.rgb[2], 220);
+          strokeWeight(2.5);
 
-        let mirrorX = width - p.x;
-        let mirrorY = height - p.y;
-        rect(mirrorX, p.y, p.size, p.size);
-        rect(p.x, mirrorY, p.size, p.size);
-        rect(mirrorX, mirrorY, p.size, p.size);
+          beginShape();
+          let baseHeight = leafHeights[idx];
+          let xBase = leafOffsets[idx];
+
+          // Channel-specific glitch math reacting to active input levels
+          let intensity = ch.envelope;
+          let glitchJitter = intensity * 25;
+          let shearFactor = (idx - 3) * smoothDelta * 0.4;
+
+          for (let y = 0; y <= baseHeight; y += 12) {
+            let progress = y / baseHeight;
+            // Taper upward like a sword leaf
+            let widthMod = sin(progress * PI) * 22;
+            
+            // Unique glitch behaviors per channel when hit by MIDI signal
+            let glitchX = 0;
+            if (intensity > 0.05) {
+              if (idx % 3 === 0) {
+                // Channel 1, 4, 7: Horizontal digital tearing jitter
+                glitchX = random(-glitchJitter, glitchJitter) * sin(y * 0.1);
+              } else if (idx % 3 === 1) {
+                // Channel 2, 5: Sine wave shear warp
+                glitchX = sin(y * 0.05 + frameCount * 0.5) * glitchJitter * 1.5;
+              } else {
+                // Channel 3, 6: Quantum packet displacement blocks
+                glitchX = (random() > 0.7 ? random(-glitchJitter * 2, glitchJitter * 2) : 0);
+              }
+            }
+
+            let px = xBase + glitchX + (progress * shearFactor * 50);
+            let py = -y;
+            vertex(px - widthMod, py);
+          }
+
+          for (let y = baseHeight; y >= 0; y -= 12) {
+            let progress = y / baseHeight;
+            let widthMod = sin(progress * PI) * 22;
+            let glitchX = 0;
+            if (intensity > 0.05) {
+              glitchX = random(-glitchJitter, glitchJitter) * cos(y * 0.1);
+            }
+            let px = xBase + glitchX + (progress * shearFactor * 50);
+            let py = -y;
+            vertex(px + widthMod, py);
+          }
+          endShape(CLOSE);
+        });
+        pop();
       }
     }
 
