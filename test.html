@@ -137,6 +137,8 @@
       border-radius: 4px;
       padding: 12px;
       margin-bottom: 12px;
+      box-sizing: border-box;
+      width: 100%;
     }
     .channel-header {
       font-weight: bold;
@@ -151,6 +153,8 @@
       display: flex;
       flex-direction: column;
       gap: 4px;
+      width: 100%;
+      box-sizing: border-box;
     }
     .control-group label {
       font-size: 10px;
@@ -165,6 +169,8 @@
       padding: 6px;
       border-radius: 4px;
       font-size: 11px;
+      box-sizing: border-box;
+      margin: 0;
     }
   </style>
 </head>
@@ -174,7 +180,7 @@
   <div id="configModal">
     <div class="modal-content">
       <div class="modal-header">
-        <span>7-CHANNEL LIGHT-SYNTH CONFIG</span>
+        <span>ACTIVE CHANNEL SOUND CONFIG</span>
         <button class="close-btn" onclick="toggleConfigModal()">✕</button>
       </div>
       
@@ -205,14 +211,10 @@
 
   <div id="legend-container">
     <div id="legend">
-      <strong style="display:block; margin-bottom:8px; border-bottom:1px solid #00ffcc; padding-bottom:4px;">CHANNEL ACTIVITY</strong>
-      <div class="legend-item"><span><span class="color-dot" style="background:#ff3333;"></span>Ch 1 (Red)</span><span id="legRed">0.00</span></div>
-      <div class="legend-item"><span><span class="color-dot" style="background:#ff9933;"></span>Ch 2 (Orange)</span><span id="legOrange">0.00</span></div>
-      <div class="legend-item"><span><span class="color-dot" style="background:#ffff33;"></span>Ch 3 (Yellow)</span><span id="legYellow">0.00</span></div>
-      <div class="legend-item"><span><span class="color-dot" style="background:#33cc33;"></span>Ch 4 (Green)</span><span id="legGreen">0.00</span></div>
-      <div class="legend-item"><span><span class="color-dot" style="background:#3399ff;"></span>Ch 5 (Blue)</span><span id="legBlue">0.00</span></div>
-      <div class="legend-item"><span><span class="color-dot" style="background:#9933ff;"></span>Ch 6 (Indigo)</span><span id="legIndigo">0.00</span></div>
-      <div class="legend-item"><span><span class="color-dot" style="background:#cc33ff;"></span>Violet (Ch 7)</span><span id="legViolet">0.00</span></div>
+      <strong style="display:block; margin-bottom:8px; border-bottom:1px solid #00ffcc; padding-bottom:4px;">ACTIVE CHANNEL ACTIVITY</strong>
+      <div id="activeLegendList">
+        <div style="font-size:10px; color:#008866; font-style:italic;">Awaiting MIDI input...</div>
+      </div>
     </div>
     <div id="lastUpdated">Code updated: <span id="timestamp">--/--/---- --:--:--</span></div>
   </div>
@@ -238,14 +240,15 @@
       arp: 'off'
     };
 
-    const channelData = [
-      { id: 1, name: "Channel 1 (Red)", color: "#ff3333", rgb: [255, 51, 51], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0.4, spawnX: 0, spawnY: 0 },
-      { id: 2, name: "Channel 2 (Orange)", color: "#ff9933", rgb: [255, 153, 51], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0.4, spawnX: 0, spawnY: 0 },
-      { id: 3, name: "Channel 3 (Yellow)", color: "#ffff33", rgb: [255, 255, 51], wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0.4, spawnX: 0, spawnY: 0 },
-      { id: 4, name: "Channel 4 (Green)", color: "#33cc33", rgb: [51, 204, 51], wave: "square", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0.4, spawnX: 0, spawnY: 0 },
-      { id: 5, name: "Channel 5 (Blue)", color: "#3399ff", rgb: [51, 153, 255], wave: "sine", attack: 0.2, release: 4.0, volume: 0.8, envelope: 0.4, spawnX: 0, spawnY: 0 },
-      { id: 6, name: "Channel 6 (Indigo)", color: "#9933ff", rgb: [153, 51, 255], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0.4, spawnX: 0, spawnY: 0 },
-      { id: 7, name: "Channel 7 (Violet)", color: "#cc33ff", rgb: [204, 51, 255], wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0.4, spawnX: 0, spawnY: 0 }
+    // Full 7-Channel Bank definition
+    const allChannels = [
+      { id: 1, name: "Channel 1 (Red)", color: "#ff3333", rgb: [255, 51, 51], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 2, name: "Channel 2 (Orange)", color: "#ff9933", rgb: [255, 153, 51], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 3, name: "Channel 3 (Yellow)", color: "#ffff33", rgb: [255, 255, 51], wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 4, name: "Channel 4 (Green)", color: "#33cc33", rgb: [51, 204, 51], wave: "square", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 5, name: "Channel 5 (Blue)", color: "#3399ff", rgb: [51, 153, 255], wave: "sine", attack: 0.2, release: 4.0, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 6, name: "Channel 6 (Indigo)", color: "#9933ff", rgb: [153, 51, 255], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 7, name: "Channel 7 (Violet)", color: "#cc33ff", rgb: [204, 51, 255], wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 }
     ];
 
     let lightParticles = [];
@@ -255,7 +258,7 @@
       createCanvas(windowWidth, windowHeight);
       colorMode(RGB, 255);
       
-      channelData.forEach((ch, idx) => {
+      allChannels.forEach((ch, idx) => {
         let angle = (TWO_PI / 7) * idx;
         ch.spawnX = width / 2 + cos(angle) * 150;
         ch.spawnY = height / 2 + sin(angle) * 150;
@@ -264,7 +267,6 @@
       buildConfigModalUI();
       setupWebMIDI();
       
-      // Set static load timestamp (Date and Time when code/page initialized)
       let loadTime = new Date();
       document.getElementById('timestamp').innerText = loadTime.toLocaleString();
     }
@@ -272,7 +274,7 @@
     function buildConfigModalUI() {
       const container = document.getElementById('modalChannelContainer');
       container.innerHTML = '';
-      channelData.forEach(ch => {
+      allChannels.forEach(ch => {
         let box = document.createElement('div');
         box.className = 'channel-box';
         box.innerHTML = `
@@ -318,7 +320,7 @@
     }
 
     function updateChannelParams(id) {
-      let ch = channelData.find(c => c.id === id);
+      let ch = allChannels.find(c => c.id === id);
       ch.wave = document.getElementById(`ch${id}_wave`).value;
       ch.attack = parseFloat(document.getElementById(`ch${id}_attack`).value);
       ch.release = parseFloat(document.getElementById(`ch${id}_release`).value);
@@ -330,7 +332,8 @@
     }
 
     function spawnLightBurst(px, py, chIndex, velocity, note) {
-      let ch = channelData[chIndex % channelData.length];
+      let ch = allChannels[chIndex % allChannels.length];
+      ch.envelope = 1.0; // Mark channel as active
       
       ch.spawnX = lerp(ch.spawnX, map(note, 0, 127, width * 0.1, width * 0.9), 0.4);
       ch.spawnY = lerp(ch.spawnY, py, 0.4);
@@ -362,7 +365,6 @@
         targetVariance = constrain(mouseY / height, 0.1, 1.0);
         
         if (mouseIsPressed && mouseY < height - 60) {
-          // Distribute mouse clicks across all channels sequentially so testing lights up all colors
           midiActivityCounter++;
           spawnLightBurst(mouseX, mouseY, midiActivityCounter, 100, map(mouseX, 0, width, 20, 100));
         }
@@ -387,19 +389,27 @@
         mainFilter.frequency.setTargetAtTime(targetCutoff, audioCtx.currentTime, 0.1);
       }
 
-      channelData.forEach((ch) => {
-        ch.envelope = max(0.0, ch.envelope - 0.04);
+      // Decay envelopes & update active legend panel dynamically
+      let activeListHTML = "";
+      allChannels.forEach((ch) => {
+        ch.envelope = max(0.0, ch.envelope - 0.03);
+        if (ch.envelope > 0.01) {
+          activeListHTML += `
+            <div class="legend-item">
+              <span><span class="color-dot" style="background:${ch.color};"></span>${ch.name}</span>
+              <span>${ch.envelope.toFixed(2)}</span>
+            </div>
+          `;
+        }
       });
+
+      if (activeListHTML === "") {
+        activeListHTML = `<div style="font-size:10px; color:#008866; font-style:italic;">Awaiting MIDI input...</div>`;
+      }
+      document.getElementById('activeLegendList').innerHTML = activeListHTML;
 
       document.getElementById('valDelta').innerText = smoothDelta.toFixed(2);
       document.getElementById('valVariance').innerText = smoothVariance.toFixed(2);
-      document.getElementById('legRed').innerText = channelData[0].envelope.toFixed(2);
-      document.getElementById('legOrange').innerText = channelData[1].envelope.toFixed(2);
-      document.getElementById('legYellow').innerText = channelData[2].envelope.toFixed(2);
-      document.getElementById('legGreen').innerText = channelData[3].envelope.toFixed(2);
-      document.getElementById('legBlue').innerText = channelData[4].envelope.toFixed(2);
-      document.getElementById('legIndigo').innerText = channelData[5].envelope.toFixed(2);
-      document.getElementById('legViolet').innerText = channelData[6].envelope.toFixed(2);
 
       noStroke();
       for (let i = lightParticles.length - 1; i >= 0; i--) {
@@ -454,8 +464,7 @@
     function playChannelTone(freq, velocity = 0.8, channelIndex = 0, delayOffset = 0) {
       if (!audioActive || !audioCtx) return;
       
-      let ch = channelData[channelIndex % channelData.length];
-      ch.envelope = 1.0;
+      let ch = allChannels[channelIndex % allChannels.length];
 
       let osc = audioCtx.createOscillator();
       let noteGain = audioCtx.createGain();
@@ -478,16 +487,14 @@
     }
 
     function triggerVoiceCluster(baseFreq, velocity, channel, note) {
-      // Map incoming MIDI channel (1-16) across our 7 visual channels evenly if in single-channel mode,
-      // or match directly if multi-channel mode is active on the Pocket SCÍON.
-      let chIndex = (channel === 1) ? (Math.floor(note / 18) % 7) : ((channel - 1) % channelData.length);
+      let chIndex = (channel === 1) ? (Math.floor(note / 18) % 7) : ((channel - 1) % allChannels.length);
       
       playChannelTone(baseFreq, velocity, chIndex, 0);
       spawnLightBurst(map(note, 20, 100, width * 0.1, width * 0.9, true), map(velocity, 0, 127, height * 0.8, height * 0.2, true), chIndex, velocity, note);
 
       if (globalConfig.arp === 'cascade') {
-        playChannelTone(baseFreq * 1.25, velocity * 0.8, (chIndex + 1) % channelData.length, 0.15);
-        playChannelTone(baseRefreq = baseFreq * 1.5, velocity * 0.6, (chIndex + 2) % channelData.length, 0.3);
+        playChannelTone(baseFreq * 1.25, velocity * 0.8, (chIndex + 1) % allChannels.length, 0.15);
+        playChannelTone(baseFreq * 1.5, velocity * 0.6, (chIndex + 2) % allChannels.length, 0.3);
       }
     }
 
@@ -524,7 +531,7 @@
     function getMIDIMessage(message) {
       let statusByte = message.data[0];
       let command = statusByte & 0xF0;
-      let channel = (statusByte & 0X0F) + 1;
+      let channel = (statusByte & 0x0F) + 1;
       let note = message.data[1];
       let velocity = message.data[2];
 
