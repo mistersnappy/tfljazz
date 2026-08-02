@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sansevieria Bio-Rhythm Synth: Zen vs. Chaos</title>
+  <title>Sansevieria Bio-Rhythm Synth & Loop Station</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
   <style>
@@ -110,6 +110,16 @@
     button:hover, select:hover {
       background: #00ffcc;
       color: #000000;
+    }
+    .recording-active {
+      background: #ff0055 !important;
+      color: #ffffff !important;
+      border-color: #ff0055 !important;
+      animation: recordPulse 1s infinite alternate;
+    }
+    @keyframes recordPulse {
+      0% { opacity: 1; }
+      100% { opacity: 0.6; }
     }
 
     #configModal {
@@ -248,6 +258,7 @@
     <button id="modeBtn" onclick="toggleViewMode()">Switch Mode: Psychedelia</button>
     <button id="bioBtn" onclick="cycleBioMode()">Bio-State: AUTO</button>
     <button id="fxBtn" onclick="toggleWeatherFX()">Weather FX: OFF</button>
+    <button id="recBtn" onclick="toggleRecordLoop()">Record 10s Loop</button>
   </div>
 
   <script>
@@ -259,13 +270,18 @@
     let midiStatus = "Searching for MIDI...";
 
     let audioCtx, masterGain, mainFilter, audioActive = false;
-    let viewMode = 'sansevieria'; // 'sansevieria' or 'psychedelia'
+    let viewMode = 'sansevieria'; 
     let weatherFxEnabled = false;
 
-    // Bio-Rhythm States: 'auto', 'force_zen', 'force_chaos'
+    // Loop Station Recording variables
+    let mediaRecorder;
+    let recordedChunks = [];
+    let isRecording = false;
+    let recordingTimer = null;
+
     let bioModeSetting = 'auto';
-    let currentBioState = 'zen'; // 'zen' or 'chaos'
-    let plantEnergy = 0.0; // Smoothed tracker for state calculation
+    let currentBioState = 'zen'; 
+    let plantEnergy = 0.0; 
     let zenBloomRadius = 0;
     
     let globalConfig = {
@@ -405,6 +421,88 @@
       }
     }
 
+    // --- LOOP STATION RECORDING ENGINE ---
+    function toggleRecordLoop() {
+      if (!isRecording) {
+        let canvasElem = document.querySelector('canvas');
+        if (!canvasElem) return;
+
+        let canvasStream = canvasElem.captureStream(30);
+        let audioStream = null;
+
+        if (masterGain && audioCtx) {
+          let dest = audioCtx.createMediaStreamDestination();
+          masterGain.connect(dest);
+          audioStream = dest.stream;
+        }
+
+        let combinedStream = new MediaStream([
+          ...canvasStream.getVideoTracks(),
+          ...(audioStream ? audioStream.getAudioTracks() : [])
+        ]);
+
+        recordedChunks = [];
+        try {
+          mediaRecorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm; codecs=vp9' });
+        } catch (e) {
+          try {
+            mediaRecorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm' });
+          } catch (err) {
+            alert('MediaRecorder video recording not supported in this browser.');
+            return;
+          }
+        }
+
+        mediaRecorder.ondataavailable = function(event) {
+          if (event.data && event.data.size > 0) {
+            recordedChunks.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = function() {
+          let blob = new Blob(recordedChunks, { type: 'video/webm' });
+          let url = URL.createObjectURL(blob);
+          let a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = url;
+          a.download = 'Sansevieria_Plant_Performance.webm';
+          document.body.appendChild(a);
+          a.click();
+          setTimeout(() => {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+          }, 100);
+        };
+
+        mediaRecorder.start();
+        isRecording = true;
+        let recBtn = document.getElementById('recBtn');
+        recBtn.classList.add('recording-active');
+        recBtn.innerText = 'Recording 10s...';
+
+        // Automatically stop recording after 10 seconds
+        recordingTimer = setTimeout(() => {
+          if (isRecording) {
+            stopRecordLoop();
+          }
+        }, 10000);
+
+      } else {
+        stopRecordLoop();
+      }
+    }
+
+    function stopRecordLoop() {
+      if (isRecording && mediaRecorder) {
+        mediaRecorder.stop();
+        isRecording = false;
+        if (recordingTimer) clearTimeout(recordingTimer);
+        let recBtn = document.getElementById('recBtn');
+        recBtn.classList.remove('recording-active');
+        recBtn.innerText = 'Record 10s Loop';
+      }
+    }
+
     function updateGlobalParams() {
       globalConfig.resonance = parseFloat(document.getElementById('global_resonance').value);
       globalConfig.arp = document.getElementById('global_arp').value;
@@ -437,7 +535,6 @@
       let ch = allChannels[chIndex % allChannels.length];
       ch.envelope = 1.0; 
       
-      // Spike energy level when MIDI events trigger
       plantEnergy = min(1.0, plantEnergy + map(velocity, 0, 127, 0.15, 0.35));
 
       let chLfoVal = sin(millis() * 0.001 * ch.lfoRate * TWO_PI) * ch.lfoDepth;
@@ -492,15 +589,13 @@
       smoothDelta = lerp(smoothDelta, targetDelta, 0.05);
       smoothVariance = lerp(smoothVariance, targetVariance, 0.05);
 
-      // --- BIO-RHYTHM STATE CALCULATION & UPDATES ---
-      plantEnergy = max(0.0, plantEnergy - 0.005); // Continuous natural energy decay
+      plantEnergy = max(0.0, plantEnergy - 0.005);
 
       if (bioModeSetting === 'force_zen') {
         currentBioState = 'zen';
       } else if (bioModeSetting === 'force_chaos') {
         currentBioState = 'chaos';
       } else {
-        // Auto-detect: High velocity/delta spikes shift to Chaos, smooth low activity shifts to Zen
         if (plantEnergy > 0.45 || smoothVariance > 0.7) {
           currentBioState = 'chaos';
         } else {
@@ -508,7 +603,6 @@
         }
       }
 
-      // Update UI Badge
       let badge = document.getElementById('bioStateBadge');
       if (currentBioState === 'zen') {
         badge.innerText = 'ZEN STATE ☯';
@@ -521,9 +615,9 @@
       if (audioActive && mainFilter) {
         let targetCutoff = map(smoothVariance, 0, 1, 200, 4000);
         if (currentBioState === 'zen') {
-          targetCutoff *= 0.6; // Softer, warmer filter in Zen mode
+          targetCutoff *= 0.6;
         } else {
-          targetCutoff *= 1.4; // Open, aggressive filter in Chaos mode
+          targetCutoff *= 1.4;
         }
         mainFilter.frequency.setTargetAtTime(targetCutoff, audioCtx.currentTime, 0.1);
       }
@@ -565,7 +659,6 @@
       }
 
       if (viewMode === 'psychedelia') {
-        // --- PSYCHEDELIA LIGHT SYNTH MODE (4-Way Symmetry Particle Engine) ---
         noStroke();
         for (let i = lightParticles.length - 1; i >= 0; i--) {
           let p = lightParticles[i];
@@ -588,12 +681,10 @@
           rect(mirrorX, mirrorY, p.size, p.size);
         }
       } else {
-        // --- SANSEVIERIA TRIFASCIATA LASER SYNTH & POT MODE ---
         push();
         let potBaseX = width / 2;
         let potBaseY = height / 2 + 220;
 
-        // ZEN MODE SPECIAL EFFECT: Soft pulsing bloom ring behind the plant
         if (currentBioState === 'zen') {
           zenBloomRadius = (zenBloomRadius + 0.8) % 180;
           noFill();
@@ -602,7 +693,6 @@
           ellipse(potBaseX, potBaseY - 140, zenBloomRadius * 2, zenBloomRadius * 0.8);
         }
 
-        // Draw Plant Pot
         fill(25, 30, 40);
         stroke(50, 65, 80);
         strokeWeight(2);
@@ -636,11 +726,9 @@
           let intensity = ch.envelope;
           let chLfoVal = sin(millis() * 0.001 * ch.lfoRate * TWO_PI) * ch.lfoDepth;
 
-          // Glitch factor scaled by state (minimal in Zen, aggressive in Chaos)
           let glitchJitter = (currentBioState === 'chaos') ? (intensity * 40 * (1.0 + chLfoVal)) : (intensity * 6);
           let shearFactor = (idx - 3) * smoothDelta * (currentBioState === 'chaos' ? 0.6 : 0.2);
 
-          // CHAOS MODE SPECIAL EFFECT: Chromatic Color Split
           if (currentBioState === 'chaos' && intensity > 0.05) {
             stroke(255, 0, 80, 180);
             strokeWeight(1.5);
@@ -651,7 +739,6 @@
             drawLeafPath(xBase + 6, baseHeight, idx, glitchJitter, shearFactor, intensity);
           }
 
-          // Main Channel Vector Outline
           stroke(ch.rgb[0], ch.rgb[1], ch.rgb[2], currentBioState === 'zen' ? 200 : 255);
           strokeWeight(2.5);
           drawLeafPath(xBase, baseHeight, idx, glitchJitter, shearFactor, intensity);
@@ -740,7 +827,6 @@
       let now = audioCtx.currentTime + delayOffset;
       let peakGain = map(velocity, 0, 127, 0.03, 0.25) * ch.volume;
 
-      // Adapt envelope times based on active Bio-State
       let atk = (currentBioState === 'zen') ? (ch.attack * 1.8) : (ch.attack * 0.5);
       let rel = (currentBioState === 'zen') ? (ch.release * 1.5) : (ch.release * 0.7);
 
