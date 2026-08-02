@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sansevieria Trifasciata Laser Synthesizer & Mod Matrix</title>
+  <title>Sansevieria Trifasciata Laser Synthesizer & Per-Channel LFO/Panning</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
   <style>
@@ -180,7 +180,7 @@
   <div id="configModal">
     <div class="modal-content">
       <div class="modal-header">
-        <span>MODULATION MATRIX & SOUND CONFIG</span>
+        <span>PER-CHANNEL SOUND & LFO CONFIG</span>
         <button class="close-btn" onclick="toggleConfigModal()">✕</button>
       </div>
       
@@ -199,27 +199,7 @@
         </div>
       </div>
 
-      <!-- LFO & Modulation Matrix Configuration -->
-      <div class="channel-box">
-        <div class="channel-header" style="color: #ffde4a;">LFO Modulation Matrix</div>
-        <div class="control-group">
-          <label>Modulation Target</label>
-          <select id="mod_target" onchange="updateModMatrix()">
-            <option value="glitch">Glitch Intensity</option>
-            <option value="cutoff">Filter Cutoff Sweep</option>
-            <option value="jitter">Laser Particle Spread</option>
-          </select>
-        </div>
-        <div class="control-group">
-          <label>LFO Rate (Speed): <span id="lbl_lfo_rate">2.0</span> Hz</label>
-          <input type="range" id="lfo_rate" min="0.1" max="10.0" step="0.2" value="2.0" oninput="updateModMatrix()">
-        </div>
-        <div class="control-group">
-          <label>LFO Depth (Amount): <span id="lbl_lfo_depth">0.5</span></label>
-          <input type="range" id="lfo_depth" min="0.0" max="1.0" step="0.05" value="0.5" oninput="updateModMatrix()">
-        </div>
-      </div>
-
+      <!-- Channel Container with full independent settings & LFO per channel -->
       <div id="modalChannelContainer"></div>
     </div>
   </div>
@@ -263,22 +243,17 @@
       arp: 'off'
     };
 
-    let modMatrixConfig = {
-      target: 'glitch',
-      rate: 2.0,
-      depth: 0.5
-    };
-
     let ambientSporeDust = [];
 
+    // All channels equipped with individual Waveform, Attack, Release, Volume, Panning, and LFO parameters
     const allChannels = [
-      { id: 1, name: "Ch 1 (Red)", color: "#ff3333", rgb: [255, 51, 51], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
-      { id: 2, name: "Ch 2 (Orange)", color: "#ff9933", rgb: [255, 153, 51], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
-      { id: 3, name: "Ch 3 (Yellow)", color: "#ffff33", rgb: [255, 255, 51], wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
-      { id: 4, name: "Ch 4 (Green)", color: "#33cc33", rgb: [51, 204, 51], wave: "square", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
-      { id: 5, name: "Ch 5 (Blue)", color: "#3399ff", rgb: [51, 153, 255], wave: "sine", attack: 0.2, release: 4.0, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
-      { id: 6, name: "Ch 6 (Indigo)", color: "#9933ff", rgb: [153, 51, 255], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 },
-      { id: 7, name: "Ch 7 (Violet)", color: "#cc33ff", rgb: [204, 51, 255], wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, envelope: 0, spawnX: 0, spawnY: 0 }
+      { id: 1, name: "Ch 1 (Red)", color: "#ff3333", rgb: [255, 51, 51], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, pan: -0.7, lfoRate: 1.0, lfoDepth: 0.3, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 2, name: "Ch 2 (Orange)", color: "#ff9933", rgb: [255, 153, 51], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, pan: -0.4, lfoRate: 1.5, lfoDepth: 0.3, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 3, name: "Ch 3 (Yellow)", color: "#ffff33", rgb: [255, 255, 51], wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, pan: -0.2, lfoRate: 2.0, lfoDepth: 0.4, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 4, name: "Ch 4 (Green)", color: "#33cc33", rgb: [51, 204, 51], wave: "square", attack: 0.1, release: 3.5, volume: 0.8, pan: 0.0, lfoRate: 0.5, lfoDepth: 0.2, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 5, name: "Ch 5 (Blue)", color: "#3399ff", rgb: [51, 153, 255], wave: "sine", attack: 0.2, release: 4.0, volume: 0.8, pan: 0.2, lfoRate: 2.5, lfoDepth: 0.5, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 6, name: "Ch 6 (Indigo)", color: "#9933ff", rgb: [153, 51, 255], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, pan: 0.4, lfoRate: 3.0, lfoDepth: 0.4, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 7, name: "Ch 7 (Violet)", color: "#cc33ff", rgb: [204, 51, 255], wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, pan: 0.7, lfoRate: 4.0, lfoDepth: 0.6, envelope: 0, spawnX: 0, spawnY: 0 }
     ];
 
     let lightParticles = [];
@@ -294,7 +269,6 @@
         ch.spawnY = height / 2 + sin(angle) * 150;
       });
 
-      // Initialize ambient spore dust particles for weather FX
       for(let i=0; i<60; i++) {
         ambientSporeDust.push({
           x: random(width),
@@ -342,6 +316,18 @@
             <label>Volume: <span id="lbl_ch${ch.id}_vol">${ch.volume}</span></label>
             <input type="range" id="ch${ch.id}_volume" min="0.1" max="1.5" step="0.1" value="${ch.volume}" oninput="updateChannelParams(${ch.id})">
           </div>
+          <div class="control-group">
+            <label>Stereo Pan (L to R): <span id="lbl_ch${ch.id}_pan">${ch.pan}</span></label>
+            <input type="range" id="ch${ch.id}_pan" min="-1.0" max="1.0" step="0.1" value="${ch.pan}" oninput="updateChannelParams(${ch.id})">
+          </div>
+          <div class="control-group">
+            <label>LFO Rate: <span id="lbl_ch${ch.id}_lforate">${ch.lfoRate}</span> Hz</label>
+            <input type="range" id="ch${ch.id}_lforate" min="0.1" max="8.0" step="0.2" value="${ch.lfoRate}" oninput="updateChannelParams(${ch.id})">
+          </div>
+          <div class="control-group">
+            <label>LFO Depth: <span id="lbl_ch${ch.id}_lfodepth">${ch.lfoDepth}</span></label>
+            <input type="range" id="ch${ch.id}_lfodepth" min="0.0" max="1.0" step="0.05" value="${ch.lfoDepth}" oninput="updateChannelParams(${ch.id})">
+          </div>
         `;
         container.appendChild(box);
       });
@@ -386,33 +372,30 @@
       }
     }
 
-    function updateModMatrix() {
-      modMatrixConfig.target = document.getElementById('mod_target').value;
-      modMatrixConfig.rate = parseFloat(document.getElementById('lfo_rate').value);
-      modMatrixConfig.depth = parseFloat(document.getElementById('lfo_depth').value);
-
-      document.getElementById('lbl_lfo_rate').innerText = modMatrixConfig.rate.toFixed(1);
-      document.getElementById('lbl_lfo_depth').innerText = modMatrixConfig.depth.toFixed(2);
-    }
-
     function updateChannelParams(id) {
       let ch = allChannels.find(c => c.id === id);
       ch.wave = document.getElementById(`ch${id}_wave`).value;
       ch.attack = parseFloat(document.getElementById(`ch${id}_attack`).value);
       ch.release = parseFloat(document.getElementById(`ch${id}_release`).value);
       ch.volume = parseFloat(document.getElementById(`ch${id}_volume`).value);
+      ch.pan = parseFloat(document.getElementById(`ch${id}_pan`).value);
+      ch.lfoRate = parseFloat(document.getElementById(`ch${id}_lforate`).value);
+      ch.lfoDepth = parseFloat(document.getElementById(`ch${id}_lfodepth`).value);
 
       document.getElementById(`lbl_ch${id}_atk`).innerText = ch.attack.toFixed(2);
       document.getElementById(`lbl_ch${id}_rel`).innerText = ch.release.toFixed(1);
       document.getElementById(`lbl_ch${id}_vol`).innerText = ch.volume.toFixed(1);
+      document.getElementById(`lbl_ch${id}_pan`).innerText = ch.pan.toFixed(1);
+      document.getElementById(`lbl_ch${id}_lforate`).innerText = ch.lfoRate.toFixed(1);
+      document.getElementById(`lbl_ch${id}_lfodepth`).innerText = ch.lfoDepth.toFixed(2);
     }
 
     function spawnLightBurst(px, py, chIndex, velocity, note) {
       let ch = allChannels[chIndex % allChannels.length];
       ch.envelope = 1.0; 
       
-      let lfoModValue = sin(frameCount * modMatrixConfig.rate * 0.2) * modMatrixConfig.depth;
-      let spreadMultiplier = (modMatrixConfig.target === 'jitter') ? (1.0 + lfoModValue * 2.0) : 1.0;
+      let chLfoVal = sin(millis() * 0.001 * ch.lfoRate * TWO_PI) * ch.lfoDepth;
+      let spreadMultiplier = 1.0 + chLfoVal;
 
       ch.spawnX = lerp(ch.spawnX, map(note, 0, 127, width * 0.1, width * 0.9), 0.4);
       ch.spawnY = lerp(ch.spawnY, py, 0.4);
@@ -463,12 +446,8 @@
       smoothDelta = lerp(smoothDelta, targetDelta, 0.05);
       smoothVariance = lerp(smoothVariance, targetVariance, 0.05);
 
-      // Compute LFO signal value
-      let lfoValue = sin(millis() * 0.001 * modMatrixConfig.rate * TWO_PI) * modMatrixConfig.depth;
-
       if (audioActive && mainFilter) {
-        let baseCutoff = map(smoothVariance, 0, 1, 200, 4000);
-        let targetCutoff = (modMatrixConfig.target === 'cutoff') ? baseCutoff * (1.0 + lfoValue) : baseCutoff;
+        let targetCutoff = map(smoothVariance, 0, 1, 200, 4000);
         mainFilter.frequency.setTargetAtTime(targetCutoff, audioCtx.currentTime, 0.1);
       }
 
@@ -487,7 +466,6 @@
       document.getElementById('valDelta').innerText = smoothDelta.toFixed(2);
       document.getElementById('valVariance').innerText = smoothVariance.toFixed(2);
 
-      // --- RENDER WEATHER FX (SPORE FOG & SCANLINES) ---
       if (weatherFxEnabled) {
         push();
         noStroke();
@@ -501,7 +479,6 @@
           ellipse(p.x, p.y, p.size);
         });
 
-        // CRT Scanline Overlay
         stroke(0, 255, 204, 12);
         strokeWeight(1);
         for(let sy = 0; sy < height; sy += 4) {
@@ -573,9 +550,9 @@
           let xBase = leafOffsets[idx];
 
           let intensity = ch.envelope;
-          // Apply LFO modulation matrix to glitch intensity if targeted
-          let lfoGlitchMod = (modMatrixConfig.target === 'glitch') ? (1.0 + lfoValue * 2.0) : 1.0;
-          let glitchJitter = intensity * 25 * lfoGlitchMod;
+          // Apply individual channel LFO modulation to glitch jitter
+          let chLfoVal = sin(millis() * 0.001 * ch.lfoRate * TWO_PI) * ch.lfoDepth;
+          let glitchJitter = intensity * 25 * (1.0 + chLfoVal);
           let shearFactor = (idx - 3) * smoothDelta * 0.4;
 
           for (let y = 0; y <= baseHeight; y += 12) {
@@ -649,6 +626,12 @@
 
       let osc = audioCtx.createOscillator();
       let noteGain = audioCtx.createGain();
+      
+      // Add Stereo Panner Node per channel for left/right spatial positioning
+      let panner = audioCtx.createStereoPanner ? audioCtx.createStereoPanner() : null;
+      if (panner) {
+        panner.pan.setValueAtTime(ch.pan, audioCtx.currentTime);
+      }
 
       osc.type = ch.wave;
       osc.frequency.setValueAtTime(freq, audioCtx.currentTime + delayOffset);
@@ -661,7 +644,12 @@
       noteGain.gain.exponentialRampToValueAtTime(0.0001, now + ch.release);
 
       osc.connect(noteGain);
-      noteGain.connect(mainFilter);
+      if (panner) {
+        noteGain.connect(panner);
+        panner.connect(mainFilter);
+      } else {
+        noteGain.connect(mainFilter);
+      }
 
       osc.start(now);
       osc.stop(now + ch.release + 0.1);
