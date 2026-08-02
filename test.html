@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sansevieria Bio-Rhythm Synth & Looping MP4 Station</title>
+  <title>Sansevieria Bio-Rhythm Synth & Sound Presets</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/p5.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.6.0/addons/p5.sound.min.js"></script>
   <style>
@@ -247,12 +247,21 @@
   <div id="configModal">
     <div class="modal-content">
       <div class="modal-header">
-        <span>PER-CHANNEL SOUND & LFO CONFIG</span>
+        <span>PRESETS & SOUND CONFIG</span>
         <button class="close-btn" onclick="toggleConfigModal()">✕</button>
       </div>
       
       <div class="channel-box">
-        <div class="channel-header" style="color: #ffde4a;">Global Master Parameters</div>
+        <div class="channel-header" style="color: #ffde4a;">Global Master & Sound Presets</div>
+        <div class="control-group">
+          <label>Harmonic Sound Preset</label>
+          <select id="sound_preset" onchange="applySoundPreset()">
+            <option value="custom">Custom (Manual Channel Settings)</option>
+            <option value="ambient" selected>Ambient Dreamscape (Soft Sine/Triangle)</option>
+            <option value="warm_pad">Warm Organic Pads (Long Reverb/Release)</option>
+            <option value="crystal">Crystal Bell Chimes (Clean & Pure)</option>
+          </select>
+        </div>
         <div class="control-group">
           <label>Filter Resonance (Q): <span id="lbl_resonance">4.0</span></label>
           <input type="range" id="global_resonance" min="1" max="20" step="0.5" value="4.0" oninput="updateGlobalParams()">
@@ -261,7 +270,7 @@
           <label>Arpeggio Mode</label>
           <select id="global_arp" onchange="updateGlobalParams()">
             <option value="off">Single Tone</option>
-            <option value="cascade">Harmonic Cascade</option>
+            <option value="cascade" selected>Harmonic Cascade</option>
           </select>
         </div>
       </div>
@@ -333,19 +342,19 @@
     
     let globalConfig = {
       resonance: 4.0,
-      arp: 'off'
+      arp: 'cascade'
     };
 
     let ambientSporeDust = [];
 
     const allChannels = [
-      { id: 1, name: "Ch 1 (Red)", color: "#ff3333", rgb: [255, 51, 51], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, pan: -0.7, lfoRate: 1.0, lfoDepth: 0.3, envelope: 0, spawnX: 0, spawnY: 0 },
-      { id: 2, name: "Ch 2 (Orange)", color: "#ff9933", rgb: [255, 153, 51], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, pan: -0.4, lfoRate: 1.5, lfoDepth: 0.3, envelope: 0, spawnX: 0, spawnY: 0 },
-      { id: 3, name: "Ch 3 (Yellow)", color: "#ffff33", rgb: [255, 255, 51], wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, pan: -0.2, lfoRate: 2.0, lfoDepth: 0.4, envelope: 0, spawnX: 0, spawnY: 0 },
-      { id: 4, name: "Ch 4 (Green)", color: "#33cc33", rgb: [51, 204, 51], wave: "square", attack: 0.1, release: 3.5, volume: 0.8, pan: 0.0, lfoRate: 0.5, lfoDepth: 0.2, envelope: 0, spawnX: 0, spawnY: 0 },
-      { id: 5, name: "Ch 5 (Blue)", color: "#3399ff", rgb: [51, 153, 255], wave: "sine", attack: 0.2, release: 4.0, volume: 0.8, pan: 0.2, lfoRate: 2.5, lfoDepth: 0.5, envelope: 0, spawnX: 0, spawnY: 0 },
-      { id: 6, name: "Ch 6 (Indigo)", color: "#9933ff", rgb: [153, 51, 255], wave: "triangle", attack: 0.1, release: 3.5, volume: 0.8, pan: 0.4, lfoRate: 3.0, lfoDepth: 0.4, envelope: 0, spawnX: 0, spawnY: 0 },
-      { id: 7, name: "Ch 7 (Violet)", color: "#cc33ff", rgb: [204, 51, 255], wave: "sawtooth", attack: 0.1, release: 3.5, volume: 0.8, pan: 0.7, lfoRate: 4.0, lfoDepth: 0.6, envelope: 0, spawnX: 0, spawnY: 0 }
+      { id: 1, name: "Ch 1 (Red)", color: "#ff3333", rgb: [255, 51, 51], wave: "sine", attack: 0.3, release: 5.0, volume: 0.7, pan: -0.7, lfoRate: 0.8, lfoDepth: 0.2, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 2, name: "Ch 2 (Orange)", color: "#ff9933", rgb: [255, 153, 51], wave: "triangle", attack: 0.3, release: 5.0, volume: 0.7, pan: -0.4, lfoRate: 1.0, lfoDepth: 0.2, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 3, name: "Ch 3 (Yellow)", color: "#ffff33", rgb: [255, 255, 51], wave: "triangle", attack: 0.2, release: 5.5, volume: 0.7, pan: -0.2, lfoRate: 1.2, lfoDepth: 0.3, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 4, name: "Ch 4 (Green)", color: "#33cc33", rgb: [51, 204, 51], wave: "sine", attack: 0.2, release: 6.0, volume: 0.7, pan: 0.0, lfoRate: 0.5, lfoDepth: 0.1, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 5, name: "Ch 5 (Blue)", color: "#3399ff", rgb: [51, 153, 255], wave: "triangle", attack: 0.3, release: 5.5, volume: 0.7, pan: 0.2, lfoRate: 1.5, lfoDepth: 0.3, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 6, name: "Ch 6 (Indigo)", color: "#9933ff", rgb: [153, 51, 255], wave: "sine", attack: 0.3, release: 5.0, volume: 0.7, pan: 0.4, lfoRate: 1.8, lfoDepth: 0.2, envelope: 0, spawnX: 0, spawnY: 0 },
+      { id: 7, name: "Ch 7 (Violet)", color: "#cc33ff", rgb: [204, 51, 255], wave: "triangle", attack: 0.3, release: 6.0, volume: 0.7, pan: 0.7, lfoRate: 2.0, lfoDepth: 0.4, envelope: 0, spawnX: 0, spawnY: 0 }
     ];
 
     let lightParticles = [];
@@ -389,7 +398,7 @@
           <div class="channel-header"><span class="color-dot" style="background:${ch.color};"></span>${ch.name}</div>
           <div class="control-group">
             <label>Waveform</label>
-            <select id="ch${ch.id}_wave" onchange="updateChannelParams(${ch.id})">
+            <select id="ch${ch.id}_wave" onchange="markCustomPreset(); updateChannelParams(${ch.id});">
               <option value="triangle" ${ch.wave==='triangle'?'selected':''}>Triangle</option>
               <option value="sine" ${ch.wave==='sine'?'selected':''}>Sine</option>
               <option value="sawtooth" ${ch.wave==='sawtooth'?'selected':''}>Sawtooth</option>
@@ -398,31 +407,71 @@
           </div>
           <div class="control-group">
             <label>Attack: <span id="lbl_ch${ch.id}_atk">${ch.attack}</span>s</label>
-            <input type="range" id="ch${ch.id}_attack" min="0.01" max="1.0" step="0.05" value="${ch.attack}" oninput="updateChannelParams(${ch.id})">
+            <input type="range" id="ch${ch.id}_attack" min="0.01" max="1.0" step="0.05" value="${ch.attack}" oninput="markCustomPreset(); updateChannelParams(${ch.id});">
           </div>
           <div class="control-group">
             <label>Release Tail: <span id="lbl_ch${ch.id}_rel">${ch.release}</span>s</label>
-            <input type="range" id="ch${ch.id}_release" min="0.5" max="8.0" step="0.2" value="${ch.release}" oninput="updateChannelParams(${ch.id})">
+            <input type="range" id="ch${ch.id}_release" min="0.5" max="8.0" step="0.2" value="${ch.release}" oninput="markCustomPreset(); updateChannelParams(${ch.id});">
           </div>
           <div class="control-group">
             <label>Volume: <span id="lbl_ch${ch.id}_vol">${ch.volume}</span></label>
-            <input type="range" id="ch${ch.id}_volume" min="0.1" max="1.5" step="0.1" value="${ch.volume}" oninput="updateChannelParams(${ch.id})">
+            <input type="range" id="ch${ch.id}_volume" min="0.1" max="1.5" step="0.1" value="${ch.volume}" oninput="markCustomPreset(); updateChannelParams(${ch.id});">
           </div>
           <div class="control-group">
             <label>Stereo Pan (L to R): <span id="lbl_ch${ch.id}_pan">${ch.pan}</span></label>
-            <input type="range" id="ch${ch.id}_pan" min="-1.0" max="1.0" step="0.1" value="${ch.pan}" oninput="updateChannelParams(${ch.id})">
+            <input type="range" id="ch${ch.id}_pan" min="-1.0" max="1.0" step="0.1" value="${ch.pan}" oninput="markCustomPreset(); updateChannelParams(${ch.id});">
           </div>
           <div class="control-group">
             <label>LFO Rate: <span id="lbl_ch${ch.id}_lforate">${ch.lfoRate}</span> Hz</label>
-            <input type="range" id="ch${ch.id}_lforate" min="0.1" max="8.0" step="0.2" value="${ch.lfoRate}" oninput="updateChannelParams(${ch.id})">
+            <input type="range" id="ch${ch.id}_lforate" min="0.1" max="8.0" step="0.2" value="${ch.lfoRate}" oninput="markCustomPreset(); updateChannelParams(${ch.id});">
           </div>
           <div class="control-group">
             <label>LFO Depth: <span id="lbl_ch${ch.id}_lfodepth">${ch.lfoDepth}</span></label>
-            <input type="range" id="ch${ch.id}_lfodepth" min="0.0" max="1.0" step="0.05" value="${ch.lfoDepth}" oninput="updateChannelParams(${ch.id})">
+            <input type="range" id="ch${ch.id}_lfodepth" min="0.0" max="1.0" step="0.05" value="${ch.lfoDepth}" oninput="markCustomPreset(); updateChannelParams(${ch.id});">
           </div>
         `;
         container.appendChild(box);
       });
+    }
+
+    function markCustomPreset() {
+      document.getElementById('sound_preset').value = 'custom';
+    }
+
+    function applySoundPreset() {
+      let preset = document.getElementById('sound_preset').value;
+      if (preset === 'custom') return;
+
+      let waveChoice = 'sine';
+      let atkVal = 0.3;
+      let relVal = 5.0;
+      let volVal = 0.7;
+
+      if (preset === 'ambient') {
+        waveChoice = 'sine';
+        atkVal = 0.4;
+        relVal = 6.0;
+        volVal = 0.7;
+      } else if (preset === 'warm_pad') {
+        waveChoice = 'triangle';
+        atkVal = 0.5;
+        relVal = 7.0;
+        volVal = 0.65;
+      } else if (preset === 'crystal') {
+        waveChoice = 'sine';
+        atkVal = 0.05;
+        relVal = 4.0;
+        volVal = 0.75;
+      }
+
+      allChannels.forEach(ch => {
+        ch.wave = waveChoice;
+        ch.attack = atkVal;
+        ch.release = relVal;
+        ch.volume = volVal;
+      });
+
+      buildConfigModalUI();
     }
 
     function toggleConfigModal() {
@@ -520,7 +569,6 @@
           let blob = new Blob(recordedChunks, { type: mimeType });
           currentLoopBlobUrl = URL.createObjectURL(blob);
           
-          // Automatically stop live soundscape so only the preview loop is heard
           if (audioActive) {
             toggleAudioEngine();
           }
