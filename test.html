@@ -309,6 +309,7 @@
     }
 
     function toggleViewMode() {
+      lightParticles = []; // Clear old particles instantly to prevent screen backlog buildup when switching
       if (viewMode === 'sansevieria') {
         viewMode = 'psychedelia';
         document.getElementById('modeBtn').innerText = 'Switch Mode: Laser Plant';
@@ -437,12 +438,12 @@
           rect(mirrorX, mirrorY, p.size, p.size);
         }
       } else {
-        // --- SANSEVIERIA TRIFASCIATA LASER SYNTH & POT MODE ---
+        // --- SANSEVIERIA TRIFASCIATA LASER SYNTH & POT MODE (CENTERED DOWN) ---
         push();
         let potBaseX = width / 2;
-        let potBaseY = height / 2 + 160;
+        let potBaseY = height / 2 + 220; // Shifted further down to center the plant in the viewport
 
-        // Draw the dark grey plant pot matching the reference image style
+        // Draw the dark grey plant pot
         fill(25, 30, 40);
         stroke(50, 65, 80);
         strokeWeight(2);
@@ -465,7 +466,7 @@
         noStroke();
         ellipse(potBaseX, potBaseY - 140, 172, 14);
 
-        // Render Sansevieria Trifasciata Laser Leaves emerging directly from the pot rim
+        // Render Sansevieria Trifasciata Laser Leaves emerging from the pot rim
         translate(potBaseX, potBaseY - 140);
         noFill();
 
@@ -618,7 +619,7 @@
     function getMIDIMessage(message) {
       let statusByte = message.data[0];
       let command = statusByte & 0xF0;
-      let channel = (statusByte & 0X0F) + 1;
+      let channel = (statusByte & 0x0F) + 1;
       let note = message.data[1];
       let velocity = message.data[2];
 
