@@ -118,11 +118,13 @@
                 const lomin = lon - buffer;
                 const lomax = lon + buffer;
 
-                // STEP 3: Query OpenSky Network
-                const openSkyUrl = `https://opensky-network.org/api/states/all?lamin=${lamin}&lamax=${lamax}&lomin=${lomin}&lomax=${lomax}`;
-                const skyResponse = await fetch(openSkyUrl);
+                // STEP 3: Query OpenSky Network using a CORS proxy to bypass browser restrictions
+                const targetUrl = `https://opensky-network.org/api/states/all?lamin=${lamin}&lamax=${lamax}&lomin=${lomin}&lomax=${lomax}`;
+                const openSkyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
                 
-                if (!skyResponse.ok) throw new Error("Could not connect to OpenSky Network");
+                const skyResponse = await fetch(openSkyUrl);
+                if (!skyResponse.ok) throw new Error("Could not connect to OpenSky Network via proxy");
+                
                 const skyData = await skyResponse.json();
 
                 // STEP 4: Display Results
