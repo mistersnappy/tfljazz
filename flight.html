@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Overhead Flight Tracker</title>
+    <title>Overhead Flight Tracker & Alerts</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #f4f7f6;
             color: #333;
-            max-width: 600px;
+            max-width: 650px;
             margin: 40px auto;
             padding: 20px;
         }
@@ -27,7 +27,7 @@
         .input-group {
             display: flex;
             gap: 10px;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         input {
             flex: 1;
@@ -39,20 +39,37 @@
         button {
             padding: 10px 20px;
             font-size: 16px;
-            background-color: #3498db;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             transition: background 0.3s;
         }
-        button:hover {
-            background-color: #2980b9;
-        }
+        .btn-start { background-color: #27ae60; }
+        .btn-start:hover { background-color: #219653; }
+        .btn-stop { background-color: #c0392b; }
+        .btn-stop:hover { background-color: #a93226; }
+
         #status {
             font-style: italic;
             color: #7f8c8d;
             margin-bottom: 20px;
+        }
+        #alert-banner {
+            display: none;
+            background-color: #e74c3c;
+            color: white;
+            padding: 12px;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 20px;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
         }
         .flight-card {
             background: #ecf0f1;
@@ -62,11 +79,12 @@
             border-left: 5px solid #3498db;
         }
         .flight-card h3 {
-            margin: 0 0 10px 0;
+            margin: 0 0 8px 0;
             font-size: 18px;
+            color: #2980b9;
         }
         .flight-card p {
-            margin: 5px 0;
+            margin: 4px 0;
             font-size: 14px;
         }
     </style>
@@ -74,86 +92,177 @@
 <body>
 
     <div class="container">
-        <h1>✈️ Overhead Flight Tracker</h1>
-        <p>Enter a UK postcode to see what aircraft are currently flying within roughly 2km of that location.</p>
+        <h1>✈️ Low-Altitude Overhead Tracker</h1>
+        <p>Enter a UK postcode to monitor aircraft flying under <strong>20,000 feet</strong> overhead.</p>
         
         <div class="input-group">
             <input type="text" id="postcode" placeholder="e.g. SW1A 1AA">
-            <button onclick="scanAirspace()">Scan Sky</button>
+            <button id="toggleButton" class="btn-start" onclick="toggleTracker()">Start Monitoring</button>
         </div>
 
-        <div id="status"></div>
+        <div id="alert-banner">🚨 NEW LOW-FLYING AIRCRAFT DETECTED OVERHEAD! 🚨</div>
+        <div id="status">Status: Stopped</div>
         <div id="results"></div>
     </div>
 
     <script>
-        async function scanAirspace() {
-            const postcode = document.getElementById('postcode').value.trim();
-            const statusDiv = document.getElementById('status');
-            const resultsDiv = document.getElementById('results');
-            
-            if (!postcode) {
-                statusDiv.innerHTML = "⚠️ Please enter a postcode.";
-                return;
-            }
+        let timer = null;
+        let isRunning = false;
+        let cachedLat = null;
+        let cachedLon = null;
+        let currentlySeenFlights = new Set(); // Tracks ICAO hex codes currently overhead to prevent spam
 
-            statusDiv.innerHTML = "🔍 Locating postcode...";
-            resultsDiv.innerHTML = ""; // Clear previous results
+        // Built-in dictionary to enrich data locally without paid APIs
+        const airlineMap = {
+            "BAW": "British Airways",
+            "EZY": "EasyJet",
+            "RYR": "Ryanair",
+            "BAW": "British Airways",
+            "TOM": "TUI Airways",
+            "VIR": "Virgin Atlantic",
+            "LOG": "Loganair",
+            "BMA": "British Midland",
+            "KLM": "KLM Royal Dutch Airlines",
+            "AFR": "Air France",
+            "DLH": "Lufthansa",
+            "UAE": "Emirates",
+            "QTR": "Qatar Airways"
+        };
+
+        async function toggleTracker() {
+            const btn = document.getElementById('toggleButton');
+            const postcode = document.getElementById('postcode').value.trim();
+
+            if (!isRunning) {
+                if (!postcode) {
+                    alert("Please enter a UK postcode first.");
+                    return;
+                }
+                
+                // Start tracking
+                isRunning = true;
+                btn.innerText = "Stop Monitoring";
+                btn.className = "btn-stop";
+                document.getElementById('postcode').disabled = true;
+
+                document.getElementById('status').innerHTML = "🔍 Locating postcode coordinates...";
+                
+                try {
+                    const geoRes = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(postcode)}`);
+                    if (!geoRes.ok) throw new Error("Invalid UK postcode");
+                    const geoData = await geoRes.json();
+                    cachedLat = geoData.result.latitude;
+                    cachedLon = geoData.result.longitude;
+                    
+                    document.getElementById('status').innerHTML = `📍 Target locked (${cachedLat.toFixed(4)}, ${cachedLon.toFixed(4)}). Scanning every 15s...`;
+                    
+                    // Run immediately, then loop every 15 seconds
+                    scanAirspace();
+                    timer = setInterval(scanAirspace, 15000);
+
+                } catch (error) {
+                    document.getElementById('status').innerHTML = `⚠️ Error: ${error.message}`;
+                    stopTracker();
+                }
+            } else {
+                stopTracker();
+            }
+        }
+
+        function stopTracker() {
+            isRunning = false;
+            clearInterval(timer);
+            const btn = document.getElementById('toggleButton');
+            btn.innerText = "Start Monitoring";
+            btn.className = "btn-start";
+            document.getElementById('postcode').disabled = false;
+            document.getElementById('status').innerHTML = "Status: Stopped";
+            document.getElementById('alert-banner').style.display = "none";
+        }
+
+        async function scanAirspace() {
+            if (!cachedLat || !cachedLon) return;
+
+            const buffer = 0.02; // ~2km boundary box
+            const lamin = cachedLat - buffer, lamax = cachedLat + buffer;
+            const lomin = cachedLon - buffer, lomax = cachedLon + buffer;
+
+            const targetUrl = `https://opensky-network.org/api/states/all?lamin=${lamin}&lamax=${lamax}&lomin=${lomin}&lomax=${lomax}`;
+            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
 
             try {
-                // STEP 1: Get coordinates from Postcodes.io
-                const geoResponse = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(postcode)}`);
-                if (!geoResponse.ok) throw new Error("Invalid UK postcode");
+                const response = await fetch(proxyUrl);
+                if (!response.ok) throw new Error("Network response failed");
+                const data = await response.json();
                 
-                const geoData = await geoResponse.json();
-                const lat = geoData.result.latitude;
-                const lon = geoData.result.longitude;
-                
-                statusDiv.innerHTML = `📍 Postcode found! Scanning airspace around Lat: ${lat.toFixed(4)}, Lon: ${lon.toFixed(4)}...`;
+                const flights = data.states || [];
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = "";
 
-                // STEP 2: Calculate Bounding Box (approx 2km radius using 0.02 degrees)
-                const buffer = 0.02;
-                const lamin = lat - buffer;
-                const lamax = lat + buffer;
-                const lomin = lon - buffer;
-                const lomax = lon + buffer;
+                let newFlightFoundThisCycle = false;
+                let activeHexCodesThisCycle = new Set();
 
-                // STEP 3: Query OpenSky Network using a CORS proxy to bypass browser restrictions
-                const targetUrl = `https://opensky-network.org/api/states/all?lamin=${lamin}&lamax=${lamax}&lomin=${lomin}&lomax=${lomax}`;
-                const openSkyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
-                
-                const skyResponse = await fetch(openSkyUrl);
-                if (!skyResponse.ok) throw new Error("Could not connect to OpenSky Network via proxy");
-                
-                const skyData = await skyResponse.json();
+                // Filter for flights under 20,000 feet (~6096 meters)
+                const lowFlights = flights.filter(f => {
+                    const altMeters = f[7]; // Index 7 is barometric altitude
+                    return altMeters !== null && altMeters <= 6096;
+                });
 
-                // STEP 4: Display Results
-                const flights = skyData.states;
-
-                if (!flights || flights.length === 0) {
-                    statusDiv.innerHTML = "❌ No planes currently detected directly over this area.";
-                } else {
-                    statusDiv.innerHTML = `✅ Found ${flights.length} aircraft overhead!`;
-                    
-                    flights.forEach(flight => {
-                        // OpenSky array indices: 1=callsign, 2=country, 7=altitude (meters)
-                        const callsign = flight[1] ? flight[1].trim() : "Unknown Callsign";
-                        const country = flight[2] ? flight[2] : "Unknown";
-                        const altitudeMeters = flight[7] ? Math.round(flight[7]) : null;
-                        const altitudeText = altitudeMeters ? `${altitudeMeters} meters (${Math.round(altitudeMeters * 3.28084)} feet)` : "Ground/Unknown";
-
-                        const card = document.createElement('div');
-                        card.className = 'flight-card';
-                        card.innerHTML = `
-                            <h3>${callsign}</h3>
-                            <p><strong>Country of Registration:</strong> ${country}</p>
-                            <p><strong>Altitude:</strong> ${altitudeText}</p>
-                        `;
-                        resultsDiv.appendChild(card);
-                    });
+                if (lowFlights.length === 0) {
+                    document.getElementById('status').innerHTML = `Scanning active... No aircraft under 20,000 ft right now. (Last check: ${new Date().toLocaleTimeString()})`;
+                    document.getElementById('alert-banner').style.display = "none";
+                    currentlySeenFlights.clear();
+                    return;
                 }
-            } catch (error) {
-                statusDiv.innerHTML = `⚠️ Error: ${error.message}`;
+
+                document.getElementById('status').innerHTML = `✅ Found ${lowFlights.length} low-altitude aircraft overhead! (Last check: ${new Date().toLocaleTimeString()})`;
+
+                lowFlights.forEach(flight => {
+                    const icaoHex = flight[0]; // Unique tracking ID
+                    const callsign = flight[1] ? flight[1].trim() : "Unknown";
+                    const country = flight[2] || "Unknown";
+                    const altMeters = Math.round(flight[7]);
+                    const altFeet = Math.round(altMeters * 3.28084);
+                    const velocityMs = flight[9]; // Ground speed in m/s
+                    const speedKmph = velocityMs ? Math.round(velocityMs * 3.6) : "Unknown";
+
+                    activeHexCodesThisCycle.add(icaoHex);
+
+                    // Check if this is a brand new arrival overhead
+                    if (!currentlySeenFlights.has(icaoHex)) {
+                        newFlightFoundThisCycle = true;
+                    }
+
+                    // Enrich data using callsign prefix
+                    let airlineName = "Private / Unmapped Carrier";
+                    const prefix = callsign.substring(0, 3).toUpperCase();
+                    if (airlineMap[prefix]) {
+                        airlineName = airlineMap[prefix];
+                    }
+
+                    // Render Card
+                    const card = document.createElement('div');
+                    card.className = 'flight-card';
+                    card.innerHTML = `
+                        <h3>✈️ ${airlineName} (${callsign})</h3>
+                        <p><strong>ICAO Hex:</strong> ${icaoHex} | <strong>Country:</strong> ${country}</p>
+                        <p><strong>Altitude:</strong> ${altFeet.toLocaleString()} ft (${altMeters} m)</p>
+                        <p><strong>Ground Speed:</strong> ${speedKmph} km/h</p>
+                    `;
+                    resultsDiv.appendChild(card);
+                });
+
+                // Manage De-duplication set and Alert Banner visual feedback
+                if (newFlightFoundThisCycle) {
+                    document.getElementById('alert-banner').style.display = "block";
+                } else {
+                    document.getElementById('alert-banner').style.display = "none";
+                }
+
+                currentlySeenFlights = activeHexCodesThisCycle;
+
+            } catch (err) {
+                console.error("Fetch error:", err);
             }
         }
     </script>
