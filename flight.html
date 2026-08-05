@@ -117,9 +117,8 @@
                 return;
             }
 
-            // Lock button temporarily to prevent spamming
             scanBtn.disabled = true;
-            let cooldown = 10;
+            let cooldown = 5;
             const cooldownTimer = setInterval(() => {
                 cooldown--;
                 if (cooldown <= 0) {
@@ -143,7 +142,7 @@
                 const lat = geoData.result.latitude;
                 const lon = geoData.result.longitude;
                 
-                statusDiv.innerHTML = `📍 Target locked (${lat.toFixed(4)}, ${lon.toFixed(4)}). Querying OpenSky network...`;
+                statusDiv.innerHTML = `📍 Target locked (${lat.toFixed(4)}, ${lon.toFixed(4)}). Querying OpenSky...`;
 
                 // STEP 2: 5km radius bounding box (~0.045 degrees offset)
                 const buffer = 0.045; 
@@ -152,14 +151,14 @@
 
                 const targetUrl = `https://opensky-network.org/api/states/all?lamin=${lamin}&lamax=${lamax}&lomin=${lomin}&lomax=${lomax}`;
                 
-                // Using an alternative public CORS routing wrapper to clear potential proxy blockages
-                const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`;
+                // Using CorsProxy.io edge routing
+                const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
 
                 const response = await fetch(proxyUrl);
                 const textResponse = await response.text();
 
                 if (textResponse.includes("Too many requests") || response.status === 429) {
-                    statusDiv.innerHTML = `⚠️ OpenSky Rate Limit Hit (429). The shared proxy IP is throttled. Please wait 1-2 minutes before scanning again.`;
+                    statusDiv.innerHTML = `⚠️ OpenSky Rate Limit Hit (429). Please wait a moment before trying again.`;
                     return;
                 }
 
@@ -167,7 +166,7 @@
                 try {
                     data = JSON.parse(textResponse);
                 } catch (e) {
-                    throw new Error("Received invalid structure from server proxy.");
+                    throw new Error("Received malformed response from proxy.");
                 }
                 
                 const flights = data.states || [];
@@ -205,7 +204,6 @@
                     `;
                     resultsDiv.appendChild(card);
 
-                    // Fetch HexDB details asynchronously
                     fetchAircraftDetails(icaoHex).then(details => {
                         const detailsEl = document.getElementById(`details-${icaoHex}`);
                         if (detailsEl) {
