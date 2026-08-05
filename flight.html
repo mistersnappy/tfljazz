@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Overhead Flight Tracker & Alerts</title>
+    <title>50km Night Sky Tracker & HexDB Lookup</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #f4f7f6;
             color: #333;
-            max-width: 650px;
+            max-width: 700px;
             margin: 40px auto;
             padding: 20px;
         }
@@ -87,20 +87,24 @@
             margin: 4px 0;
             font-size: 14px;
         }
+        .loading-details {
+            color: #e67e22;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>✈️ Low-Altitude Overhead Tracker</h1>
-        <p>Enter a UK postcode to monitor aircraft flying under <strong>20,000 feet</strong> overhead.</p>
+        <h1>🌙 50km Night Sky Tracker</h1>
+        <p>Monitoring aircraft under <strong>20,000 feet</strong> within a expanded <strong>50km radius</strong> zone.</p>
         
         <div class="input-group">
             <input type="text" id="postcode" placeholder="e.g. SW1A 1AA">
             <button id="toggleButton" class="btn-start" onclick="toggleTracker()">Start Monitoring</button>
         </div>
 
-        <div id="alert-banner">🚨 NEW LOW-FLYING AIRCRAFT DETECTED OVERHEAD! 🚨</div>
+        <div id="alert-banner">🚨 NEW AIRCRAFT ENTERED THE 50KM ZONE! 🚨</div>
         <div id="status">Status: Stopped</div>
         <div id="results"></div>
     </div>
@@ -110,24 +114,10 @@
         let isRunning = false;
         let cachedLat = null;
         let cachedLon = null;
-        let currentlySeenFlights = new Set(); // Tracks ICAO hex codes currently overhead to prevent spam
-
-        // Built-in dictionary to enrich data locally without paid APIs
-        const airlineMap = {
-            "BAW": "British Airways",
-            "EZY": "EasyJet",
-            "RYR": "Ryanair",
-            "BAW": "British Airways",
-            "TOM": "TUI Airways",
-            "VIR": "Virgin Atlantic",
-            "LOG": "Loganair",
-            "BMA": "British Midland",
-            "KLM": "KLM Royal Dutch Airlines",
-            "AFR": "Air France",
-            "DLH": "Lufthansa",
-            "UAE": "Emirates",
-            "QTR": "Qatar Airways"
-        };
+        let currentlySeenFlights = new Set(); 
+        
+        // Local cache for HexDB lookups so we don't spam requests for lingering planes
+        let hexDbCache = {};
 
         async function toggleTracker() {
             const btn = document.getElementById('toggleButton');
@@ -139,12 +129,10 @@
                     return;
                 }
                 
-                // Start tracking
                 isRunning = true;
                 btn.innerText = "Stop Monitoring";
                 btn.className = "btn-stop";
                 document.getElementById('postcode').disabled = true;
-
                 document.getElementById('status').innerHTML = "🔍 Locating postcode coordinates...";
                 
                 try {
@@ -154,11 +142,10 @@
                     cachedLat = geoData.result.latitude;
                     cachedLon = geoData.result.longitude;
                     
-                    document.getElementById('status').innerHTML = `📍 Target locked (${cachedLat.toFixed(4)}, ${cachedLon.toFixed(4)}). Scanning every 15s...`;
+                    document.getElementById('status').innerHTML = `📍 Target locked (${cachedLat.toFixed(4)}, ${cachedLon.toFixed(4)}). Scanning 50km radius every 20s...`;
                     
-                    // Run immediately, then loop every 15 seconds
                     scanAirspace();
-                    timer = setInterval(scanAirspace, 15000);
+                    timer = setInterval(scanAirspace, 20000); // 20s interval for wider scope
 
                 } catch (error) {
                     document.getElementById('status').innerHTML = `⚠️ Error: ${error.message}`;
@@ -180,10 +167,28 @@
             document.getElementById('alert-banner').style.display = "none";
         }
 
+        async function fetchAircraftDetails(icaoHex) {
+            if (hexDbCache[icaoHex]) return hexDbCache[icaoHex];
+
+            try {
+                // HexDB public endpoint lookup
+                const response = await fetch(`https://hexdb.io/api/v1/aircraft/${icaoHex}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    hexDbCache[icaoHex] = data;
+                    return data;
+                }
+            } catch (e) {
+                console.warn("HexDB lookup failed for", icaoHex);
+            }
+            return null;
+        }
+
         async function scanAirspace() {
             if (!cachedLat || !cachedLon) return;
 
-            const buffer = 0.02; // ~2km boundary box
+            // 50km radius boundary box (~0.45 degrees latitude/longitude offset)
+            const buffer = 0.45; 
             const lamin = cachedLat - buffer, lamax = cachedLat + buffer;
             const lomin = cachedLon - buffer, lomax = cachedLon + buffer;
 
@@ -204,55 +209,68 @@
 
                 // Filter for flights under 20,000 feet (~6096 meters)
                 const lowFlights = flights.filter(f => {
-                    const altMeters = f[7]; // Index 7 is barometric altitude
+                    const altMeters = f[7];
                     return altMeters !== null && altMeters <= 6096;
                 });
 
                 if (lowFlights.length === 0) {
-                    document.getElementById('status').innerHTML = `Scanning active... No aircraft under 20,000 ft right now. (Last check: ${new Date().toLocaleTimeString()})`;
+                    document.getElementById('status').innerHTML = `Scanning 50km zone... No aircraft under 20,000 ft right now. (Last check: ${new Date().toLocaleTimeString()})`;
                     document.getElementById('alert-banner').style.display = "none";
                     currentlySeenFlights.clear();
                     return;
                 }
 
-                document.getElementById('status').innerHTML = `✅ Found ${lowFlights.length} low-altitude aircraft overhead! (Last check: ${new Date().toLocaleTimeString()})`;
+                document.getElementById('status').innerHTML = `✅ Found ${lowFlights.length} aircraft under 20k ft in your 50km zone! (Last check: ${new Date().toLocaleTimeString()})`;
 
-                lowFlights.forEach(flight => {
-                    const icaoHex = flight[0]; // Unique tracking ID
-                    const callsign = flight[1] ? flight[1].trim() : "Unknown";
+                for (let flight of lowFlights) {
+                    const icaoHex = flight[0];
+                    const callsign = flight[1] ? flight[1].trim() : "Unknown Callsign";
                     const country = flight[2] || "Unknown";
                     const altMeters = Math.round(flight[7]);
                     const altFeet = Math.round(altMeters * 3.28084);
-                    const velocityMs = flight[9]; // Ground speed in m/s
+                    const velocityMs = flight[9];
                     const speedKmph = velocityMs ? Math.round(velocityMs * 3.6) : "Unknown";
 
                     activeHexCodesThisCycle.add(icaoHex);
 
-                    // Check if this is a brand new arrival overhead
                     if (!currentlySeenFlights.has(icaoHex)) {
                         newFlightFoundThisCycle = true;
                     }
 
-                    // Enrich data using callsign prefix
-                    let airlineName = "Private / Unmapped Carrier";
-                    const prefix = callsign.substring(0, 3).toUpperCase();
-                    if (airlineMap[prefix]) {
-                        airlineName = airlineMap[prefix];
-                    }
-
-                    // Render Card
+                    // Render placeholder card immediately
+                    const cardId = `flight-${icaoHex}`;
                     const card = document.createElement('div');
                     card.className = 'flight-card';
+                    card.id = cardId;
                     card.innerHTML = `
-                        <h3>✈️ ${airlineName} (${callsign})</h3>
-                        <p><strong>ICAO Hex:</strong> ${icaoHex} | <strong>Country:</strong> ${country}</p>
-                        <p><strong>Altitude:</strong> ${altFeet.toLocaleString()} ft (${altMeters} m)</p>
-                        <p><strong>Ground Speed:</strong> ${speedKmph} km/h</p>
+                        <h3>✈️ Callsign: ${callsign}</h3>
+                        <p><strong>ICAO Hex:</strong> ${icaoHex} | <strong>Country Reg:</strong> ${country}</p>
+                        <p><strong>Altitude:</strong> ${altFeet.toLocaleString()} ft | <strong>Speed:</strong> ${speedKmph} km/h</p>
+                        <p class="loading-details" id="details-${icaoHex}">🔄 Querying HexDB for aircraft details...</p>
                     `;
                     resultsDiv.appendChild(card);
-                });
 
-                // Manage De-duplication set and Alert Banner visual feedback
+                    // Fetch detailed data from HexDB asynchronously
+                    fetchAircraftDetails(icaoHex).then(details => {
+                        const detailsEl = document.getElementById(`details-${icaoHex}`);
+                        if (detailsEl) {
+                            if (details) {
+                                const reg = details.Registration || "Unknown Reg";
+                                const type = details.Type || details.ICAOTypeCode || "Unknown Model";
+                                const operator = details.RegisteredOwner || details.Operator || "Unknown Operator";
+                                detailsEl.outerHTML = `
+                                    <p><strong>Registration (Tail):</strong> ${reg}</p>
+                                    <p><strong>Aircraft Type:</strong> ${type}</p>
+                                    <p><strong>Operator/Owner:</strong> ${operator}</p>
+                                `;
+                            } else {
+                                detailsEl.innerHTML = `⚠️ Extended database info unavailable for this hex.`;
+                                detailsEl.className = "";
+                            }
+                        }
+                    });
+                }
+
                 if (newFlightFoundThisCycle) {
                     document.getElementById('alert-banner').style.display = "block";
                 } else {
