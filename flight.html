@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manual Check Overhead Flight Tracker</title>
+    <title>Manual Overhead Flight Tracker</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -47,6 +47,7 @@
         }
         .btn-scan { background-color: #2980b9; }
         .btn-scan:hover { background-color: #2471a3; }
+        .btn-scan:disabled { background-color: #95a5a6; cursor: not-allowed; }
 
         #status {
             font-style: italic;
@@ -89,11 +90,11 @@
 
     <div class="container">
         <h1>✈️ Manual Overhead Flight Tracker</h1>
-        <p>Enter a UK postcode and click <strong>"Scan Sky Now"</strong> to check for low-flying aircraft (&lt;5,000 ft, 5km zone) on demand.</p>
+        <p>Enter a UK postcode and click <strong>"Scan Sky Now"</strong> (5km zone, &lt;5,000 ft).</p>
         
         <div class="input-group">
             <input type="text" id="postcode" placeholder="e.g. SW1A 1AA">
-            <button class="btn-scan" onclick="scanAirspace()">Scan Sky Now</button>
+            <button id="scanBtn" class="btn-scan" onclick="scanAirspace()">Scan Sky Now</button>
         </div>
 
         <div id="alert-banner">🚨 LOW-FLYING AIRCRAFT DETECTED DIRECTLY OVERHEAD! 🚨</div>
@@ -109,11 +110,26 @@
             const statusDiv = document.getElementById('status');
             const resultsDiv = document.getElementById('results');
             const alertBanner = document.getElementById('alert-banner');
+            const scanBtn = document.getElementById('scanBtn');
             
             if (!postcode) {
                 alert("Please enter a UK postcode first.");
                 return;
             }
+
+            // Lock button temporarily to prevent spamming
+            scanBtn.disabled = true;
+            let cooldown = 10;
+            const cooldownTimer = setInterval(() => {
+                cooldown--;
+                if (cooldown <= 0) {
+                    clearInterval(cooldownTimer);
+                    scanBtn.disabled = false;
+                    scanBtn.innerText = "Scan Sky Now";
+                } else {
+                    scanBtn.innerText = `Wait (${cooldown}s)`;
+                }
+            }, 1000);
 
             statusDiv.innerHTML = "🔍 Locating postcode coordinates...";
             resultsDiv.innerHTML = "";
@@ -127,7 +143,7 @@
                 const lat = geoData.result.latitude;
                 const lon = geoData.result.longitude;
                 
-                statusDiv.innerHTML = `📍 Target locked (${lat.toFixed(4)}, ${lon.toFixed(4)}). Querying OpenSky...`;
+                statusDiv.innerHTML = `📍 Target locked (${lat.toFixed(4)}, ${lon.toFixed(4)}). Querying OpenSky network...`;
 
                 // STEP 2: 5km radius bounding box (~0.045 degrees offset)
                 const buffer = 0.045; 
@@ -135,13 +151,15 @@
                 const lomin = lon - buffer, lomax = lon + buffer;
 
                 const targetUrl = `https://opensky-network.org/api/states/all?lamin=${lamin}&lamax=${lamax}&lomin=${lomin}&lomax=${lomax}`;
-                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+                
+                // Using an alternative public CORS routing wrapper to clear potential proxy blockages
+                const proxyUrl = `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`;
 
                 const response = await fetch(proxyUrl);
                 const textResponse = await response.text();
 
                 if (textResponse.includes("Too many requests") || response.status === 429) {
-                    statusDiv.innerHTML = `⚠️ OpenSky Rate Limit Hit (429). Please wait a moment before trying again.`;
+                    statusDiv.innerHTML = `⚠️ OpenSky Rate Limit Hit (429). The shared proxy IP is throttled. Please wait 1-2 minutes before scanning again.`;
                     return;
                 }
 
@@ -149,7 +167,7 @@
                 try {
                     data = JSON.parse(textResponse);
                 } catch (e) {
-                    throw new Error("Received malformed response from proxy/server.");
+                    throw new Error("Received invalid structure from server proxy.");
                 }
                 
                 const flights = data.states || [];
