@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Overhead Low-Altitude Flight Tracker</title>
+    <title>Manual Check Overhead Flight Tracker</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -45,10 +45,8 @@
             cursor: pointer;
             transition: background 0.3s;
         }
-        .btn-start { background-color: #27ae60; }
-        .btn-start:hover { background-color: #219653; }
-        .btn-stop { background-color: #c0392b; }
-        .btn-stop:hover { background-color: #a93226; }
+        .btn-scan { background-color: #2980b9; }
+        .btn-scan:hover { background-color: #2471a3; }
 
         #status {
             font-style: italic;
@@ -64,12 +62,6 @@
             font-weight: bold;
             text-align: center;
             margin-bottom: 20px;
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.6; }
-            100% { opacity: 1; }
         }
         .flight-card {
             background: #ecf0f1;
@@ -96,113 +88,71 @@
 <body>
 
     <div class="container">
-        <h1>✈️ Low-Altitude Overhead Tracker</h1>
-        <p>Monitoring aircraft under <strong>5,000 feet</strong> within a tight <strong>5km radius</strong> zone.</p>
+        <h1>✈️ Manual Overhead Flight Tracker</h1>
+        <p>Enter a UK postcode and click <strong>"Scan Sky Now"</strong> to check for low-flying aircraft (&lt;5,000 ft, 5km zone) on demand.</p>
         
         <div class="input-group">
             <input type="text" id="postcode" placeholder="e.g. SW1A 1AA">
-            <button id="toggleButton" class="btn-start" onclick="toggleTracker()">Start Monitoring</button>
+            <button class="btn-scan" onclick="scanAirspace()">Scan Sky Now</button>
         </div>
 
         <div id="alert-banner">🚨 LOW-FLYING AIRCRAFT DETECTED DIRECTLY OVERHEAD! 🚨</div>
-        <div id="status">Status: Stopped</div>
+        <div id="status">Status: Ready</div>
         <div id="results"></div>
     </div>
 
     <script>
-        let timer = null;
-        let isRunning = false;
-        let cachedLat = null;
-        let cachedLon = null;
-        let currentlySeenFlights = new Set(); 
         let hexDbCache = {};
 
-        async function toggleTracker() {
-            const btn = document.getElementById('toggleButton');
+        async function scanAirspace() {
             const postcode = document.getElementById('postcode').value.trim();
+            const statusDiv = document.getElementById('status');
+            const resultsDiv = document.getElementById('results');
+            const alertBanner = document.getElementById('alert-banner');
+            
+            if (!postcode) {
+                alert("Please enter a UK postcode first.");
+                return;
+            }
 
-            if (!isRunning) {
-                if (!postcode) {
-                    alert("Please enter a UK postcode first.");
+            statusDiv.innerHTML = "🔍 Locating postcode coordinates...";
+            resultsDiv.innerHTML = "";
+            alertBanner.style.display = "none";
+
+            try {
+                // STEP 1: Get coordinates from Postcodes.io
+                const geoRes = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(postcode)}`);
+                if (!geoRes.ok) throw new Error("Invalid UK postcode");
+                const geoData = await geoRes.json();
+                const lat = geoData.result.latitude;
+                const lon = geoData.result.longitude;
+                
+                statusDiv.innerHTML = `📍 Target locked (${lat.toFixed(4)}, ${lon.toFixed(4)}). Querying OpenSky...`;
+
+                // STEP 2: 5km radius bounding box (~0.045 degrees offset)
+                const buffer = 0.045; 
+                const lamin = lat - buffer, lamax = lat + buffer;
+                const lomin = lon - buffer, lomax = lon + buffer;
+
+                const targetUrl = `https://opensky-network.org/api/states/all?lamin=${lamin}&lamax=${lamax}&lomin=${lomin}&lomax=${lomax}`;
+                const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
+
+                const response = await fetch(proxyUrl);
+                const textResponse = await response.text();
+
+                if (textResponse.includes("Too many requests") || response.status === 429) {
+                    statusDiv.innerHTML = `⚠️ OpenSky Rate Limit Hit (429). Please wait a moment before trying again.`;
                     return;
                 }
-                
-                isRunning = true;
-                btn.innerText = "Stop Monitoring";
-                btn.className = "btn-stop";
-                document.getElementById('postcode').disabled = true;
-                document.getElementById('status').innerHTML = "🔍 Locating postcode coordinates...";
-                
+
+                let data;
                 try {
-                    const geoRes = await fetch(`https://api.postcodes.io/postcodes/${encodeURIComponent(postcode)}`);
-                    if (!geoRes.ok) throw new Error("Invalid UK postcode");
-                    const geoData = await geoRes.json();
-                    cachedLat = geoData.result.latitude;
-                    cachedLon = geoData.result.longitude;
-                    
-                    document.getElementById('status').innerHTML = `📍 Target locked (${cachedLat.toFixed(4)}, ${cachedLon.toFixed(4)}). Scanning 5km zone every 15s...`;
-                    
-                    scanAirspace();
-                    timer = setInterval(scanAirspace, 15000);
-
-                } catch (error) {
-                    document.getElementById('status').innerHTML = `⚠️ Error: ${error.message}`;
-                    stopTracker();
+                    data = JSON.parse(textResponse);
+                } catch (e) {
+                    throw new Error("Received malformed response from proxy/server.");
                 }
-            } else {
-                stopTracker();
-            }
-        }
-
-        function stopTracker() {
-            isRunning = false;
-            clearInterval(timer);
-            const btn = document.getElementById('toggleButton');
-            btn.innerText = "Start Monitoring";
-            btn.className = "btn-start";
-            document.getElementById('postcode').disabled = false;
-            document.getElementById('status').innerHTML = "Status: Stopped";
-            document.getElementById('alert-banner').style.display = "none";
-        }
-
-        async function fetchAircraftDetails(icaoHex) {
-            if (hexDbCache[icaoHex]) return hexDbCache[icaoHex];
-
-            try {
-                const response = await fetch(`https://hexdb.io/api/v1/aircraft/icao/${icaoHex}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    hexDbCache[icaoHex] = data;
-                    return data;
-                }
-            } catch (e) {
-                console.warn("HexDB lookup failed for", icaoHex);
-            }
-            return null;
-        }
-
-        async function scanAirspace() {
-            if (!cachedLat || !cachedLon) return;
-
-            // 5km radius boundary box (~0.045 degrees latitude/longitude offset)
-            const buffer = 0.045; 
-            const lamin = cachedLat - buffer, lamax = cachedLat + buffer;
-            const lomin = cachedLon - buffer, lomax = cachedLon + buffer;
-
-            const targetUrl = `https://opensky-network.org/api/states/all?lamin=${lamin}&lamax=${lamax}&lomin=${lomin}&lomax=${lomax}`;
-            const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`;
-
-            try {
-                const response = await fetch(proxyUrl);
-                if (!response.ok) throw new Error("OpenSky rate-limited or proxy blocked. Wait 1 minute.");
-                const data = await response.json();
                 
                 const flights = data.states || [];
-                const resultsDiv = document.getElementById('results');
-                resultsDiv.innerHTML = "";
-
-                let newFlightFoundThisCycle = false;
-                let activeHexCodesThisCycle = new Set();
 
                 // Filter for flights under 5,000 feet (~1524 meters)
                 const lowFlights = flights.filter(f => {
@@ -211,13 +161,12 @@
                 });
 
                 if (lowFlights.length === 0) {
-                    document.getElementById('status').innerHTML = `Scanning 5km zone... No aircraft under 5k ft right now. (Last check: ${new Date().toLocaleTimeString()})`;
-                    document.getElementById('alert-banner').style.display = "none";
-                    currentlySeenFlights.clear();
+                    statusDiv.innerHTML = `❌ Scan complete: No aircraft under 5,000 ft found in the 5km zone right now. (Checked at ${new Date().toLocaleTimeString()})`;
                     return;
                 }
 
-                document.getElementById('status').innerHTML = `✅ Found ${lowFlights.length} low-altitude aircraft within 5km! (Last check: ${new Date().toLocaleTimeString()})`;
+                statusDiv.innerHTML = `✅ Found ${lowFlights.length} low-altitude aircraft within 5km! (Checked at ${new Date().toLocaleTimeString()})`;
+                alertBanner.style.display = "block";
 
                 for (let flight of lowFlights) {
                     const icaoHex = flight[0];
@@ -228,16 +177,8 @@
                     const velocityMs = flight[9];
                     const speedKmph = velocityMs ? Math.round(velocityMs * 3.6) : "Unknown";
 
-                    activeHexCodesThisCycle.add(icaoHex);
-
-                    if (!currentlySeenFlights.has(icaoHex)) {
-                        newFlightFoundThisCycle = true;
-                    }
-
-                    const cardId = `flight-${icaoHex}`;
                     const card = document.createElement('div');
                     card.className = 'flight-card';
-                    card.id = cardId;
                     card.innerHTML = `
                         <h3>✈️ Callsign: ${callsign}</h3>
                         <p><strong>ICAO Hex:</strong> ${icaoHex} | <strong>Country Reg:</strong> ${country}</p>
@@ -246,6 +187,7 @@
                     `;
                     resultsDiv.appendChild(card);
 
+                    // Fetch HexDB details asynchronously
                     fetchAircraftDetails(icaoHex).then(details => {
                         const detailsEl = document.getElementById(`details-${icaoHex}`);
                         if (detailsEl) {
@@ -266,17 +208,25 @@
                     });
                 }
 
-                if (newFlightFoundThisCycle) {
-                    document.getElementById('alert-banner').style.display = "block";
-                } else {
-                    document.getElementById('alert-banner').style.display = "none";
-                }
-
-                currentlySeenFlights = activeHexCodesThisCycle;
-
             } catch (err) {
-                document.getElementById('status').innerHTML = `⚠️ Error: ${err.message}`;
+                statusDiv.innerHTML = `⚠️ Error: ${err.message}`;
             }
+        }
+
+        async function fetchAircraftDetails(icaoHex) {
+            if (hexDbCache[icaoHex]) return hexDbCache[icaoHex];
+
+            try {
+                const response = await fetch(`https://hexdb.io/api/v1/aircraft/icao/${icaoHex}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    hexDbCache[icaoHex] = data;
+                    return data;
+                }
+            } catch (e) {
+                console.warn("HexDB lookup failed for", icaoHex);
+            }
+            return null;
         }
     </script>
 </body>
