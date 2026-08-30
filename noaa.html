@@ -115,8 +115,8 @@
         <p style="font-size: 13px; color: #94a3b8;">Generative soundscape steered by live NOAA space telemetry.</p>
         
         <div class="stats">
-            <div class="stat-box">Solar Speed<br><val id="speedVal">Loading...</val></div>
-            <div class="stat-box">K-Index (Storm)<br><val id="kpVal">Loading...</val></div>
+            <div class="stat-box">Solar Speed<br><val id="speedVal">Connecting...</val></div>
+            <div class="stat-box">K-Index (Storm)<br><val id="kpVal">Connecting...</val></div>
         </div>
 
         <div class="controls-row">
@@ -130,7 +130,7 @@
         </div>
 
         <button id="playBtn" onclick="toggleAudio()">INITIALIZE AUDIO STREAM</button>
-        <div id="status">Fetching telemetry from NOAA...</div>
+        <div id="status">Connecting to NOAA via proxy...</div>
 
         <canvas id="visualizer" width="540" height="120"></canvas>
 
@@ -151,7 +151,6 @@
         let masterGain, filterNode, analyser;
         let synthInterval = null;
 
-        // Scale dictionary (Frequencies in Hz)
         const scales = {
             ethereal: { name: "Ethereal Minor", frets: [130.81, 196.00, 233.08, 293.66, 349.23, 392.00] },
             pentatonic: { name: "Cosmic Pentatonic", frets: [146.83, 220.00, 246.94, 293.66, 329.63, 440.00] },
@@ -167,7 +166,6 @@
             chordFrequencies = scales[key].frets;
             document.getElementById("activeNotes").textContent = chordFrequencies.map(f => f + "Hz").join(", ");
             
-            // If audio is running, instantly re-adjust filter context
             if (filterNode && audioCtx) {
                 let mappedCutoff = 200 + (solarSpeed * 2.5);
                 filterNode.frequency.setValueAtTime(Math.min(mappedCutoff, 3000), audioCtx.currentTime);
@@ -176,7 +174,11 @@
 
         async function fetchSpaceWeather() {
             try {
-                const windRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json");
+                // Using a public CORS proxy wrapper to seamlessly bypass browser blockages
+                const proxy = "https://api.allorigins.win/raw?url=";
+                
+                const windUrl = encodeURIComponent("https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json");
+                const windRes = await fetch(proxy + windUrl);
                 const windData = await windRes.json();
                 if (windData.length > 1) {
                     const latestWind = windData[windData.length - 1];
@@ -186,7 +188,8 @@
                     }
                 }
 
-                const kpRes = await fetch("https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json");
+                const kpUrl = encodeURIComponent("https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json");
+                const kpRes = await fetch(proxy + kpUrl);
                 const kpData = await kpRes.json();
                 if (kpData.length > 1) {
                     const latestKp = kpData[kpData.length - 1];
@@ -196,9 +199,9 @@
                     }
                 }
                 
-                document.getElementById("status").textContent = "Telemetry locked. Ready to stream.";
+                document.getElementById("status").textContent = "Live telemetry locked via proxy. Ready to stream.";
             } catch (e) {
-                console.error("Error fetching live NOAA data:", e);
+                console.error("Proxy fetch failed, applying fallback telemetry:", e);
                 document.getElementById("speedVal").textContent = "400.0 km/s (Fallback)";
                 document.getElementById("kpVal").textContent = "1.0 (Fallback)";
                 document.getElementById("status").textContent = "Using fallback telemetry values.";
@@ -235,7 +238,6 @@
 
             let freq = chordFrequencies[Math.floor(Math.random() * chordFrequencies.length)];
             
-            // Geomagnetic storms (K-index > 3) occasionally trigger higher harmonic flares
             if (kpIndex > 3 && Math.random() > 0.5) {
                 freq *= 1.5; 
             }
@@ -244,7 +246,7 @@
             osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
 
             let now = audioCtx.currentTime;
-            let duration = 7.0 + (Math.random() * 6.0); // 7 to 13 second ambient envelopes
+            let duration = 7.0 + (Math.random() * 6.0);
 
             noteGain.gain.setValueAtTime(0, now);
             noteGain.gain.linearRampToValueAtTime(0.12, now + 3.5);
@@ -271,7 +273,6 @@
                 status.textContent = "Live stream active. Generative ambient pads online.";
 
                 playRandomDrone();
-                // Higher K-index speeds up the generative triggering interval
                 let intervalTime = Math.max(2500, 5500 - (kpIndex * 350));
                 synthInterval = setInterval(playRandomDrone, intervalTime);
 
@@ -310,7 +311,6 @@
             }
         }
 
-        // Initialize display text on load
         updateScale("ethereal");
     </script>
 
