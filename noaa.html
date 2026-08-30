@@ -130,7 +130,7 @@
         </div>
 
         <button id="playBtn" onclick="toggleAudio()">INITIALIZE AUDIO STREAM</button>
-        <div id="status">Contacting orbital telemetry feed...</div>
+        <div id="status">Contacting secure orbital telemetry feed...</div>
 
         <canvas id="visualizer" width="540" height="120"></canvas>
 
@@ -172,21 +172,20 @@
             }
         }
 
-        // Fetch live ISS coordinates directly from Open-Notify API
+        // Fetch live ISS coordinates securely over HTTPS
         async function fetchISSData() {
             try {
-                const res = await fetch("https://api.open-notify.org/iss-now.json");
+                const res = await fetch("https://api.wheretheiss.at/v1/satellites/25544");
                 const data = await res.json();
                 
-                if (data.message === "success") {
-                    issLat = parseFloat(data.iss_position.latitude);
-                    issLon = parseFloat(data.iss_position.longitude);
+                if (data && data.latitude) {
+                    issLat = parseFloat(data.latitude);
+                    issLon = parseFloat(data.longitude);
 
                     document.getElementById("latVal").textContent = issLat.toFixed(2) + "°";
                     document.getElementById("lonVal").textContent = issLon.toFixed(2) + "°";
                     document.getElementById("status").textContent = "Orbital lock acquired. Live ISS stream active.";
 
-                    // Map latitude (-90 to 90) to filter cutoff frequency (300Hz to 2300Hz)
                     if (filterNode && audioCtx) {
                         let mappedCutoff = 300 + ((Math.abs(issLat) / 90) * 2000);
                         filterNode.frequency.setTargetAtTime(mappedCutoff, audioCtx.currentTime, 2.0);
@@ -200,7 +199,6 @@
             }
         }
 
-        // Fetch immediately, then poll every 6 seconds
         fetchISSData();
         setInterval(fetchISSData, 6000);
 
@@ -232,7 +230,6 @@
 
             let freq = chordFrequencies[Math.floor(Math.random() * chordFrequencies.length)];
             
-            // Longitude variation introduces occasional harmonic variation
             if (Math.abs(issLon) > 100 && Math.random() > 0.6) {
                 freq *= 1.25; 
             }
