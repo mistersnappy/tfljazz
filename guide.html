@@ -1,1 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ISS Orbital Ambient - Telemetry Documentation</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛰️</text></svg>">
+    <style>
+        body {
+            background-color: #050814;
+            color: #c7d2fe;
+            font-family: monospace;
+            line-height: 1.6;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #818cf8;
+            text-shadow: 0 0 15px rgba(129, 140, 248, 0.5);
+            border-bottom: 1px solid #312e81;
+            padding-bottom: 15px;
+        }
+        h2 {
+            color: #38bdf8;
+            margin-top: 30px;
+        }
+        .card {
+            background: #0b1126;
+            border: 1px solid #312e81;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 20px rgba(49, 46, 129, 0.2);
+        }
+        .highlight {
+            color: #38bdf8;
+            font-weight: bold;
+        }
+        .back-btn {
+            display: inline-block;
+            background: #4f46e5;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            margin-bottom: 30px;
+            transition: 0.2s;
+        }
+        .back-btn:hover {
+            background: #6366f1;
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.8);
+        }
+    </style>
+</head>
+<body>
 
+    <a href="index.html" class="back-btn">← Back to Generator</a>
+
+    <h1>ISS Telemetry & Sound Mapping Guide</h1>
+    <p>This document breaks down how live data from the International Space Station directly drives the procedural audio engine and soundscape in real time.</p>
+
+    <div class="card">
+        <h2>1. Distance to You (Proximity Reverb)</h2>
+        <p><span class="highlight">What it is:</span> The direct great-circle distance (calculated via the Haversine formula) between your IP location and the live coordinates of the ISS.</p>
+        <p><span class="highlight">Musical Effect:</span> Controls the <span class="highlight">Reverb Wet/Dry Mix</span>. When the station orbits far away from you across the globe, the sound blooms into a massive, heavily reverberant space wash. When it orbits closer to your region, the sound tightens up to feel dry, intimate, and direct.</p>
+    </div>
+
+    <div class="card">
+        <h2>2. Visibility: Daylight vs. Eclipses (Emotional Shift)</h2>
+        <p><span class="highlight">What it is:</span> Indicates whether the ISS is currently flying through direct sunlight or sitting in Earth's shadow.</p>
+        <p><span class="highlight">Musical Effect:</span> Drives the <span class="highlight">Major/Minor Scale Morphing</span>. When the station enters daylight, the drone palette shifts into a bright, uplifting Major chord set. When it plunges into Earth's night eclipse, the music transitions into introspective Minor chord structures.</p>
+    </div>
+
+    <div class="card">
+        <h2>3. Altitude (Timbral Resonance)</h2>
+        <p><span class="highlight">What it is:</span> The precise height of the station above Earth (fluctuating between 400 and 420 km due to atmospheric drag).</p>
+        <p><span class="highlight">Musical Effect:</span> Controls the <span class="highlight">Filter Resonance ($Q$)</span>. As the ISS subtly breathes higher or lower in orbit, the peak resonance of the low-pass filter tightens or softens, shifting the overtone brightness and timbral bite of the generative pads.</p>
+    </div>
+
+    <div class="card">
+        <h2>4. Footprint (Spatial Panning)</h2>
+        <p><span class="highlight">What it is:</span> The diameter of the visible horizon area visible from the station (typically around 4,400 to 4,600 km).</p>
+        <p><span class="highlight">Musical Effect:</span> Drives the <span class="highlight">Stereo Panning Engine</span> and kick transient filter. As the horizon span shifts, the sound gently drifts across your left and right speakers, creating a wide, breathing spatial soundstage.</p>
+    </div>
+
+    <div class="card">
+        <h2>5. Orbital Velocity (Rhythm & Tempo)</h2>
+        <p><span class="highlight">What it is:</span> The speed of the space station as it hurtles along at roughly 27,600 km/h.</p>
+        <p><span class="highlight">Musical Effect:</span> Modulates the <span class="highlight">Sub-Bass Drum Pulse</span>. Tiny fluctuations in speed subtly adjust the groove tempo and trigger syncopated orbital ghost notes when the station accelerates.</p>
+    </div>
+
+    <div class="card">
+        <h2>6. Voice Waypoints (Capsule Computer)</h2>
+        <p><span class="highlight">What it is:</span> An onboard coordinate scanner tracking major world cities against current orbital coordinates.</p>
+        <p><span class="highlight">Musical Effect:</span> When the ISS flies within 350 km of a major city or landmark, the browser's native text-to-speech engine softly announces the waypoint out loud (e.g., *"Passing over Tokyo"*), acting as an automated space mission audio log.</p>
+    </div>
+
+    <a href="index.html" class="back-btn">← Back to Generator</a>
+
+</body>
+</html>
