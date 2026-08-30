@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ISS Timbral Ambient Generator</title>
+    <title>ISS Orbital Ambient & Rhythm Generator</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛰️</text></svg>">
     <style>
         body {
@@ -47,8 +47,9 @@
             margin: 15px 0;
             display: flex;
             justify-content: center;
-            gap: 15px;
+            gap: 20px;
             align-items: center;
+            flex-wrap: wrap;
         }
         select {
             background: #030712;
@@ -58,6 +59,13 @@
             font-family: monospace;
             border-radius: 6px;
             font-size: 13px;
+            cursor: pointer;
+        }
+        .toggle-label {
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
             cursor: pointer;
         }
         button {
@@ -113,8 +121,8 @@
 <body>
 
     <div class="container">
-        <h1>ISS TIMBRAL AMBIENT</h1>
-        <p style="font-size: 12px; color: #94a3b8;">Generative soundscape dynamically shaped by orbital telemetry.</p>
+        <h1>ISS RHYTHMIC AMBIENT</h1>
+        <p style="font-size: 12px; color: #94a3b8;">Generative soundscape & sub-bass pulse driven by orbital telemetry.</p>
         
         <div class="stats">
             <div class="stat-box">Your Location<br><val id="userLoc">Locating IP...</val></div>
@@ -126,12 +134,18 @@
         </div>
 
         <div class="controls-row">
-            <label for="baseScaleSelect" style="font-size: 13px;"><strong>Base Palette:</strong></label>
-            <select id="baseScaleSelect" onchange="updateBasePalette(this.value)">
-                <option value="ethereal">Ethereal Drones</option>
-                <option value="deepspace">Deep Space Sub-Bass</option>
-                <option value="cosmic">Cosmic Open Air</option>
-            </select>
+            <div>
+                <label for="baseScaleSelect" style="font-size: 13px;"><strong>Palette:</strong></label>
+                <select id="baseScaleSelect" onchange="updateBasePalette(this.value)">
+                    <option value="ethereal">Ethereal Drones</option>
+                    <option value="deepspace">Deep Space Sub-Bass</option>
+                    <option value="cosmic">Cosmic Open Air</option>
+                </select>
+            </div>
+            <div class="toggle-label">
+                <input type="checkbox" id="drumToggle" checked onchange="toggleBeats(this.checked)">
+                <strong>Sub-Bass Pulse</strong>
+            </div>
         </div>
 
         <button id="playBtn" onclick="toggleAudio()">INITIALIZE AUDIO STREAM</button>
@@ -140,11 +154,9 @@
         <canvas id="visualizer" width="540" height="100"></canvas>
 
         <div class="mapping-panel">
-            <h3>🛰️ ADVANCED TIMBRAL MAPPING:</h3>
-            <div>• <span class="highlight">Distance to You</span> scales the <strong>Reverb Wetness</strong> (Far = washed out; Close = dry).</div>
-            <div>• <span class="highlight">Visibility (Day/Night)</span> switches scale: <strong>Day = Major</strong> | <strong>Night = Minor</strong>.</div>
-            <div>• <span class="highlight">Altitude</span> alters the <strong>Filter Resonance ($Q$)</strong>, changing harmonic sharpness.</div>
-            <div>• <span class="highlight">Footprint</span> drives the <strong>Stereo Panner</strong>, drifting the sound across your speakers.</div>
+            <h3>🛰️ RHYTHMIC & TIMBRAL MAPPING:</h3>
+            <div>• <span class="highlight">Sub-Bass Kick Pulse</span> provides a low heartbeat rhythm, augmented by orbital velocity and day/night transitions.</div>
+            <div>• <span class="highlight">Distance</span> scales Reverb Wetness; <span class="highlight">Altitude</span> sets Filter Resonance ($Q$); <span class="highlight">Footprint</span> drives Stereo Panning.</div>
             <div>• Current Mode: <span id="activeModeDesc" class="highlight">Minor (Eclipsed)</span></div>
         </div>
     </div>
@@ -164,6 +176,8 @@
         let isPlaying = false;
         let masterGain, filterNode, pannerNode, convolverNode, dryGain, wetGain, analyser;
         let synthInterval = null;
+        let drumInterval = null;
+        let drumsActive = true;
 
         const palettes = {
             ethereal: {
@@ -186,6 +200,16 @@
         function updateBasePalette(key) {
             selectedPaletteKey = key;
             applyVisibilityMode();
+        }
+
+        function toggleBeats(enabled) {
+            drumsActive = enabled;
+            if (!isPlaying) return;
+            if (drumsActive) {
+                startDrumLoop();
+            } else {
+                clearInterval(drumInterval);
+            }
         }
 
         function applyVisibilityMode() {
@@ -246,19 +270,16 @@
                     document.getElementById("velVal").textContent = Math.round(issVelocity) + " km/h";
 
                     applyVisibilityMode();
-                    document.getElementById("status").textContent = "Advanced orbital telemetry active.";
+                    document.getElementById("status").textContent = "Rhythmic orbital telemetry active.";
 
                     if (audioCtx) {
-                        // Map distance to Reverb Mix
                         let wetness = Math.min(1.0, issDistKm / 15000);
                         wetGain.gain.setTargetAtTime(wetness * 0.8, audioCtx.currentTime, 2.0);
                         dryGain.gain.setTargetAtTime((1.0 - (wetness * 0.5)) * 0.4, audioCtx.currentTime, 2.0);
 
-                        // Map Altitude to Filter Resonance ($Q$) (range ~380 to 430 km mapped to Q 1.0 to 7.0)
                         let mappedQ = 1.0 + ((issAltitude - 390) / 40) * 6.0;
                         filterNode.Q.setTargetAtTime(Math.max(1.0, Math.min(8.0, mappedQ)), audioCtx.currentTime, 2.0);
 
-                        // Map Footprint to Stereo Panning position (-0.8 to 0.8)
                         let panValue = Math.sin(issFootprint) * 0.7;
                         pannerNode.pan.setTargetAtTime(panValue, audioCtx.currentTime, 3.0);
                     }
@@ -297,17 +318,14 @@
             analyser = audioCtx.createAnalyser();
             analyser.fftSize = 256;
 
-            // Filter node with dynamic Q driven by altitude
             filterNode = audioCtx.createBiquadFilter();
             filterNode.type = "lowpass";
             filterNode.frequency.setValueAtTime(1200, audioCtx.currentTime);
             filterNode.Q.setValueAtTime(3.0, audioCtx.currentTime);
 
-            // Stereo Panner node driven by footprint
             pannerNode = audioCtx.createStereoPanner();
             pannerNode.pan.setValueAtTime(0, audioCtx.currentTime);
 
-            // Reverb Convolver setup
             convolverNode = audioCtx.createConvolver();
             convolverNode.buffer = createReverbBuffer(audioCtx);
 
@@ -318,20 +336,52 @@
             wetGain.gain.value = initialWet * 0.8;
             dryGain.gain.value = (1.0 - (initialWet * 0.5)) * 0.4;
 
-            // Audio Routing Graph:
-            // Synth -> Filter -> Stereo Panner -> splits into [Dry -> Master] and [Convolver -> Wet -> Master]
             filterNode.connect(pannerNode);
-
             pannerNode.connect(dryGain);
             pannerNode.connect(convolverNode);
-
             convolverNode.connect(wetGain);
-
             dryGain.connect(masterGain);
             wetGain.connect(masterGain);
-
             masterGain.connect(analyser);
             analyser.connect(audioCtx.destination);
+        }
+
+        // Procedural Sub-Bass Kick Drum Generator
+        function playSubKick() {
+            if (!isPlaying || !drumsActive) return;
+
+            let osc = audioCtx.createOscillator();
+            let kickGain = audioCtx.createGain();
+            let now = audioCtx.currentTime;
+
+            // Deep sub-frequency drop (80Hz diving down to 30Hz)
+            osc.type = "sine";
+            osc.frequency.setValueAtTime(80, now);
+            osc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
+
+            // Punchy initial transient envelope fading out smoothly
+            kickGain.gain.setValueAtTime(0.4, now);
+            kickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+
+            osc.connect(kickGain);
+            
+            // Route kick through dry channel so it stays punchy/grounded (bypassing heavy pad reverb)
+            kickGain.connect(dryGain);
+
+            osc.start(now);
+            osc.stop(now + 0.45);
+        }
+
+        function startDrumLoop() {
+            clearInterval(drumInterval);
+            // Map orbital velocity to subtle tempo shifts (faster velocity = tighter beat interval)
+            // 27600 km/h maps roughly to a 2000ms pulse
+            let intervalSpeed = Math.max(1600, 3000 - ((issVelocity - 27000) * 0.5));
+            if (issVisibility === "eclipses") intervalSpeed *= 1.25; // Slower, deeper pulse during night
+
+            drumInterval = setInterval(() => {
+                playSubKick();
+            }, intervalSpeed);
         }
 
         function playRandomDrone() {
@@ -370,15 +420,17 @@
                 }
                 isPlaying = true;
                 btn.textContent = "STOP SOUNDSCAPE";
-                status.textContent = "Advanced timbral audio stream online.";
+                status.textContent = "Orbital rhythm & ambient stream online.";
 
                 playRandomDrone();
                 synthInterval = setInterval(playRandomDrone, 4500);
+                if (drumsActive) startDrumLoop();
 
                 drawVisualizer();
             } else {
                 isPlaying = false;
                 clearInterval(synthInterval);
+                clearInterval(drumInterval);
                 btn.textContent = "INITIALIZE AUDIO STREAM";
                 status.textContent = "Stream paused.";
             }
