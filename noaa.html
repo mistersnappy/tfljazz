@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ISS Orbital Ambient & Voice Waypoints</title>
+    <title>ISS Orbital Ambient & Waveform Generator</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛰️</text></svg>">
     <style>
         body {
@@ -20,7 +20,7 @@
             margin-bottom: 5px;
         }
         .container {
-            max-width: 700px;
+            max-width: 720px;
             margin: 0 auto;
             background: #0b1126;
             border: 1px solid #312e81;
@@ -75,7 +75,7 @@
             margin: 15px 0;
             display: flex;
             justify-content: center;
-            gap: 20px;
+            gap: 15px;
             align-items: center;
             flex-wrap: wrap;
         }
@@ -150,7 +150,7 @@
 
     <div class="container">
         <h1>ISS ORBITAL AMBIENT</h1>
-        <p style="font-size: 12px; color: #94a3b8;">Generative soundscape & voice-announced terrestrial waypoints.</p>
+        <p style="font-size: 12px; color: #94a3b8;">Generative soundscape, waveform selector, & voice waypoints.</p>
         
         <div class="stats">
             <div class="stat-box">Your Location<br><val id="userLoc">Locating...</val></div>
@@ -176,16 +176,26 @@
 
         <div class="controls-row">
             <div>
-                <label for="baseScaleSelect" style="font-size: 13px;"><strong>Palette:</strong></label>
+                <label for="baseScaleSelect" style="font-size: 12px;"><strong>Palette:</strong></label>
                 <select id="baseScaleSelect" onchange="updateBasePalette(this.value)">
                     <option value="ethereal">Ethereal Drones</option>
                     <option value="deepspace">Deep Space Sub-Bass</option>
                     <option value="cosmic">Cosmic Open Air</option>
                 </select>
             </div>
+            <div>
+                <label for="waveSelect" style="font-size: 12px;"><strong>Wave:</strong></label>
+                <select id="waveSelect" onchange="updateWaveType(this.value)">
+                    <option value="sine">Sine (Pure)</option>
+                    <option value="triangle" selected>Triangle (Warm)</option>
+                    <option value="sawtooth">Sawtooth (Bright)</option>
+                    <option value="square">Square (Hollow)</option>
+                    <option value="random">Cosmic Shift</option>
+                </select>
+            </div>
             <div class="toggle-label">
                 <input type="checkbox" id="voiceToggle" checked>
-                <strong>Voice Announcements</strong>
+                <strong>Voice</strong>
             </div>
             <div class="toggle-label">
                 <input type="checkbox" id="drumToggle" checked onchange="toggleBeats(this.checked)">
@@ -199,8 +209,8 @@
         <canvas id="visualizer" width="540" height="100"></canvas>
 
         <div class="mapping-panel">
-            <h3>🛰️ CAPSULE COMPUTER MAPPING:</h3>
-            <div>• <span class="highlight">Voice Announcements</span> softly speak major cities and landmarks aloud when the space station crosses within range.</div>
+            <h3>🛰️ ENGINE CONTROLS:</h3>
+            <div>• <span class="highlight">Wave Selector</span> changes the underlying oscillator timbre of the ambient pads instantly.</div>
             <div>• Current Mode: <span id="activeModeDesc" class="highlight">Minor (Eclipsed)</span></div>
         </div>
     </div>
@@ -228,8 +238,8 @@
         let closestApproachSecs = 900;  
         let lastAnnouncedCity = "";
         let announcementCooldown = 0;
+        let selectedWaveType = "triangle";
 
-        // Major world cities/landmarks coordinate database for waypoint tracking
         const majorCities = [
             { name: "London, United Kingdom", lat: 51.5074, lon: -0.1278 },
             { name: "New York City, United States", lat: 40.7128, lon: -74.0060 },
@@ -270,6 +280,10 @@
         function updateBasePalette(key) {
             selectedPaletteKey = key;
             applyVisibilityMode();
+        }
+
+        function updateWaveType(wave) {
+            selectedWaveType = wave;
         }
 
         function toggleBeats(enabled) {
@@ -321,12 +335,10 @@
         function speakWaypoint(cityName) {
             if (!document.getElementById("voiceToggle").checked) return;
             if ('speechSynthesis' in window) {
-                // Cancel any pending speech
                 window.speechSynthesis.cancel();
-                
                 let utterance = new SpeechSynthesisUtterance(`Passing over ${cityName}`);
-                utterance.rate = 0.85; // Slightly slower, more ambient/calm pace
-                utterance.pitch = 0.9;  // Slightly lower space-computer tone
+                utterance.rate = 0.85; 
+                utterance.pitch = 0.9;  
                 utterance.volume = 0.7;
                 window.speechSynthesis.speak(utterance);
             }
@@ -336,7 +348,6 @@
             let closestCity = null;
             let minDistance = Infinity;
 
-            // Find the closest city in our database to the current ISS position
             for (let city of majorCities) {
                 let dist = calculateDistance(issLat, issLon, city.lat, city.lon);
                 if (dist < minDistance) {
@@ -348,10 +359,9 @@
             if (closestCity) {
                 document.getElementById("waypointDisplay").textContent = `${closestCity.name} (~${Math.round(minDistance)} km away)`;
 
-                // If ISS flies within 350 km of a waypoint city and we haven't just announced it
                 if (minDistance <= 350 && closestCity.name !== lastAnnouncedCity && announcementCooldown <= 0) {
                     lastAnnouncedCity = closestCity.name;
-                    announcementCooldown = 120; // Cooldown timer (seconds) before announcing same city again
+                    announcementCooldown = 120; 
                     speakWaypoint(closestCity.name);
                 }
             }
@@ -544,7 +554,13 @@
 
             let freq = currentFrequencies[Math.floor(Math.random() * currentFrequencies.length)];
 
-            osc.type = Math.random() > 0.4 ? "sine" : "triangle";
+            // Handle waveform selection
+            let wave = selectedWaveType;
+            if (wave === "random") {
+                const types = ["sine", "triangle", "sawtooth", "square"];
+                wave = types[Math.floor(Math.random() * types.length)];
+            }
+            osc.type = wave;
             osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
 
             let now = audioCtx.currentTime;
@@ -558,7 +574,6 @@
             noteGain.connect(filterNode);
 
             osc.start(now);
-            noteGain.connect(filterNode); // redundant line cleanup
             osc.stop(now + duration);
         }
 
@@ -573,7 +588,7 @@
                 }
                 isPlaying = true;
                 btn.textContent = "STOP SOUNDSCAPE";
-                status.textContent = "Waypoint voice announcements & ambient engine online.";
+                status.textContent = "Orbital ambient & waveform engine online.";
 
                 playRandomDrone();
                 synthInterval = setInterval(playRandomDrone, 4500);
