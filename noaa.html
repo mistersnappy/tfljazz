@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ISS Orbital Ambient Generator</title>
-    <!-- Add this line to satisfy the browser favicon request -->
+    <title>ISS Proximity Ambient Generator</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛰️</text></svg>">
     <style>
         body {
@@ -12,7 +11,7 @@
             font-family: monospace;
             text-align: center;
             margin: 0;
-            padding: 30px;
+            padding: 20px;
         }
         h1 {
             letter-spacing: 3px;
@@ -21,17 +20,18 @@
             margin-bottom: 5px;
         }
         .container {
-            max-width: 650px;
+            max-width: 680px;
             margin: 0 auto;
             background: #0b1126;
             border: 1px solid #312e81;
-            padding: 25px;
+            padding: 20px;
             border-radius: 12px;
             box-shadow: 0 0 30px rgba(49, 46, 129, 0.3);
         }
         .stats {
-            display: flex;
-            justify-content: space-around;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
             margin: 15px 0;
             background: #030712;
             padding: 12px;
@@ -39,7 +39,7 @@
             border: 1px solid #1e1b4b;
         }
         .stat-box val {
-            font-size: 16px;
+            font-size: 14px;
             color: #38bdf8;
             font-weight: bold;
         }
@@ -54,10 +54,10 @@
             background: #030712;
             color: #38bdf8;
             border: 1px solid #312e81;
-            padding: 10px;
+            padding: 8px;
             font-family: monospace;
             border-radius: 6px;
-            font-size: 14px;
+            font-size: 13px;
             cursor: pointer;
         }
         button {
@@ -83,7 +83,7 @@
         }
         canvas {
             display: block;
-            margin: 15px auto;
+            margin: 10px auto;
             background: #030712;
             border-radius: 6px;
             border: 1px solid #1e1b4b;
@@ -91,18 +91,18 @@
         .mapping-panel {
             background: #030712;
             border: 1px solid #1e1b4b;
-            padding: 12px;
+            padding: 10px;
             border-radius: 6px;
             text-align: left;
             font-size: 11px;
             color: #94a3b8;
-            margin-top: 15px;
-            line-height: 1.5;
+            margin-top: 10px;
+            line-height: 1.4;
         }
         .mapping-panel h3 {
             color: #818cf8;
-            margin: 0 0 5px 0;
-            font-size: 12px;
+            margin: 0 0 4px 0;
+            font-size: 11px;
             letter-spacing: 1px;
         }
         .highlight {
@@ -113,68 +113,116 @@
 <body>
 
     <div class="container">
-        <h1>ISS ORBITAL AMBIENT</h1>
-        <p style="font-size: 13px; color: #94a3b8;">Generative soundscape steered live by the International Space Station.</p>
+        <h1>ISS PROXIMITY AMBIENT</h1>
+        <p style="font-size: 12px; color: #94a3b8;">Generative soundscape driven by your distance to the orbiting Space Station.</p>
         
         <div class="stats">
-            <div class="stat-box">ISS Latitude<br><val id="latVal">Locating...</val></div>
-            <div class="stat-box">ISS Longitude<br><val id="lonVal">Locating...</val></div>
+            <div class="stat-box">Your Location<br><val id="userLoc">Locating IP...</val></div>
+            <div class="stat-box">ISS Distance<br><val id="distVal">Calculating...</val></div>
+            <div class="stat-box">ISS Visibility<br><val id="visVal">Syncing...</val></div>
+            <div class="stat-box">Orbital Velocity<br><val id="velVal">Syncing...</val></div>
         </div>
 
         <div class="controls-row">
-            <label for="scaleSelect"><strong>Harmonic Scale:</strong></label>
-            <select id="scaleSelect" onchange="updateScale(this.value)">
-                <option value="ethereal">Ethereal Minor (C Minor Sus)</option>
-                <option value="pentatonic">Cosmic Pentatonic (Ambient Open)</option>
-                <option value="lydian">Lydian Dream (Floating Space)</option>
-                <option value="deepspace">Deep Space Drone (Sub-Bass)</option>
+            <label for="baseScaleSelect" style="font-size: 13px;"><strong>Base Palette:</strong></label>
+            <select id="baseScaleSelect" onchange="updateBasePalette(this.value)">
+                <option value="ethereal">Ethereal Drones</option>
+                <option value="deepspace">Deep Space Sub-Bass</option>
+                <option value="cosmic">Cosmic Open Air</option>
             </select>
         </div>
 
         <button id="playBtn" onclick="toggleAudio()">INITIALIZE AUDIO STREAM</button>
-        <div id="status">Contacting secure orbital telemetry feed...</div>
+        <div id="status">Locating user position and contacting ISS...</div>
 
-        <canvas id="visualizer" width="540" height="120"></canvas>
+        <canvas id="visualizer" width="540" height="100"></canvas>
 
         <div class="mapping-panel">
-            <h3>📡 ORBITAL DATA-TO-MUSIC MAPPING:</h3>
-            <div>• <span class="highlight">ISS Latitude</span> shifts the master <strong>Low-Pass Filter cutoff</strong> as it moves north/south across the globe.</div>
-            <div>• <span class="highlight">ISS Longitude</span> subtly modulates the <strong>Generative Trigger Speed</strong>.</div>
-            <div>• Current Active Frequencies: <span id="activeNotes" class="highlight">C3, G3, Bb3, D4, F4, G4</span></div>
+            <h3>🛰️ LIVE TELEMETRY MAPPING:</h3>
+            <div>• <span class="highlight">Distance to You</span> scales the <strong>Reverb Wetness</strong> (Farther = more washed out and spaced out; Closer = dry and direct).</div>
+            <div>• <span class="highlight">Visibility (Day/Night)</span> auto-switches scales: <strong>Daylight = Uplifting Major</strong> | <strong>Eclipse = Introspective Minor</strong>.</div>
+            <div>• <span class="highlight">Orbital Velocity</span> subtly modulates panning/modulation width.</div>
+            <div>• Current Mode/Chord: <span id="activeModeDesc" class="highlight">Minor (Eclipsed)</span></div>
         </div>
     </div>
 
     <script>
-        let issLat = 0.0;
-        let issLon = 0.0;
+        let userLat = 51.5074;  // Default fallback (London)
+        let userLon = -0.1278;
+        
+        let issLat = 0.0, issLon = 0.0;
+        let issDistKm = 5000;
+        let issVisibility = "eclipses";
+        let issVelocity = 27600;
 
         let audioCtx = null;
         let isPlaying = false;
-        let masterGain, filterNode, analyser;
+        let masterGain, filterNode, convolverNode, dryGain, wetGain, analyser;
         let synthInterval = null;
 
-        const scales = {
-            ethereal: { name: "Ethereal Minor", frets: [130.81, 196.00, 233.08, 293.66, 349.23, 392.00] },
-            pentatonic: { name: "Cosmic Pentatonic", frets: [146.83, 220.00, 246.94, 293.66, 329.63, 440.00] },
-            lydian: { name: "Lydian Dream", frets: [174.61, 261.63, 293.66, 329.63, 369.99, 440.00] },
-            deepspace: { name: "Deep Space Drone", frets: [65.41, 98.00, 130.81, 146.83, 196.00, 220.00] }
+        // Frequencies mapped across palettes
+        const palettes = {
+            ethereal: {
+                minor: [130.81, 196.00, 233.08, 293.66, 349.23, 392.00], // C Minor Sus
+                major: [130.81, 164.81, 196.00, 246.94, 293.66, 329.63]  // C Major Add9
+            },
+            deepspace: {
+                minor: [65.41, 98.00, 116.54, 146.83, 174.61, 196.00], 
+                major: [65.41, 82.41, 98.00, 123.47, 146.83, 164.81]
+            },
+            cosmic: {
+                minor: [146.83, 220.00, 246.94, 293.66, 329.63, 440.00], 
+                major: [146.83, 185.00, 220.00, 277.18, 329.63, 370.00]
+            }
         };
 
-        let currentScaleKey = "ethereal";
-        let chordFrequencies = scales.ethereal.frets;
+        let selectedPaletteKey = "ethereal";
+        let currentFrequencies = palettes.ethereal.minor;
 
-        function updateScale(key) {
-            currentScaleKey = key;
-            chordFrequencies = scales[key].frets;
-            document.getElementById("activeNotes").textContent = chordFrequencies.map(f => f + "Hz").join(", ");
-            
-            if (filterNode && audioCtx) {
-                let mappedCutoff = 300 + ((Math.abs(issLat) / 90) * 2000);
-                filterNode.frequency.setValueAtTime(mappedCutoff, audioCtx.currentTime);
+        function updateBasePalette(key) {
+            selectedPaletteKey = key;
+            applyVisibilityMode();
+        }
+
+        function applyVisibilityMode() {
+            const palette = palettes[selectedPaletteKey];
+            if (issVisibility === "daylight") {
+                currentFrequencies = palette.major;
+                document.getElementById("activeModeDesc").textContent = "Major (Daylight Orbit)";
+            } else {
+                currentFrequencies = palette.minor;
+                document.getElementById("activeModeDesc").textContent = "Minor (Night Eclipse)";
             }
         }
 
-        // Fetch live ISS coordinates securely over HTTPS
+        // 1. Locate user via IP Geolocation API
+        async function locateUser() {
+            try {
+                const res = await fetch("https://ipapi.co/json/");
+                const data = await res.json();
+                if (data.latitude && data.longitude) {
+                    userLat = data.latitude;
+                    userLon = data.longitude;
+                    document.getElementById("userLoc").textContent = `${data.city || 'Found'} (${userLat.toFixed(1)}°, ${userLon.toFixed(1)}°)`;
+                }
+            } catch (e) {
+                document.getElementById("userLoc").textContent = "London (Default IP)";
+            }
+        }
+
+        // Haversine formula to calculate distance between user and ISS in kilometers
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Earth radius in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // 2. Fetch live ISS telemetry
         async function fetchISSData() {
             try {
                 const res = await fetch("https://api.wheretheiss.at/v1/satellites/25544");
@@ -183,43 +231,91 @@
                 if (data && data.latitude) {
                     issLat = parseFloat(data.latitude);
                     issLon = parseFloat(data.longitude);
+                    issVisibility = data.visibility || "eclipses";
+                    issVelocity = parseFloat(data.velocity) || 27600;
 
-                    document.getElementById("latVal").textContent = issLat.toFixed(2) + "°";
-                    document.getElementById("lonVal").textContent = issLon.toFixed(2) + "°";
-                    document.getElementById("status").textContent = "Orbital lock acquired. Live ISS stream active.";
+                    // Calculate distance to user
+                    issDistKm = calculateDistance(userLat, userLon, issLat, issLon);
 
-                    if (filterNode && audioCtx) {
-                        let mappedCutoff = 300 + ((Math.abs(issLat) / 90) * 2000);
-                        filterNode.frequency.setTargetAtTime(mappedCutoff, audioCtx.currentTime, 2.0);
+                    document.getElementById("distVal").textContent = Math.round(issDistKm) + " km";
+                    document.getElementById("visVal").textContent = issVisibility.toUpperCase();
+                    document.getElementById("velVal").textContent = Math.round(issVelocity) + " km/h";
+
+                    applyVisibilityMode();
+                    document.getElementById("status").textContent = "Orbital & Proximity telemetry active.";
+
+                    // Map distance to Reverb Mix (closer = dry, farther = very wet reverb)
+                    // Max distance across globe is ~20,000 km
+                    if (wetGain && dryGain && audioCtx) {
+                        let wetness = Math.min(1.0, issDistKm / 15000); // 0 to 1 scale
+                        wetGain.gain.setTargetAtTime(wetness * 0.8, audioCtx.currentTime, 2.0);
+                        dryGain.gain.setTargetAtTime((1.0 - (wetness * 0.5)) * 0.4, audioCtx.currentTime, 2.0);
                     }
                 }
             } catch (e) {
-                console.log("ISS Fetch error, using orbital default telemetry.");
-                document.getElementById("latVal").textContent = "51.50° (Default)";
-                document.getElementById("lonVal").textContent = "-0.12° (Default)";
-                document.getElementById("status").textContent = "Running on standard orbital drift.";
+                console.log("Telemetry sync warning.");
             }
         }
 
-        fetchISSData();
-        setInterval(fetchISSData, 6000);
+        // Initialize geolocation then start tracking loop
+        locateUser().then(() => {
+            fetchISSData();
+            setInterval(fetchISSData, 7000);
+        });
+
+        // Procedurally generate a rich impulse response buffer for ambient Reverb
+        function createReverbBuffer(audioContext) {
+            const rate = audioContext.sampleRate;
+            const length = rate * 4.5; // 4.5 second long lush tail
+            const impulse = audioContext.createBuffer(2, length, rate);
+            const left = impulse.getChannelData(0);
+            const right = impulse.getChannelData(1);
+
+            for (let i = 0; i < length; i++) {
+                let decay = Math.exp(-i / (rate * 1.2));
+                left[i] = (Math.random() * 2 - 1) * decay;
+                right[i] = (Math.random() * 2 - 1) * decay;
+            }
+            return impulse;
+        }
 
         function initAudio() {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
             masterGain = audioCtx.createGain();
-            masterGain.gain.value = 0.3;
+            masterGain.gain.value = 0.35;
 
             analyser = audioCtx.createAnalyser();
             analyser.fftSize = 256;
 
+            // Filter node
             filterNode = audioCtx.createBiquadFilter();
             filterNode.type = "lowpass";
-            let mappedCutoff = 300 + ((Math.abs(issLat) / 90) * 2000);
-            filterNode.frequency.setValueAtTime(mappedCutoff, audioCtx.currentTime);
-            filterNode.Q.setValueAtTime(3.5, audioCtx.currentTime);
+            filterNode.frequency.setValueAtTime(1200, audioCtx.currentTime);
+            filterNode.Q.setValueAtTime(3.0, audioCtx.currentTime);
 
-            filterNode.connect(masterGain);
+            // Reverb Convolver setup
+            convolverNode = audioCtx.createConvolver();
+            convolverNode.buffer = createReverbBuffer(audioCtx);
+
+            dryGain = audioCtx.createGain();
+            wetGain = audioCtx.createGain();
+
+            // Set initial mix based on current ISS distance
+            let initialWet = Math.min(1.0, issDistKm / 15000);
+            wetGain.gain.value = initialWet * 0.8;
+            dryGain.gain.value = (1.0 - (initialWet * 0.5)) * 0.4;
+
+            // Audio Routing Graph:
+            // Synth -> Filter -> splits into [Dry Gain -> Master] and [Convolver -> Wet Gain -> Master]
+            filterNode.connect(dryGain);
+            filterNode.connect(convolverNode);
+
+            convolverNode.connect(wetGain);
+
+            dryGain.connect(masterGain);
+            wetGain.connect(masterGain);
+
             masterGain.connect(analyser);
             analyser.connect(audioCtx.destination);
         }
@@ -230,20 +326,17 @@
             let osc = audioCtx.createOscillator();
             let noteGain = audioCtx.createGain();
 
-            let freq = chordFrequencies[Math.floor(Math.random() * chordFrequencies.length)];
-            
-            if (Math.abs(issLon) > 100 && Math.random() > 0.6) {
-                freq *= 1.25; 
-            }
+            let freq = currentFrequencies[Math.floor(Math.random() * currentFrequencies.length)];
 
+            // Orbital velocity shifts modulation slightly
             osc.type = Math.random() > 0.4 ? "sine" : "triangle";
             osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
 
             let now = audioCtx.currentTime;
-            let duration = 7.0 + (Math.random() * 6.0);
+            let duration = 8.0 + (Math.random() * 6.0); // 8 to 14 second swells
 
             noteGain.gain.setValueAtTime(0, now);
-            noteGain.gain.linearRampToValueAtTime(0.12, now + 3.5);
+            noteGain.gain.linearRampToValueAtTime(0.15, now + 4.0);
             noteGain.gain.linearRampToValueAtTime(0, now + duration);
 
             osc.connect(noteGain);
@@ -264,10 +357,10 @@
                 }
                 isPlaying = true;
                 btn.textContent = "STOP SOUNDSCAPE";
-                status.textContent = "Orbital stream active. Ambient pads online.";
+                status.textContent = "Proximity audio stream online.";
 
                 playRandomDrone();
-                synthInterval = setInterval(playRandomDrone, 4000);
+                synthInterval = setInterval(playRandomDrone, 4500);
 
                 drawVisualizer();
             } else {
@@ -303,8 +396,6 @@
                 x += barWidth + 1;
             }
         }
-
-        updateScale("ethereal");
     </script>
 
 </body>
