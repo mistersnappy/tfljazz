@@ -43,6 +43,24 @@
             color: #38bdf8;
             font-weight: bold;
         }
+        .countdown-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        .countdown-box {
+            background: #030712;
+            border: 1px solid #1e1b4b;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+        .countdown-box val {
+            font-size: 14px;
+            color: #f43f5e;
+            font-weight: bold;
+        }
         .controls-row {
             margin: 15px 0;
             display: flex;
@@ -121,16 +139,25 @@
 <body>
 
     <div class="container">
-        <h1>ISS RHYTHMIC AMBIENT</h1>
-        <p style="font-size: 12px; color: #94a3b8;">Generative soundscape & sub-bass pulse driven by orbital telemetry.</p>
+        <h1>ISS ORBITAL AMBIENT</h1>
+        <p style="font-size: 12px; color: #94a3b8;">Generative soundscape & rhythmic pulse driven live by telemetry clocks.</p>
         
         <div class="stats">
-            <div class="stat-box">Your Location<br><val id="userLoc">Locating IP...</val></div>
-            <div class="stat-box">ISS Distance<br><val id="distVal">Calculating...</val></div>
+            <div class="stat-box">Your Location<br><val id="userLoc">Locating...</val></div>
+            <div class="stat-box">ISS Distance<br><val id="distVal">Syncing...</val></div>
             <div class="stat-box">Visibility<br><val id="visVal">Syncing...</val></div>
             <div class="stat-box">Altitude<br><val id="altVal">Syncing...</val></div>
             <div class="stat-box">Footprint<br><val id="footVal">Syncing...</val></div>
             <div class="stat-box">Velocity<br><val id="velVal">Syncing...</val></div>
+        </div>
+
+        <div class="countdown-row">
+            <div class="countdown-box">
+                Next Day/Night Shift<br><val id="terminatorClock">Calculating...</val>
+            </div>
+            <div class="countdown-box">
+                <span id="proximityLabel">Orbit Direction</span><br><val id="proximityClock">Calculating...</val>
+            </div>
         </div>
 
         <div class="controls-row">
@@ -155,8 +182,8 @@
 
         <div class="mapping-panel">
             <h3>🛰️ RHYTHMIC & TIMBRAL MAPPING:</h3>
-            <div>• <span class="highlight">Sub-Bass Kick Pulse</span> provides a low heartbeat rhythm, augmented by orbital velocity and day/night transitions.</div>
-            <div>• <span class="highlight">Distance</span> scales Reverb Wetness; <span class="highlight">Altitude</span> sets Filter Resonance ($Q$); <span class="highlight">Footprint</span> drives Stereo Panning.</div>
+            <div>• <span class="highlight">Countdowns</span> track your dynamic proximity turns and upcoming day/night phase shifts.</div>
+            <div>• <span class="highlight">Distance</span> scales Reverb Wetness; <span class="highlight">Altitude</span> sets Filter Resonance ($Q$); <span class="highlight">Footprint</span> drives Panning.</div>
             <div>• Current Mode: <span id="activeModeDesc" class="highlight">Minor (Eclipsed)</span></div>
         </div>
     </div>
@@ -167,6 +194,7 @@
         
         let issLat = 0.0, issLon = 0.0;
         let issDistKm = 5000;
+        let prevDistKm = 5000;
         let issVisibility = "eclipses";
         let issVelocity = 27600;
         let issAltitude = 415;
@@ -178,6 +206,10 @@
         let synthInterval = null;
         let drumInterval = null;
         let drumsActive = true;
+
+        // Countdown estimation states
+        let visibilityTimerSecs = 1350; // Average half-orbit block (~22.5 mins in daylight/eclipse)
+        let closestApproachSecs = 900;  // Dynamic tracker estimate
 
         const palettes = {
             ethereal: {
@@ -254,14 +286,32 @@
                 const data = await res.json();
                 
                 if (data && data.latitude) {
+                    prevDistKm = issDistKm;
                     issLat = parseFloat(data.latitude);
                     issLon = parseFloat(data.longitude);
+                    
+                    let oldVisibility = issVisibility;
                     issVisibility = data.visibility || "eclipses";
                     issVelocity = parseFloat(data.velocity) || 27600;
                     issAltitude = parseFloat(data.altitude) || 415;
                     issFootprint = parseFloat(data.footprint) || 4500;
 
                     issDistKm = calculateDistance(userLat, userLon, issLat, issLon);
+
+                    // Reset visibility timer if phase switched
+                    if (oldVisibility !== issVisibility) {
+                        visibilityTimerSecs = 1350; // Reset to ~22.5 mins for next phase block
+                    }
+
+                    // Check if direction reversed (crossed apogee/furthest point or perigee/closest point)
+                    if (issDistKm > prevDistKm) {
+                        // Moving away -> approaching apogee (furthest point)
+                        document.getElementById("proximityLabel").textContent = "Est. Furthest Point (Apogee)";
+                    } else {
+                        // Moving closer -> approaching perigee (closest point)
+                        document.getElementById("proximityLabel").textContent = "Est. Closest Point (Perigee)";
+                        closestApproachSecs = 900; // Reset estimate baseline
+                    }
 
                     document.getElementById("distVal").textContent = Math.round(issDistKm) + " km";
                     document.getElementById("visVal").textContent = issVisibility.toUpperCase();
@@ -270,7 +320,7 @@
                     document.getElementById("velVal").textContent = Math.round(issVelocity) + " km/h";
 
                     applyVisibilityMode();
-                    document.getElementById("status").textContent = "Rhythmic orbital telemetry active.";
+                    document.getElementById("status").textContent = "Telemetry & clocks synced.";
 
                     if (audioCtx) {
                         let wetness = Math.min(1.0, issDistKm / 15000);
@@ -288,6 +338,22 @@
                 console.log("Telemetry sync warning.");
             }
         }
+
+        // Global UI Countdown Second-Ticker Loop
+        setInterval(() => {
+            if (visibilityTimerSecs > 0) visibilityTimerSecs--;
+            if (closestApproachSecs > 0) closestApproachSecs--;
+
+            // Format terminator clock
+            let vMins = Math.floor(visibilityTimerSecs / 60);
+            let vSecs = visibilityTimerSecs % 60;
+            document.getElementById("terminatorClock").textContent = `${vMins}:${vSecs < 10 ? '0' : ''}${vSecs}`;
+
+            // Format distance turn clock
+            let cMins = Math.floor(closestApproachSecs / 60);
+            let cSecs = closestApproachSecs % 60;
+            document.getElementById("proximityClock").textContent = `${cMins}:${cSecs < 10 ? '0' : ''}${cSecs}`;
+        }, 1000);
 
         locateUser().then(() => {
             fetchISSData();
@@ -346,7 +412,6 @@
             analyser.connect(audioCtx.destination);
         }
 
-        // Procedural Sub-Bass Kick Drum Generator
         function playSubKick() {
             if (!isPlaying || !drumsActive) return;
 
@@ -354,18 +419,14 @@
             let kickGain = audioCtx.createGain();
             let now = audioCtx.currentTime;
 
-            // Deep sub-frequency drop (80Hz diving down to 30Hz)
             osc.type = "sine";
             osc.frequency.setValueAtTime(80, now);
             osc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
 
-            // Punchy initial transient envelope fading out smoothly
             kickGain.gain.setValueAtTime(0.4, now);
             kickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
 
             osc.connect(kickGain);
-            
-            // Route kick through dry channel so it stays punchy/grounded (bypassing heavy pad reverb)
             kickGain.connect(dryGain);
 
             osc.start(now);
@@ -374,10 +435,8 @@
 
         function startDrumLoop() {
             clearInterval(drumInterval);
-            // Map orbital velocity to subtle tempo shifts (faster velocity = tighter beat interval)
-            // 27600 km/h maps roughly to a 2000ms pulse
             let intervalSpeed = Math.max(1600, 3000 - ((issVelocity - 27000) * 0.5));
-            if (issVisibility === "eclipses") intervalSpeed *= 1.25; // Slower, deeper pulse during night
+            if (issVisibility === "eclipses") intervalSpeed *= 1.25;
 
             drumInterval = setInterval(() => {
                 playSubKick();
@@ -420,7 +479,7 @@
                 }
                 isPlaying = true;
                 btn.textContent = "STOP SOUNDSCAPE";
-                status.textContent = "Orbital rhythm & ambient stream online.";
+                status.textContent = "Orbital rhythm & clocks online.";
 
                 playRandomDrone();
                 synthInterval = setInterval(playRandomDrone, 4500);
