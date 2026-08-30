@@ -70,6 +70,24 @@
             font-size: 13px;
             color: #38bdf8;
             letter-spacing: 1px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .docs-link {
+            color: #818cf8;
+            text-decoration: none;
+            font-size: 11px;
+            border: 1px solid #4f46e5;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: 0.2s;
+            background: #0b1126;
+        }
+        .docs-link:hover {
+            background: #4f46e5;
+            color: white;
+            box-shadow: 0 0 10px rgba(79, 70, 229, 0.5);
         }
         .controls-row {
             margin: 15px 0;
@@ -124,26 +142,6 @@
             border-radius: 6px;
             border: 1px solid #1e1b4b;
         }
-        .mapping-panel {
-            background: #030712;
-            border: 1px solid #1e1b4b;
-            padding: 10px;
-            border-radius: 6px;
-            text-align: left;
-            font-size: 11px;
-            color: #94a3b8;
-            margin-top: 10px;
-            line-height: 1.4;
-        }
-        .mapping-panel h3 {
-            color: #818cf8;
-            margin: 0 0 4px 0;
-            font-size: 11px;
-            letter-spacing: 1px;
-        }
-        .highlight {
-            color: #38bdf8;
-        }
     </style>
 </head>
 <body>
@@ -162,7 +160,8 @@
         </div>
 
         <div class="waypoint-banner">
-            📍 Nearest Waypoint: <span id="waypointDisplay" class="highlight">Scanning orbital track...</span>
+            <span>📍 Nearest Waypoint: <span id="waypointDisplay" class="highlight">Scanning track...</span></span>
+            <a href="guide.html" target="_blank" class="docs-link">[? Documentation]</a>
         </div>
 
         <div class="countdown-row">
@@ -208,12 +207,6 @@
         <div id="status">Contacting location and orbital services...</div>
 
         <canvas id="visualizer" width="540" height="100"></canvas>
-
-        <div class="mapping-panel">
-            <h3>🛰️ ENGINE CONTROLS:</h3>
-            <div>• <span class="highlight">All Waves Together</span> blends sine, triangle, sawtooth, and square waves simultaneously for a rich, stacked analog synthesizer sound.</div>
-            <div>• Current Mode: <span id="activeModeDesc" class="highlight">Minor (Eclipsed)</span></div>
-        </div>
     </div>
 
     <script>
@@ -559,7 +552,6 @@
             noteGain.gain.linearRampToValueAtTime(0.12, now + 4.0);
             noteGain.gain.linearRampToValueAtTime(0, now + duration);
 
-            // Determine which waveforms to build
             let activeWaves = [];
             if (selectedWaveType === "all") {
                 activeWaves = ["sine", "triangle", "sawtooth", "square"];
@@ -570,7 +562,6 @@
                 activeWaves = [selectedWaveType];
             }
 
-            // Scale sub-gains down so stacking multiple oscillators doesn't clip audio
             let subGainScale = 1.0 / activeWaves.length;
 
             activeWaves.forEach(wType => {
