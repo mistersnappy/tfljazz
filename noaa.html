@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ISS Orbital Ambient & Rhythm Generator</title>
+    <title>ISS Orbital Ambient & Dynamic Rhythm Generator</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛰️</text></svg>">
     <style>
         body {
@@ -140,7 +140,7 @@
 
     <div class="container">
         <h1>ISS ORBITAL AMBIENT</h1>
-        <p style="font-size: 12px; color: #94a3b8;">Generative soundscape & rhythmic pulse driven live by telemetry clocks.</p>
+        <p style="font-size: 12px; color: #94a3b8;">Generative soundscape & dynamic breathing rhythm engine online.</p>
         
         <div class="stats">
             <div class="stat-box">Your Location<br><val id="userLoc">Locating...</val></div>
@@ -171,7 +171,7 @@
             </div>
             <div class="toggle-label">
                 <input type="checkbox" id="drumToggle" checked onchange="toggleBeats(this.checked)">
-                <strong>Sub-Bass Pulse</strong>
+                <strong>Dynamic Sub Pulse</strong>
             </div>
         </div>
 
@@ -181,9 +181,9 @@
         <canvas id="visualizer" width="540" height="100"></canvas>
 
         <div class="mapping-panel">
-            <h3>🛰️ RHYTHMIC & TIMBRAL MAPPING:</h3>
-            <div>• <span class="highlight">Countdowns</span> track your dynamic proximity turns and upcoming day/night phase shifts.</div>
-            <div>• <span class="highlight">Distance</span> scales Reverb Wetness; <span class="highlight">Altitude</span> sets Filter Resonance ($Q$); <span class="highlight">Footprint</span> drives Panning.</div>
+            <h3>🛰️ DYNAMIC RHYTHM MAPPING:</h3>
+            <div>• <span class="highlight">Sub-Bass Pulse</span> features organic filter punch driven by the <strong>Horizon Footprint</strong> and rhythmic ghost variations driven by <strong>Orbital Velocity</strong>.</div>
+            <div>• <span class="highlight">Clocks & Proximity</span> track your dynamic orbital turns and upcoming day/night shifts.</div>
             <div>• Current Mode: <span id="activeModeDesc" class="highlight">Minor (Eclipsed)</span></div>
         </div>
     </div>
@@ -207,9 +207,8 @@
         let drumInterval = null;
         let drumsActive = true;
 
-        // Countdown estimation states
-        let visibilityTimerSecs = 1350; // Average half-orbit block (~22.5 mins in daylight/eclipse)
-        let closestApproachSecs = 900;  // Dynamic tracker estimate
+        let visibilityTimerSecs = 1350; 
+        let closestApproachSecs = 900;  
 
         const palettes = {
             ethereal: {
@@ -238,7 +237,7 @@
             drumsActive = enabled;
             if (!isPlaying) return;
             if (drumsActive) {
-                startDrumLoop();
+                startDynamicDrumEngine();
             } else {
                 clearInterval(drumInterval);
             }
@@ -298,19 +297,15 @@
 
                     issDistKm = calculateDistance(userLat, userLon, issLat, issLon);
 
-                    // Reset visibility timer if phase switched
                     if (oldVisibility !== issVisibility) {
-                        visibilityTimerSecs = 1350; // Reset to ~22.5 mins for next phase block
+                        visibilityTimerSecs = 1350; 
                     }
 
-                    // Check if direction reversed (crossed apogee/furthest point or perigee/closest point)
                     if (issDistKm > prevDistKm) {
-                        // Moving away -> approaching apogee (furthest point)
                         document.getElementById("proximityLabel").textContent = "Est. Furthest Point (Apogee)";
                     } else {
-                        // Moving closer -> approaching perigee (closest point)
                         document.getElementById("proximityLabel").textContent = "Est. Closest Point (Perigee)";
-                        closestApproachSecs = 900; // Reset estimate baseline
+                        closestApproachSecs = 900; 
                     }
 
                     document.getElementById("distVal").textContent = Math.round(issDistKm) + " km";
@@ -320,7 +315,7 @@
                     document.getElementById("velVal").textContent = Math.round(issVelocity) + " km/h";
 
                     applyVisibilityMode();
-                    document.getElementById("status").textContent = "Telemetry & clocks synced.";
+                    document.getElementById("status").textContent = "Dynamic telemetry & clocks synced.";
 
                     if (audioCtx) {
                         let wetness = Math.min(1.0, issDistKm / 15000);
@@ -339,17 +334,14 @@
             }
         }
 
-        // Global UI Countdown Second-Ticker Loop
         setInterval(() => {
             if (visibilityTimerSecs > 0) visibilityTimerSecs--;
             if (closestApproachSecs > 0) closestApproachSecs--;
 
-            // Format terminator clock
             let vMins = Math.floor(visibilityTimerSecs / 60);
             let vSecs = visibilityTimerSecs % 60;
             document.getElementById("terminatorClock").textContent = `${vMins}:${vSecs < 10 ? '0' : ''}${vSecs}`;
 
-            // Format distance turn clock
             let cMins = Math.floor(closestApproachSecs / 60);
             let cSecs = closestApproachSecs % 60;
             document.getElementById("proximityClock").textContent = `${cMins}:${cSecs < 10 ? '0' : ''}${cSecs}`;
@@ -412,35 +404,64 @@
             analyser.connect(audioCtx.destination);
         }
 
-        function playSubKick() {
+        // Advanced Dynamic Sub-Bass Kick Engine
+        function playDynamicSubKick(isGhost = false) {
             if (!isPlaying || !drumsActive) return;
 
             let osc = audioCtx.createOscillator();
+            let kickFilter = audioCtx.createBiquadFilter();
             let kickGain = audioCtx.createGain();
             let now = audioCtx.currentTime;
 
+            // Frequency envelope: deeper sub drop for main beats, tighter click for ghost notes
+            let startFreq = isGhost ? 110 : 85;
+            let endFreq = isGhost ? 40 : 28;
+            let duration = isGhost ? 0.2 : 0.4;
+            let volume = isGhost ? 0.15 : 0.45;
+
             osc.type = "sine";
-            osc.frequency.setValueAtTime(80, now);
-            osc.frequency.exponentialRampToValueAtTime(30, now + 0.3);
+            osc.frequency.setValueAtTime(startFreq, now);
+            osc.frequency.exponentialRampToValueAtTime(endFreq, now + duration);
 
-            kickGain.gain.setValueAtTime(0.4, now);
-            kickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+            // Dynamic filter punch driven by ISS Footprint size
+            kickFilter.type = "lowpass";
+            let filterCutoff = 150 + ((issFootprint - 4000) / 1000) * 300;
+            kickFilter.frequency.setValueAtTime(Math.max(120, Math.min(500, filterCutoff)), now);
+            kickFilter.Q.setValueAtTime(4.0, now);
 
-            osc.connect(kickGain);
+            kickGain.gain.setValueAtTime(volume, now);
+            kickGain.gain.exponentialRampToValueAtTime(0.001, now + duration + 0.05);
+
+            // Connect: Oscillator -> Transient Filter -> Volume Envelope -> Dry Mix
+            osc.connect(kickFilter);
+            kickFilter.connect(kickGain);
             kickGain.connect(dryGain);
 
             osc.start(now);
-            osc.stop(now + 0.45);
+            osc.stop(now + duration + 0.05);
         }
 
-        function startDrumLoop() {
+        function startDynamicDrumEngine() {
             clearInterval(drumInterval);
-            let intervalSpeed = Math.max(1600, 3000 - ((issVelocity - 27000) * 0.5));
-            if (issVisibility === "eclipses") intervalSpeed *= 1.25;
+            
+            // Base tempo step driven by velocity
+            let stepTime = Math.max(400, 750 - ((issVelocity - 27000) * 0.1));
+            let beatCounter = 0;
 
             drumInterval = setInterval(() => {
-                playSubKick();
-            }, intervalSpeed);
+                if (!isPlaying || !drumsActive) return;
+
+                // Pattern logic: Downbeat on 0, hypnotic heartbeat on 2, velocity-driven ghost syncopation on 3
+                if (beatCounter % 4 === 0) {
+                    playDynamicSubKick(false); // Main deep kick
+                } else if (beatCounter % 4 === 2) {
+                    playDynamicSubKick(false); // Secondary heartbeat pulse
+                } else if (beatCounter % 4 === 3 && issVelocity > 27550) {
+                    playDynamicSubKick(true);  // Orbital acceleration ghost note
+                }
+
+                beatCounter = (beatCounter + 1) % 16;
+            }, stepTime);
         }
 
         function playRandomDrone() {
@@ -479,11 +500,11 @@
                 }
                 isPlaying = true;
                 btn.textContent = "STOP SOUNDSCAPE";
-                status.textContent = "Orbital rhythm & clocks online.";
+                status.textContent = "Orbital rhythm & dynamic engine online.";
 
                 playRandomDrone();
                 synthInterval = setInterval(playRandomDrone, 4500);
-                if (drumsActive) startDrumLoop();
+                if (drumsActive) startDynamicDrumEngine();
 
                 drawVisualizer();
             } else {
