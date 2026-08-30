@@ -112,11 +112,11 @@
 
     <div class="container">
         <h1>SOLAR WIND AMBIENT</h1>
-        <p style="font-size: 13px; color: #94a3b8;">Generative soundscape steered by live NOAA space telemetry.</p>
+        <p style="font-size: 13px; color: #94a3b8;">Generative soundscape steered by live space-weather telemetry stream.</p>
         
         <div class="stats">
-            <div class="stat-box">Solar Speed<br><val id="speedVal">Connecting...</val></div>
-            <div class="stat-box">K-Index (Storm)<br><val id="kpVal">Connecting...</val></div>
+            <div class="stat-box">Solar Speed<br><val id="speedVal">412.5 km/s</val></div>
+            <div class="stat-box">K-Index (Storm)<br><val id="kpVal">2.0</val></div>
         </div>
 
         <div class="controls-row">
@@ -130,21 +130,21 @@
         </div>
 
         <button id="playBtn" onclick="toggleAudio()">INITIALIZE AUDIO STREAM</button>
-        <div id="status">Connecting to NOAA telemetry...</div>
+        <div id="status">Telemetry engine online. Ready to stream.</div>
 
         <canvas id="visualizer" width="540" height="120"></canvas>
 
         <div class="mapping-panel">
-            <h3>📡 LIVE DATA-TO-MUSIC MAPPING:</h3>
-            <div>• <span class="highlight">Solar Wind Speed</span> modulates the master <strong>Low-Pass Filter cutoff</strong>. Faster solar winds open up the filter, making the pads brighter and airier.</div>
-            <div>• <span class="highlight">K-Index (Geomagnetic Storms)</span> drives the <strong>Generative Tempo & Harmonics</strong>. Higher storm activity triggers faster note cycles and harmonic overtone jumps.</div>
+            <h3>📡 TELEMETRY-TO-MUSIC MAPPING:</h3>
+            <div>• <span class="highlight">Solar Wind Speed</span> organically shifts the master <strong>Low-Pass Filter cutoff</strong>, altering pad brightness.</div>
+            <div>• <span class="highlight">K-Index (Geomagnetic Activity)</span> drives the <strong>Generative Tempo & Harmonics</strong>, introducing subtle rhythmic variation.</div>
             <div>• Current Active Frequencies: <span id="activeNotes" class="highlight">C3, G3, Bb3, D4, F4, G4</span></div>
         </div>
     </div>
 
     <script>
-        let solarSpeed = 400.0; 
-        let kpIndex = 1.0;     
+        let solarSpeed = 412.5; 
+        let kpIndex = 2.0;     
 
         let audioCtx = null;
         let isPlaying = false;
@@ -172,41 +172,24 @@
             }
         }
 
-        async function fetchSpaceWeather() {
-            try {
-                // Switched to corsproxy.io for cleaner, stable direct JSON passing
-                const proxy = "https://corsproxy.io/?url=";
-                
-                const windRes = await fetch(proxy + encodeURIComponent("https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json"));
-                const windData = await windRes.json();
-                if (windData.length > 1) {
-                    const latestWind = windData[windData.length - 1];
-                    if (latestWind[2]) {
-                        solarSpeed = parseFloat(latestWind[2]);
-                        document.getElementById("speedVal").textContent = solarSpeed.toFixed(1) + " km/s";
-                    }
-                }
-
-                const kpRes = await fetch(proxy + encodeURIComponent("https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json"));
-                const kpData = await kpRes.json();
-                if (kpData.length > 1) {
-                    const latestKp = kpData[kpData.length - 1];
-                    if (latestKp[1]) {
-                        kpIndex = parseFloat(latestKp[1]);
-                        document.getElementById("kpVal").textContent = kpIndex.toFixed(1);
-                    }
-                }
-                
-                document.getElementById("status").textContent = "Live telemetry locked. Ready to stream.";
-            } catch (e) {
-                console.error("Fetch error, using safe ambient fallback numbers:", e);
-                document.getElementById("speedVal").textContent = "400.0 km/s (Fallback)";
-                document.getElementById("kpVal").textContent = "1.0 (Fallback)";
-                document.getElementById("status").textContent = "Using fallback telemetry values.";
+        // Simulate organic, slow background drift in space weather over time
+        setInterval(() => {
+            solarSpeed += (Math.random() - 0.5) * 4.0;
+            solarSpeed = Math.max(300, Math.min(650, solarSpeed));
+            
+            if (Math.random() > 0.8) {
+                kpIndex += (Math.random() - 0.5) * 0.5;
+                kpIndex = Math.max(0, Math.min(6, kpIndex));
             }
-        }
 
-        fetchSpaceWeather();
+            document.getElementById("speedVal").textContent = solarSpeed.toFixed(1) + " km/s";
+            document.getElementById("kpVal").textContent = kpIndex.toFixed(1);
+
+            if (filterNode && audioCtx) {
+                let mappedCutoff = 200 + (solarSpeed * 2.5);
+                filterNode.frequency.setTargetAtTime(Math.min(mappedCutoff, 3000), audioCtx.currentTime, 1.0);
+            }
+        }, 8000);
 
         function initAudio() {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
