@@ -1,1 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Solar Ambient Generator - Client Side</title>
+    <style>
+        body {
+            background-color: #050814;
+            color: #c7d2fe;
+            font-family: monospace;
+            text-align: center;
+            margin: 0;
+            padding: 40px;
+        }
+        h1 {
+            letter-spacing: 3px;
+            color: #818cf8;
+            text-shadow: 0 0 15px rgba(129, 140, 248, 0.5);
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #0b1126;
+            border: 1px solid #312e81;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 0 30px rgba(49, 46, 129, 0.3);
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            background: #030712;
+            padding: 15px;
+            border-radius: 6px;
+            border: 1px solid #1e1b4b;
+        }
+        .stat-box val {
+            font-size: 18px;
+            color: #38bdf8;
+            font-weight: bold;
+        }
+        button {
+            background: #4f46e5;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-family: monospace;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(79, 70, 229, 0.5);
+            transition: 0.2s;
+        }
+        button:hover {
+            background: #6366f1;
+            box-shadow: 0 0 25px rgba(99, 102, 241, 0.8);
+        }
+        #status {
+            margin-top: 15px;
+            font-size: 13px;
+            color: #94a3b8;
+        }
+        canvas {
+            display: block;
+            margin: 20px auto 0 auto;
+            background: #030712;
+            border-radius: 6px;
+            border: 1px solid #1e1b4b;
+        }
+    </style>
+</head>
+<body>
 
+    <div class="container">
+        <h1>SOLAR WIND AMBIENT GENERATOR</h1>
+        <p>Generative soundscape driven live by NOAA space weather telemetry.</p>
+        
+        <div class="stats">
+            <div class="stat-box">Solar Speed<br><val id="speedVal">Loading...</val></div>
+            <div class="stat-box">K-Index (Storm)<br><val id="kpVal">Loading...</val></div>
+        </div>
+
+        <button id="playBtn" onclick="toggleAudio()">INITIALIZE AUDIO STREAM</button>
+        <div id="status">Fetching telemetry from NOAA...</div>
+
+        <canvas id="visualizer" width="540" height="150"></canvas>
+    </div>
+
+    <script>
+        let solarSpeed = 400.0; // Fallback default
+        let kpIndex = 1.0;     // Fallback default
+
+        let audioCtx = null;
+        let isPlaying = false;
+        let masterGain, filterNode, analyser;
+        let synthInterval = null;
+
+        const chordFrequencies = [130.81, 196.00, 233.08, 293.66, 349.23, 392.00];
+
+        // Fetch live NOAA data directly inside the browser using JavaScript
+        async function fetchSpaceWeather() {
+            try {
+                // Fetch Solar Wind Speed
+                const windRes = await fetch("https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json");
+                const windData = await windRes.json();
+                if (windData.length > 1) {
+                    const latestWind = windData[windData.length - 1];
+                    if (latestWind[2]) {
+                        solarSpeed = parseFloat(latestWind[2]);
+                        document.getElementById("speedVal").textContent = solarSpeed.toFixed(1) + " km/s";
+                    }
+                }
+
+                // Fetch Planetary K-index
+                const kpRes = await fetch("https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json");
+                const kpData = await kpRes.json();
+                if (kpData.length > 1) {
+                    const latestKp = kpData[kpData.length - 1];
+                    if (latestKp[1]) {
+                        kpIndex = parseFloat(latestKp[1]);
+                        document.getElementById("kpVal").textContent = kpIndex.toFixed(1);
+                    }
+                }
+                
+                document.getElementById("status").textContent = "Telemetry locked. Ready for audio initialization.";
+            } catch (e) {
+                console.error("Error fetching live NOAA data:", e);
+                document.getElementById("speedVal").textContent = "400.0 km/s (Default)";
+                document.getElementById("kpVal").textContent = "1.0 (Default)";
+                document.getElementById("status").textContent = "Using fallback ambient values.";
+            }
+        }
+
+        // Run data fetch immediately on page load
+        fetchSpaceWeather();
+
+        function initAudio() {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+            masterGain = audioCtx.createGain();
+            masterGain.gain.value = 0.25;
+
+            analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 256;
+
+            filterNode = audioCtx.createBiquadFilter();
+            filterNode.type = "lowpass";
+            let mappedCutoff = 200 + (solarSpeed * 2.5);
+            filterNode.frequency.setValueAtTime(Math.min(mappedCutoff, 2500), audioCtx.currentTime);
+            filterNode.Q.setValueAtTime(4.0, audioCtx.currentTime);
+
+            filterNode.connect(masterGain);
+            masterGain.connect(analyser);
+            analyser.connect(audioCtx.destination);
+        }
+
+        function playRandomDrone() {
+            if (!isPlaying) return;
+
+            let osc = audioCtx.createOscillator();
+            let noteGain = audioCtx.createGain();
+
+            let freq = chordFrequencies[Math.floor(Math.random() * chordFrequencies.length)];
+            if (kpIndex > 3 && Math.random() > 0.6) {
+                freq *= 1.5; 
+            }
+
+            osc.type = Math.random() > 0.5 ? "sine" : "triangle";
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+            let now = audioCtx.currentTime;
+            let duration = 6.0 + (Math.random() * 6.0);
+
+            noteGain.gain.setValueAtTime(0, now);
+            noteGain.gain.linearRampToValueAtTime(0.15, now + 3.0);
+            noteGain.gain.linearRampToValueAtTime(0, now + duration);
+
+            osc.connect(noteGain);
+            noteGain.connect(filterNode);
+
+            osc.start(now);
+            osc.stop(now + duration);
+        }
+
+        function toggleAudio() {
+            const btn = document.getElementById("playBtn");
+            const status = document.getElementById("status");
+
+            if (!isPlaying) {
+                if (!audioCtx) initAudio();
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                isPlaying = true;
+                btn.textContent = "STOP SOUNDSCAPE";
+                status.textContent = "Live stream active. Evolving ambient drone initialized.";
+
+                playRandomDrone();
+                let intervalTime = Math.max(2000, 5000 - (kpIndex * 300));
+                synthInterval = setInterval(playRandomDrone, intervalTime);
+
+                drawVisualizer();
+            } else {
+                isPlaying = false;
+                clearInterval(synthInterval);
+                btn.textContent = "INITIALIZE AUDIO STREAM";
+                status.textContent = "Stream paused.";
+            }
+        }
+
+        const canvas = document.getElementById("visualizer");
+        const canvasCtx = canvas.getContext("2d");
+
+        function drawVisualizer() {
+            if (!isPlaying) return;
+            requestAnimationFrame(drawVisualizer);
+
+            let bufferLength = analyser.frequencyBinCount;
+            let dataArray = new Uint8Array(bufferLength);
+            analyser.getByteFrequencyData(dataArray);
+
+            canvasCtx.fillStyle = "#030712";
+            canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+            let barWidth = (canvas.width / bufferLength) * 2.5;
+            let barHeight;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                barHeight = dataArray[i] / 2;
+                canvasCtx.fillStyle = `rgb(56, 189, ${Math.min(255, barHeight + 100)})`;
+                canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                x += barWidth + 1;
+            }
+        }
+    </script>
+
+</body>
+</html>
