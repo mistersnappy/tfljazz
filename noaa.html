@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ISS Proximity Ambient Generator</title>
+    <title>ISS Timbral Ambient Generator</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛰️</text></svg>">
     <style>
         body {
@@ -20,7 +20,7 @@
             margin-bottom: 5px;
         }
         .container {
-            max-width: 680px;
+            max-width: 700px;
             margin: 0 auto;
             background: #0b1126;
             border: 1px solid #312e81;
@@ -30,16 +30,16 @@
         }
         .stats {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
             margin: 15px 0;
             background: #030712;
-            padding: 12px;
+            padding: 10px;
             border-radius: 6px;
             border: 1px solid #1e1b4b;
         }
         .stat-box val {
-            font-size: 14px;
+            font-size: 13px;
             color: #38bdf8;
             font-weight: bold;
         }
@@ -113,14 +113,16 @@
 <body>
 
     <div class="container">
-        <h1>ISS PROXIMITY AMBIENT</h1>
-        <p style="font-size: 12px; color: #94a3b8;">Generative soundscape driven by your distance to the orbiting Space Station.</p>
+        <h1>ISS TIMBRAL AMBIENT</h1>
+        <p style="font-size: 12px; color: #94a3b8;">Generative soundscape dynamically shaped by orbital telemetry.</p>
         
         <div class="stats">
             <div class="stat-box">Your Location<br><val id="userLoc">Locating IP...</val></div>
             <div class="stat-box">ISS Distance<br><val id="distVal">Calculating...</val></div>
-            <div class="stat-box">ISS Visibility<br><val id="visVal">Syncing...</val></div>
-            <div class="stat-box">Orbital Velocity<br><val id="velVal">Syncing...</val></div>
+            <div class="stat-box">Visibility<br><val id="visVal">Syncing...</val></div>
+            <div class="stat-box">Altitude<br><val id="altVal">Syncing...</val></div>
+            <div class="stat-box">Footprint<br><val id="footVal">Syncing...</val></div>
+            <div class="stat-box">Velocity<br><val id="velVal">Syncing...</val></div>
         </div>
 
         <div class="controls-row">
@@ -133,38 +135,40 @@
         </div>
 
         <button id="playBtn" onclick="toggleAudio()">INITIALIZE AUDIO STREAM</button>
-        <div id="status">Locating user position and contacting ISS...</div>
+        <div id="status">Contacting location and orbital services...</div>
 
         <canvas id="visualizer" width="540" height="100"></canvas>
 
         <div class="mapping-panel">
-            <h3>🛰️ LIVE TELEMETRY MAPPING:</h3>
-            <div>• <span class="highlight">Distance to You</span> scales the <strong>Reverb Wetness</strong> (Farther = more washed out and spaced out; Closer = dry and direct).</div>
-            <div>• <span class="highlight">Visibility (Day/Night)</span> auto-switches scales: <strong>Daylight = Uplifting Major</strong> | <strong>Eclipse = Introspective Minor</strong>.</div>
-            <div>• <span class="highlight">Orbital Velocity</span> subtly modulates panning/modulation width.</div>
-            <div>• Current Mode/Chord: <span id="activeModeDesc" class="highlight">Minor (Eclipsed)</span></div>
+            <h3>🛰️ ADVANCED TIMBRAL MAPPING:</h3>
+            <div>• <span class="highlight">Distance to You</span> scales the <strong>Reverb Wetness</strong> (Far = washed out; Close = dry).</div>
+            <div>• <span class="highlight">Visibility (Day/Night)</span> switches scale: <strong>Day = Major</strong> | <strong>Night = Minor</strong>.</div>
+            <div>• <span class="highlight">Altitude</span> alters the <strong>Filter Resonance ($Q$)</strong>, changing harmonic sharpness.</div>
+            <div>• <span class="highlight">Footprint</span> drives the <strong>Stereo Panner</strong>, drifting the sound across your speakers.</div>
+            <div>• Current Mode: <span id="activeModeDesc" class="highlight">Minor (Eclipsed)</span></div>
         </div>
     </div>
 
     <script>
-        let userLat = 51.5074;  // Default fallback (London)
+        let userLat = 51.5074;  
         let userLon = -0.1278;
         
         let issLat = 0.0, issLon = 0.0;
         let issDistKm = 5000;
         let issVisibility = "eclipses";
         let issVelocity = 27600;
+        let issAltitude = 415;
+        let issFootprint = 4500;
 
         let audioCtx = null;
         let isPlaying = false;
-        let masterGain, filterNode, convolverNode, dryGain, wetGain, analyser;
+        let masterGain, filterNode, pannerNode, convolverNode, dryGain, wetGain, analyser;
         let synthInterval = null;
 
-        // Frequencies mapped across palettes
         const palettes = {
             ethereal: {
-                minor: [130.81, 196.00, 233.08, 293.66, 349.23, 392.00], // C Minor Sus
-                major: [130.81, 164.81, 196.00, 246.94, 293.66, 329.63]  // C Major Add9
+                minor: [130.81, 196.00, 233.08, 293.66, 349.23, 392.00], 
+                major: [130.81, 164.81, 196.00, 246.94, 293.66, 329.63]  
             },
             deepspace: {
                 minor: [65.41, 98.00, 116.54, 146.83, 174.61, 196.00], 
@@ -195,7 +199,6 @@
             }
         }
 
-        // 1. Locate user via IP Geolocation API
         async function locateUser() {
             try {
                 const res = await fetch("https://ipapi.co/json/");
@@ -210,9 +213,8 @@
             }
         }
 
-        // Haversine formula to calculate distance between user and ISS in kilometers
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371; // Earth radius in km
+            const R = 6371; 
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -222,7 +224,6 @@
             return R * c;
         }
 
-        // 2. Fetch live ISS telemetry
         async function fetchISSData() {
             try {
                 const res = await fetch("https://api.wheretheiss.at/v1/satellites/25544");
@@ -233,23 +234,33 @@
                     issLon = parseFloat(data.longitude);
                     issVisibility = data.visibility || "eclipses";
                     issVelocity = parseFloat(data.velocity) || 27600;
+                    issAltitude = parseFloat(data.altitude) || 415;
+                    issFootprint = parseFloat(data.footprint) || 4500;
 
-                    // Calculate distance to user
                     issDistKm = calculateDistance(userLat, userLon, issLat, issLon);
 
                     document.getElementById("distVal").textContent = Math.round(issDistKm) + " km";
                     document.getElementById("visVal").textContent = issVisibility.toUpperCase();
+                    document.getElementById("altVal").textContent = issAltitude.toFixed(1) + " km";
+                    document.getElementById("footVal").textContent = Math.round(issFootprint) + " km";
                     document.getElementById("velVal").textContent = Math.round(issVelocity) + " km/h";
 
                     applyVisibilityMode();
-                    document.getElementById("status").textContent = "Orbital & Proximity telemetry active.";
+                    document.getElementById("status").textContent = "Advanced orbital telemetry active.";
 
-                    // Map distance to Reverb Mix (closer = dry, farther = very wet reverb)
-                    // Max distance across globe is ~20,000 km
-                    if (wetGain && dryGain && audioCtx) {
-                        let wetness = Math.min(1.0, issDistKm / 15000); // 0 to 1 scale
+                    if (audioCtx) {
+                        // Map distance to Reverb Mix
+                        let wetness = Math.min(1.0, issDistKm / 15000);
                         wetGain.gain.setTargetAtTime(wetness * 0.8, audioCtx.currentTime, 2.0);
                         dryGain.gain.setTargetAtTime((1.0 - (wetness * 0.5)) * 0.4, audioCtx.currentTime, 2.0);
+
+                        // Map Altitude to Filter Resonance ($Q$) (range ~380 to 430 km mapped to Q 1.0 to 7.0)
+                        let mappedQ = 1.0 + ((issAltitude - 390) / 40) * 6.0;
+                        filterNode.Q.setTargetAtTime(Math.max(1.0, Math.min(8.0, mappedQ)), audioCtx.currentTime, 2.0);
+
+                        // Map Footprint to Stereo Panning position (-0.8 to 0.8)
+                        let panValue = Math.sin(issFootprint) * 0.7;
+                        pannerNode.pan.setTargetAtTime(panValue, audioCtx.currentTime, 3.0);
                     }
                 }
             } catch (e) {
@@ -257,16 +268,14 @@
             }
         }
 
-        // Initialize geolocation then start tracking loop
         locateUser().then(() => {
             fetchISSData();
             setInterval(fetchISSData, 7000);
         });
 
-        // Procedurally generate a rich impulse response buffer for ambient Reverb
         function createReverbBuffer(audioContext) {
             const rate = audioContext.sampleRate;
-            const length = rate * 4.5; // 4.5 second long lush tail
+            const length = rate * 4.5;
             const impulse = audioContext.createBuffer(2, length, rate);
             const left = impulse.getChannelData(0);
             const right = impulse.getChannelData(1);
@@ -288,11 +297,15 @@
             analyser = audioCtx.createAnalyser();
             analyser.fftSize = 256;
 
-            // Filter node
+            // Filter node with dynamic Q driven by altitude
             filterNode = audioCtx.createBiquadFilter();
             filterNode.type = "lowpass";
             filterNode.frequency.setValueAtTime(1200, audioCtx.currentTime);
             filterNode.Q.setValueAtTime(3.0, audioCtx.currentTime);
+
+            // Stereo Panner node driven by footprint
+            pannerNode = audioCtx.createStereoPanner();
+            pannerNode.pan.setValueAtTime(0, audioCtx.currentTime);
 
             // Reverb Convolver setup
             convolverNode = audioCtx.createConvolver();
@@ -301,15 +314,16 @@
             dryGain = audioCtx.createGain();
             wetGain = audioCtx.createGain();
 
-            // Set initial mix based on current ISS distance
             let initialWet = Math.min(1.0, issDistKm / 15000);
             wetGain.gain.value = initialWet * 0.8;
             dryGain.gain.value = (1.0 - (initialWet * 0.5)) * 0.4;
 
             // Audio Routing Graph:
-            // Synth -> Filter -> splits into [Dry Gain -> Master] and [Convolver -> Wet Gain -> Master]
-            filterNode.connect(dryGain);
-            filterNode.connect(convolverNode);
+            // Synth -> Filter -> Stereo Panner -> splits into [Dry -> Master] and [Convolver -> Wet -> Master]
+            filterNode.connect(pannerNode);
+
+            pannerNode.connect(dryGain);
+            pannerNode.connect(convolverNode);
 
             convolverNode.connect(wetGain);
 
@@ -328,12 +342,11 @@
 
             let freq = currentFrequencies[Math.floor(Math.random() * currentFrequencies.length)];
 
-            // Orbital velocity shifts modulation slightly
             osc.type = Math.random() > 0.4 ? "sine" : "triangle";
             osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
 
             let now = audioCtx.currentTime;
-            let duration = 8.0 + (Math.random() * 6.0); // 8 to 14 second swells
+            let duration = 8.0 + (Math.random() * 6.0);
 
             noteGain.gain.setValueAtTime(0, now);
             noteGain.gain.linearRampToValueAtTime(0.15, now + 4.0);
@@ -357,7 +370,7 @@
                 }
                 isPlaying = true;
                 btn.textContent = "STOP SOUNDSCAPE";
-                status.textContent = "Proximity audio stream online.";
+                status.textContent = "Advanced timbral audio stream online.";
 
                 playRandomDrone();
                 synthInterval = setInterval(playRandomDrone, 4500);
