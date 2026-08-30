@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Solar Ambient Generator</title>
+    <title>ISS Orbital Ambient Generator</title>
     <style>
         body {
             background-color: #050814;
@@ -111,12 +111,12 @@
 <body>
 
     <div class="container">
-        <h1>SOLAR WIND AMBIENT</h1>
-        <p style="font-size: 13px; color: #94a3b8;">Generative soundscape steered by live space-weather telemetry stream.</p>
+        <h1>ISS ORBITAL AMBIENT</h1>
+        <p style="font-size: 13px; color: #94a3b8;">Generative soundscape steered live by the International Space Station.</p>
         
         <div class="stats">
-            <div class="stat-box">Solar Speed<br><val id="speedVal">412.5 km/s</val></div>
-            <div class="stat-box">K-Index (Storm)<br><val id="kpVal">2.0</val></div>
+            <div class="stat-box">ISS Latitude<br><val id="latVal">Locating...</val></div>
+            <div class="stat-box">ISS Longitude<br><val id="lonVal">Locating...</val></div>
         </div>
 
         <div class="controls-row">
@@ -130,21 +130,21 @@
         </div>
 
         <button id="playBtn" onclick="toggleAudio()">INITIALIZE AUDIO STREAM</button>
-        <div id="status">Telemetry engine online. Ready to stream.</div>
+        <div id="status">Contacting orbital telemetry feed...</div>
 
         <canvas id="visualizer" width="540" height="120"></canvas>
 
         <div class="mapping-panel">
-            <h3>📡 TELEMETRY-TO-MUSIC MAPPING:</h3>
-            <div>• <span class="highlight">Solar Wind Speed</span> organically shifts the master <strong>Low-Pass Filter cutoff</strong>, altering pad brightness.</div>
-            <div>• <span class="highlight">K-Index (Geomagnetic Activity)</span> drives the <strong>Generative Tempo & Harmonics</strong>, introducing subtle rhythmic variation.</div>
+            <h3>📡 ORBITAL DATA-TO-MUSIC MAPPING:</h3>
+            <div>• <span class="highlight">ISS Latitude</span> shifts the master <strong>Low-Pass Filter cutoff</strong> as it moves north/south across the globe.</div>
+            <div>• <span class="highlight">ISS Longitude</span> subtly modulates the <strong>Generative Trigger Speed</strong>.</div>
             <div>• Current Active Frequencies: <span id="activeNotes" class="highlight">C3, G3, Bb3, D4, F4, G4</span></div>
         </div>
     </div>
 
     <script>
-        let solarSpeed = 412.5; 
-        let kpIndex = 2.0;     
+        let issLat = 0.0;
+        let issLon = 0.0;
 
         let audioCtx = null;
         let isPlaying = false;
@@ -167,29 +167,42 @@
             document.getElementById("activeNotes").textContent = chordFrequencies.map(f => f + "Hz").join(", ");
             
             if (filterNode && audioCtx) {
-                let mappedCutoff = 200 + (solarSpeed * 2.5);
-                filterNode.frequency.setValueAtTime(Math.min(mappedCutoff, 3000), audioCtx.currentTime);
+                let mappedCutoff = 300 + ((Math.abs(issLat) / 90) * 2000);
+                filterNode.frequency.setValueAtTime(mappedCutoff, audioCtx.currentTime);
             }
         }
 
-        // Simulate organic, slow background drift in space weather over time
-        setInterval(() => {
-            solarSpeed += (Math.random() - 0.5) * 4.0;
-            solarSpeed = Math.max(300, Math.min(650, solarSpeed));
-            
-            if (Math.random() > 0.8) {
-                kpIndex += (Math.random() - 0.5) * 0.5;
-                kpIndex = Math.max(0, Math.min(6, kpIndex));
-            }
+        // Fetch live ISS coordinates directly from Open-Notify API
+        async function fetchISSData() {
+            try {
+                const res = await fetch("https://api.open-notify.org/iss-now.json");
+                const data = await res.json();
+                
+                if (data.message === "success") {
+                    issLat = parseFloat(data.iss_position.latitude);
+                    issLon = parseFloat(data.iss_position.longitude);
 
-            document.getElementById("speedVal").textContent = solarSpeed.toFixed(1) + " km/s";
-            document.getElementById("kpVal").textContent = kpIndex.toFixed(1);
+                    document.getElementById("latVal").textContent = issLat.toFixed(2) + "°";
+                    document.getElementById("lonVal").textContent = issLon.toFixed(2) + "°";
+                    document.getElementById("status").textContent = "Orbital lock acquired. Live ISS stream active.";
 
-            if (filterNode && audioCtx) {
-                let mappedCutoff = 200 + (solarSpeed * 2.5);
-                filterNode.frequency.setTargetAtTime(Math.min(mappedCutoff, 3000), audioCtx.currentTime, 1.0);
+                    // Map latitude (-90 to 90) to filter cutoff frequency (300Hz to 2300Hz)
+                    if (filterNode && audioCtx) {
+                        let mappedCutoff = 300 + ((Math.abs(issLat) / 90) * 2000);
+                        filterNode.frequency.setTargetAtTime(mappedCutoff, audioCtx.currentTime, 2.0);
+                    }
+                }
+            } catch (e) {
+                console.log("ISS Fetch error, using orbital default telemetry.");
+                document.getElementById("latVal").textContent = "51.50° (Default)";
+                document.getElementById("lonVal").textContent = "-0.12° (Default)";
+                document.getElementById("status").textContent = "Running on standard orbital drift.";
             }
-        }, 8000);
+        }
+
+        // Fetch immediately, then poll every 6 seconds
+        fetchISSData();
+        setInterval(fetchISSData, 6000);
 
         function initAudio() {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -202,8 +215,8 @@
 
             filterNode = audioCtx.createBiquadFilter();
             filterNode.type = "lowpass";
-            let mappedCutoff = 200 + (solarSpeed * 2.5);
-            filterNode.frequency.setValueAtTime(Math.min(mappedCutoff, 3000), audioCtx.currentTime);
+            let mappedCutoff = 300 + ((Math.abs(issLat) / 90) * 2000);
+            filterNode.frequency.setValueAtTime(mappedCutoff, audioCtx.currentTime);
             filterNode.Q.setValueAtTime(3.5, audioCtx.currentTime);
 
             filterNode.connect(masterGain);
@@ -219,8 +232,9 @@
 
             let freq = chordFrequencies[Math.floor(Math.random() * chordFrequencies.length)];
             
-            if (kpIndex > 3 && Math.random() > 0.5) {
-                freq *= 1.5; 
+            // Longitude variation introduces occasional harmonic variation
+            if (Math.abs(issLon) > 100 && Math.random() > 0.6) {
+                freq *= 1.25; 
             }
 
             osc.type = Math.random() > 0.4 ? "sine" : "triangle";
@@ -251,11 +265,10 @@
                 }
                 isPlaying = true;
                 btn.textContent = "STOP SOUNDSCAPE";
-                status.textContent = "Live stream active. Generative ambient pads online.";
+                status.textContent = "Orbital stream active. Ambient pads online.";
 
                 playRandomDrone();
-                let intervalTime = Math.max(2500, 5500 - (kpIndex * 350));
-                synthInterval = setInterval(playRandomDrone, intervalTime);
+                synthInterval = setInterval(playRandomDrone, 4000);
 
                 drawVisualizer();
             } else {
