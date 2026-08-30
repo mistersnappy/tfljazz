@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ISS Orbital Ambient & Waveform Generator</title>
+    <title>ISS Orbital Ambient & Multi-Wave Generator</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛰️</text></svg>">
     <style>
         body {
@@ -150,7 +150,7 @@
 
     <div class="container">
         <h1>ISS ORBITAL AMBIENT</h1>
-        <p style="font-size: 12px; color: #94a3b8;">Generative soundscape, waveform selector, & voice waypoints.</p>
+        <p style="font-size: 12px; color: #c7d2fe;">Generative soundscape, multi-wave ensemble, & voice waypoints.</p>
         
         <div class="stats">
             <div class="stat-box">Your Location<br><val id="userLoc">Locating...</val></div>
@@ -187,9 +187,10 @@
                 <label for="waveSelect" style="font-size: 12px;"><strong>Wave:</strong></label>
                 <select id="waveSelect" onchange="updateWaveType(this.value)">
                     <option value="sine">Sine (Pure)</option>
-                    <option value="triangle" selected>Triangle (Warm)</option>
+                    <option value="triangle">Triangle (Warm)</option>
                     <option value="sawtooth">Sawtooth (Bright)</option>
                     <option value="square">Square (Hollow)</option>
+                    <option value="all" selected>All Waves Together (Ensemble)</option>
                     <option value="random">Cosmic Shift</option>
                 </select>
             </div>
@@ -210,7 +211,7 @@
 
         <div class="mapping-panel">
             <h3>🛰️ ENGINE CONTROLS:</h3>
-            <div>• <span class="highlight">Wave Selector</span> changes the underlying oscillator timbre of the ambient pads instantly.</div>
+            <div>• <span class="highlight">All Waves Together</span> blends sine, triangle, sawtooth, and square waves simultaneously for a rich, stacked analog synthesizer sound.</div>
             <div>• Current Mode: <span id="activeModeDesc" class="highlight">Minor (Eclipsed)</span></div>
         </div>
     </div>
@@ -238,7 +239,7 @@
         let closestApproachSecs = 900;  
         let lastAnnouncedCity = "";
         let announcementCooldown = 0;
-        let selectedWaveType = "triangle";
+        let selectedWaveType = "all";
 
         const majorCities = [
             { name: "London, United Kingdom", lat: 51.5074, lon: -0.1278 },
@@ -549,32 +550,45 @@
         function playRandomDrone() {
             if (!isPlaying) return;
 
-            let osc = audioCtx.createOscillator();
-            let noteGain = audioCtx.createGain();
-
             let freq = currentFrequencies[Math.floor(Math.random() * currentFrequencies.length)];
-
-            // Handle waveform selection
-            let wave = selectedWaveType;
-            if (wave === "random") {
-                const types = ["sine", "triangle", "sawtooth", "square"];
-                wave = types[Math.floor(Math.random() * types.length)];
-            }
-            osc.type = wave;
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-
             let now = audioCtx.currentTime;
             let duration = 8.0 + (Math.random() * 6.0);
 
+            let noteGain = audioCtx.createGain();
             noteGain.gain.setValueAtTime(0, now);
-            noteGain.gain.linearRampToValueAtTime(0.15, now + 4.0);
+            noteGain.gain.linearRampToValueAtTime(0.12, now + 4.0);
             noteGain.gain.linearRampToValueAtTime(0, now + duration);
 
-            osc.connect(noteGain);
-            noteGain.connect(filterNode);
+            // Determine which waveforms to build
+            let activeWaves = [];
+            if (selectedWaveType === "all") {
+                activeWaves = ["sine", "triangle", "sawtooth", "square"];
+            } else if (selectedWaveType === "random") {
+                const types = ["sine", "triangle", "sawtooth", "square"];
+                activeWaves = [types[Math.floor(Math.random() * types.length)]];
+            } else {
+                activeWaves = [selectedWaveType];
+            }
 
-            osc.start(now);
-            osc.stop(now + duration);
+            // Scale sub-gains down so stacking multiple oscillators doesn't clip audio
+            let subGainScale = 1.0 / activeWaves.length;
+
+            activeWaves.forEach(wType => {
+                let osc = audioCtx.createOscillator();
+                let subGain = audioCtx.createGain();
+                subGain.gain.value = subGainScale;
+
+                osc.type = wType;
+                osc.frequency.setValueAtTime(freq, now);
+
+                osc.connect(subGain);
+                subGain.connect(noteGain);
+
+                osc.start(now);
+                osc.stop(now + duration);
+            });
+
+            noteGain.connect(filterNode);
         }
 
         function toggleAudio() {
@@ -588,7 +602,7 @@
                 }
                 isPlaying = true;
                 btn.textContent = "STOP SOUNDSCAPE";
-                status.textContent = "Orbital ambient & waveform engine online.";
+                status.textContent = "Orbital ambient & ensemble engine online.";
 
                 playRandomDrone();
                 synthInterval = setInterval(playRandomDrone, 4500);
