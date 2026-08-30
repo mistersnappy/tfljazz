@@ -130,7 +130,7 @@
         </div>
 
         <button id="playBtn" onclick="toggleAudio()">INITIALIZE AUDIO STREAM</button>
-        <div id="status">Connecting to NOAA via proxy...</div>
+        <div id="status">Connecting to NOAA telemetry...</div>
 
         <canvas id="visualizer" width="540" height="120"></canvas>
 
@@ -174,11 +174,10 @@
 
         async function fetchSpaceWeather() {
             try {
-                // Using a public CORS proxy wrapper to seamlessly bypass browser blockages
-                const proxy = "https://api.allorigins.win/raw?url=";
+                // Switched to corsproxy.io for cleaner, stable direct JSON passing
+                const proxy = "https://corsproxy.io/?url=";
                 
-                const windUrl = encodeURIComponent("https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json");
-                const windRes = await fetch(proxy + windUrl);
+                const windRes = await fetch(proxy + encodeURIComponent("https://services.swpc.noaa.gov/products/solar-wind/plasma-1-day.json"));
                 const windData = await windRes.json();
                 if (windData.length > 1) {
                     const latestWind = windData[windData.length - 1];
@@ -188,8 +187,7 @@
                     }
                 }
 
-                const kpUrl = encodeURIComponent("https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json");
-                const kpRes = await fetch(proxy + kpUrl);
+                const kpRes = await fetch(proxy + encodeURIComponent("https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json"));
                 const kpData = await kpRes.json();
                 if (kpData.length > 1) {
                     const latestKp = kpData[kpData.length - 1];
@@ -199,9 +197,9 @@
                     }
                 }
                 
-                document.getElementById("status").textContent = "Live telemetry locked via proxy. Ready to stream.";
+                document.getElementById("status").textContent = "Live telemetry locked. Ready to stream.";
             } catch (e) {
-                console.error("Proxy fetch failed, applying fallback telemetry:", e);
+                console.error("Fetch error, using safe ambient fallback numbers:", e);
                 document.getElementById("speedVal").textContent = "400.0 km/s (Fallback)";
                 document.getElementById("kpVal").textContent = "1.0 (Fallback)";
                 document.getElementById("status").textContent = "Using fallback telemetry values.";
