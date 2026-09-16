@@ -1,1 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Parallel Eras: Synchronous History Timeline</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏳</text></svg>">
+    <style>
+        :root {
+            --bg-color: #090d16;
+            --card-bg: #111827;
+            --border-color: #1f2937;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --accent-1: #38bdf8; /* Science */
+            --accent-2: #f43f5e; /* Empires */
+            --accent-3: #34d399; /* Culture */
+            --accent-4: #fbbf24; /* Global */
+        }
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            line-height: 1.5;
+        }
+        header {
+            max-width: 1100px;
+            margin: 0 auto 30px auto;
+            text-align: center;
+        }
+        h1 {
+            letter-spacing: 2px;
+            color: #818cf8;
+            margin-bottom: 5px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        .filter-btn {
+            background: var(--card-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .filter-btn.active, .filter-btn:hover {
+            background: #4f46e5;
+            border-color: #6366f1;
+        }
+        .timeline-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            position: relative;
+        }
+        /* Central vertical axis */
+        .timeline-container::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #374151;
+            transform: translateX(-50%);
+        }
+        .era-block {
+            margin-bottom: 40px;
+            position: relative;
+        }
+        .era-header {
+            text-align: center;
+            margin-bottom: 25px;
+            position: relative;
+            z-index: 2;
+        }
+        .era-title {
+            background: #1e1b4b;
+            color: #818cf8;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: bold;
+            border: 1px solid #312e81;
+            display: inline-block;
+            box-shadow: 0 0 15px rgba(79, 70, 229, 0.3);
+        }
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 60px 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+        .row.left-heavy .card-right { opacity: 0.3; }
+        .row.right-heavy .card-left { opacity: 0.3; }
+        
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            padding: 15px 20px;
+            border-radius: 8px;
+            position: relative;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            transition: 0.2s;
+        }
+        .card:hover {
+            border-color: #4b5563;
+            transform: translateY(-2px);
+        }
+        .card.cat-empire { border-left: 4px solid var(--accent-2); }
+        .card.cat-science { border-left: 4px solid var(--accent-1); }
+        .card.cat-culture { border-left: 4px solid var(--accent-3); }
+        .card.cat-global { border-left: 4px solid var(--accent-4); }
 
+        .year-badge {
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+            display: block;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 6px;
+            color: #ffffff;
+        }
+        .card-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin: 0;
+        }
+        .center-node {
+            width: 16px;
+            height: 16px;
+            background: #4f46e5;
+            border: 3px solid var(--bg-color);
+            border-radius: 50%;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+            box-shadow: 0 0 0 2px #6366f1;
+        }
+        .empty-slot {
+            visibility: hidden;
+        }
+        @media(max-width: 768px) {
+            .timeline-container::before { left: 20px; }
+            .row { grid-template-columns: 40px 1fr; }
+            .card-left { grid-column: 2; }
+            .card-right { grid-column: 2; }
+            .center-node { grid-column: 1; grid-row: 1; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>PARALLEL ERAS</h1>
+        <p class="subtitle">Discover what actually happened at the same time in human history.</p>
+        
+        <div class="controls">
+            <button class="filter-btn active" onclick="filterCategory('all', this)">All Categories</button>
+            <button class="filter-btn" onclick="filterCategory('empire', this)">🏛️ Empires & Power</button>
+            <button class="filter-btn" onclick="filterCategory('science', this)">💡 Science & Invention</button>
+            <button class="filter-btn" onclick="filterCategory('culture', this)">🎨 Culture & Philosophy</button>
+            <button class="filter-btn" onclick="filterCategory('global', this)">🌍 Americas & Global</button>
+        </div>
+    </header>
+
+    <div class="timeline-container" id="timeline">
+        <!-- Timeline rows injected dynamically via JavaScript -->
+    </div>
+
+    <script>
+        // Curated dataset showing synchronous historical moments
+        const timelineData = [
+            {
+                era: "Ancient Wonders & Early Empires",
+                events: [
+                    { year: "c. 2500 BCE", title: "Building the Great Pyramid of Giza", desc: "The Khufu pyramid is completed in Egypt. Woolly mammoths are still roaming Wrangel Island off Siberia at this exact time.", category: "empire" },
+                    { year: "c. 2500 BCE", title: "Rise of the Indus Valley Civilization", desc: "Harappa and Mohenjo-daro feature advanced urban planning, grid systems, and complex drainage while Egypt builds pyramids.", category: "global" }
+                ]
+            },
+            {
+                era: "Classical Antiquity Overlaps",
+                events: [
+                    { year: "c. 500 BCE", title: "Birth of Athenian Democracy", desc: "Cleisthenes introduces democratic reforms in Athens, setting the stage for Western political philosophy.", category: "culture" },
+                    { year: "c. 500 BCE", title: "Life of Confucius & Buddha", desc: "Confucius in China and Siddhartha Gautama (The Buddha) in India are shaping Eastern philosophy and spiritual thought simultaneously.", category: "culture" }
+                ]
+            },
+            {
+                era: "The Roman & Han Parallel",
+                events: [
+                    { year: "c. 100 CE", title: "Height of the Roman Empire", desc: "Trajan expands Rome to its greatest territorial extent around the Mediterranean basin.", category: "empire" },
+                    { year: "c. 100 CE", title: "Han Dynasty Invents Paper", desc: "Cai Lun invents papermaking in China during the Han Dynasty, revolutionizing global record-keeping long before Europe adopts it.", category: "science" }
+                ]
+            },
+            {
+                era: "The Middle Ages Across Continents",
+                events: [
+                    { year: "1088 CE", title: "Founding of Oxford University", desc: "Teaching begins in Oxford, making the university older than the entire Aztec Empire.", category: "culture" },
+                    { year: "1325 CE", title: "Founding of Tenochtitlan", desc: "The Mexica people establish the magnificent floating city of Tenochtitlan, the heart of the Aztec Empire.", category: "global" }
+                ]
+            },
+            {
+                era: "The Renaissance & Global Encounters",
+                events: [
+                    { year: "1455 CE", title: "Gutenberg Prints the Bible", desc: "Johannes Gutenberg unleashes the movable-type printing press in Germany, sparking the information revolution.", category: "science" },
+                    { year: "1492 CE", title: "Columbus Crosses the Atlantic", desc: "Christopher Columbus makes landfall in the Bahamas, permanently connecting the Eastern and Western hemispheres.", category: "global" }
+                ]
+            },
+            {
+                era: "The Age of Reason & Shogunate Japan",
+                events: [
+                    { year: "1687 CE", title: "Newton Publishes Principia", desc: "Isaac Newton lays the groundwork for classical mechanics and universal gravitation in England.", category: "science" },
+                    { year: "1688 CE", title: "Edo Period Cultural Boom", desc: "Japan is flourishing under the Tokugawa Shogunate during a long era of peace, producing Kabuki theater and master woodblock prints.", category: "culture" }
+                ]
+            },
+            {
+                era: "The Industrial Revolution & Global Shifts",
+                events: [
+                    { year: "1889 CE", title: "Eiffel Tower Opens & Nintendo Founded", desc: "The Eiffel Tower opens in Paris for the World's Fair, while in Japan, a small playing card company named Nintendo is founded.", category: "culture" },
+                    { year: "1903 CE", title: "First Powered Flight", desc: "The Wright brothers achieve the first controlled, sustained powered heavier-than-air flight in North Carolina.", category: "science" }
+                ]
+            },
+            {
+                era: "The Modern Era Confluence",
+                events: [
+                    { year: "1969 CE", title: "Apollo 11 Moon Landing", desc: "Humanity lands on the Moon, watched live by an estimated 650 million people worldwide.", category: "science" },
+                    { year: "1969 CE", title: "Birth of ARPANET", desc: "The precursor to the modern internet successfully transmits its first message between UCLA and Stanford.", category: "science" }
+                ]
+            }
+        ];
+
+        function renderTimeline(filter = 'all') {
+            const container = document.getElementById("timeline");
+            container.innerHTML = "";
+
+            timelineData.forEach(eraObj => {
+                let filteredEvents = eraObj.events;
+                if (filter !== 'all') {
+                    filteredEvents = eraObj.events.filter(e => e.category === filter);
+                }
+
+                if (filteredEvents.length === 0) return;
+
+                const eraBlock = document.createElement("div");
+                eraBlock.className = "era-block";
+
+                eraBlock.innerHTML = `
+                    <div class="era-header">
+                        <span class="era-title">${eraObj.era}</span>
+                    </div>
+                `;
+
+                // Group events into rows of 2 (Left and Right)
+                for (let i = 0; i < filteredEvents.length; i += 2) {
+                    const leftEvent = filteredEvents[i];
+                    const rightEvent = filteredEvents[i+1];
+
+                    const row = document.createElement("div");
+                    row.className = "row";
+
+                    // Left Card
+                    const leftCardHtml = leftEvent ? `
+                        <div class="card cat-${leftEvent.category}">
+                            <span class="year-badge">${leftEvent.year}</span>
+                            <div class="card-title">${leftEvent.title}</div>
+                            <p class="card-desc">${leftEvent.desc}</p>
+                        </div>
+                    ` : `<div class="empty-slot"></div>`;
+
+                    // Right Card
+                    const rightCardHtml = rightEvent ? `
+                        <div class="card cat-${rightEvent.category}">
+                            <span class="year-badge">${rightEvent.year}</span>
+                            <div class="card-title">${rightEvent.title}</div>
+                            <p class="card-desc">${rightEvent.desc}</p>
+                        </div>
+                    ` : `<div class="empty-slot"></div>`;
+
+                    row.innerHTML = `
+                        ${leftCardHtml}
+                        <div class="center-node"></div>
+                        ${rightCardHtml}
+                    `;
+
+                    eraBlock.appendChild(row);
+                }
+
+                container.appendChild(eraBlock);
+            });
+        }
+
+        function filterCategory(cat, btn) {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderTimeline(cat);
+        }
+
+        // Initial render
+        renderTimeline();
+    </script>
+</body>
+</html>
