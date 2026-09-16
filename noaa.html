@@ -197,7 +197,7 @@
             </div>
             <div class="toggle-label">
                 <input type="checkbox" id="drumToggle" checked onchange="toggleBeats(this.checked)">
-                <strong>Sub Pulse</strong>
+                <strong>Evolving Beats</strong>
             </div>
         </div>
 
@@ -224,7 +224,7 @@
 
         let audioCtx = null;
         let isPlaying = false;
-        let masterGain, filterNode, pannerNode, convolverNode, dryGain, wetGain, analyser, solarNoiseGain;
+        let masterGain, filterNode, pannerNode, convolverNode, dryGain, wetGain, analyser;
         let synthInterval = null;
         let drumInterval = null;
         let drumsActive = true;
@@ -233,7 +233,6 @@
         let announcementCooldown = 0;
         let selectedWaveType = "all";
 
-        // Expanded global waypoint database with unique regional musical scales
         const majorCities = [
             { name: "Tokyo, Japan", lat: 35.6762, lon: 139.6503, scale: [146.83, 164.81, 196.00, 220.00, 293.66], flavor: "Insen Pentatonic (East Asian)" },
             { name: "New York City, United States", lat: 40.7128, lon: -74.0060, scale: [130.81, 164.81, 196.00, 246.94, 293.66], flavor: "Lydian Modern (Western)" },
@@ -244,7 +243,6 @@
             { name: "Singapore", lat: 1.3521, lon: 103.8198, scale: [164.81, 196.00, 246.94, 293.66, 329.63], flavor: "Equatorial Luminous" },
             { name: "Beijing, China", lat: 39.9042, lon: 116.4074, scale: [130.81, 146.83, 196.00, 220.00, 261.63], flavor: "Traditional Pentatonic" },
             { name: "Dubai, United Arab Emirates", lat: 25.2048, lon: 55.2708, scale: [138.59, 164.81, 207.65, 246.94, 277.18], flavor: "Desert Mirage Mode" },
-            // New additions
             { name: "Reykjavik, Iceland", lat: 64.1466, lon: -21.9426, scale: [110.00, 123.47, 164.81, 196.00, 246.94], flavor: "Nordic Frost Drone" },
             { name: "Honolulu, Hawaii", lat: 21.3069, lon: -157.8583, scale: [174.61, 220.00, 261.63, 329.63, 392.00], flavor: "Pacific Oceanic Major" },
             { name: "Mumbai, India", lat: 19.0760, lon: 72.8777, scale: [130.81, 138.59, 174.61, 196.00, 233.08], flavor: "Raga Bhairav Mystical" },
@@ -360,7 +358,6 @@
             if (closestCity) {
                 document.getElementById("waypointDisplay").textContent = `${closestCity.name} (~${Math.round(minDistance)} km away)`;
 
-                // Expanded radius threshold set to 1000 km
                 if (minDistance <= 1000) {
                     isCityLocked = true;
                     currentFrequencies = closestCity.scale;
@@ -369,7 +366,7 @@
 
                     if (closestCity.name !== lastAnnouncedCity && announcementCooldown <= 0) {
                         lastAnnouncedCity = closestCity.name;
-                        announcementCooldown = 180; // slightly longer cooldown for a 1000km span
+                        announcementCooldown = 180; 
                         speakWaypoint(closestCity.name);
                     }
                 } else {
@@ -429,12 +426,6 @@
                         wetGain.gain.setTargetAtTime(footprintWetness * 0.9, audioCtx.currentTime, 3.0);
                         dryGain.gain.setTargetAtTime((1.0 - (footprintWetness * 0.4)) * 0.4, audioCtx.currentTime, 3.0);
 
-                        let solarDist = calculateDistance(issLat, issLon, solarLat, solarLon);
-                        let noiseMix = Math.max(0.01, Math.min(0.08, 1.0 - (solarDist / 10000)));
-                        if (solarNoiseGain) {
-                            solarNoiseGain.gain.setTargetAtTime(noiseMix, audioCtx.currentTime, 4.0);
-                        }
-
                         let mappedQ = 1.0 + ((issAltitude - 390) / 40) * 6.0 + ((issVelocity - 27600) * 0.001);
                         filterNode.Q.setTargetAtTime(Math.max(1.0, Math.min(9.0, mappedQ)), audioCtx.currentTime, 2.0);
 
@@ -471,17 +462,6 @@
             return impulse;
         }
 
-        function createCosmicNoiseBuffer(audioContext) {
-            const rate = audioContext.sampleRate;
-            const length = rate * 2;
-            const buffer = audioContext.createBuffer(1, length, rate);
-            const data = buffer.getChannelData(0);
-            for (let i = 0; i < length; i++) {
-                data[i] = Math.random() * 2 - 1;
-            }
-            return buffer;
-        }
-
         function initAudio() {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -509,23 +489,6 @@
             wetGain.gain.value = 0.5;
             dryGain.gain.value = 0.4;
 
-            let noiseSource = audioCtx.createBufferSource();
-            noiseSource.buffer = createCosmicNoiseBuffer(audioCtx);
-            noiseSource.loop = true;
-
-            let noiseFilter = audioCtx.createBiquadFilter();
-            noiseFilter.type = "bandpass";
-            noiseFilter.frequency.value = 800;
-            noiseFilter.Q.value = 3.0;
-
-            solarNoiseGain = audioCtx.createGain();
-            solarNoiseGain.gain.value = 0.02;
-
-            noiseSource.connect(noiseFilter);
-            noiseFilter.connect(solarNoiseGain);
-            solarNoiseGain.connect(convolverNode);
-            noiseSource.start();
-
             filterNode.connect(pannerNode);
             pannerNode.connect(dryGain);
             pannerNode.connect(convolverNode);
@@ -536,55 +499,66 @@
             analyser.connect(audioCtx.destination);
         }
 
-        function playDynamicSubKick(isGhost = false) {
+        // Evolving Percussion & Sub Pulse Engine (Replacing the noise hiss)
+        function playEvolvingBeat(step) {
             if (!isPlaying || !drumsActive) return;
 
-            let osc = audioCtx.createOscillator();
-            let kickFilter = audioCtx.createBiquadFilter();
-            let kickGain = audioCtx.createGain();
             let now = audioCtx.currentTime;
 
-            let startFreq = isGhost ? 110 : 85;
-            let endFreq = isGhost ? 40 : 28;
-            let duration = isGhost ? 0.2 : 0.4;
-            let volume = isGhost ? 0.15 : 0.45;
+            // 1. Sub-Bass Kick on specific beat steps
+            if (step % 4 === 0 || (step % 8 === 6 && issVelocity > 27550)) {
+                let osc = audioCtx.createOscillator();
+                let kickGain = audioCtx.createGain();
+                let isGhost = (step % 8 === 6);
 
-            osc.type = "sine";
-            osc.frequency.setValueAtTime(startFreq, now);
-            osc.frequency.exponentialRampToValueAtTime(endFreq, now + duration);
+                let startFreq = isGhost ? 95 : 80;
+                let endFreq = isGhost ? 35 : 26;
+                let duration = isGhost ? 0.2 : 0.45;
+                let volume = isGhost ? 0.2 : 0.45;
 
-            kickFilter.type = "lowpass";
-            let filterCutoff = 150 + ((issFootprint - 4000) / 1000) * 300;
-            kickFilter.frequency.setValueAtTime(Math.max(120, Math.min(500, filterCutoff)), now);
-            kickFilter.Q.setValueAtTime(4.0, now);
+                osc.type = "sine";
+                osc.frequency.setValueAtTime(startFreq, now);
+                osc.frequency.exponentialRampToValueAtTime(endFreq, now + duration);
 
-            kickGain.gain.setValueAtTime(volume, now);
-            kickGain.gain.exponentialRampToValueAtTime(0.001, now + duration + 0.05);
+                kickGain.gain.setValueAtTime(volume, now);
+                kickGain.gain.exponentialRampToValueAtTime(0.001, now + duration + 0.05);
 
-            osc.connect(kickFilter);
-            kickFilter.connect(kickGain);
-            kickGain.connect(dryGain);
+                osc.connect(kickGain);
+                kickGain.connect(dryGain);
 
-            osc.start(now);
-            osc.stop(now + duration + 0.05);
+                osc.start(now);
+                osc.stop(now + duration + 0.05);
+            }
+
+            // 2. Evolving Cosmic Pulsar / Metallic Click (replaces background hiss)
+            if (step % 2 !== 0 || step % 8 === 2) {
+                let clickOsc = audioCtx.createOscillator();
+                let clickGain = audioCtx.createGain();
+                
+                // Frequency shifts dynamically based on current day number and orbit velocity
+                let pulsarFreq = 440 + ((dayNum * 1000) % 600) + ((issVelocity - 27000) * 0.1);
+                clickOsc.type = "triangle";
+                clickOsc.frequency.setValueAtTime(pulsarFreq, now);
+                clickOsc.frequency.exponentialRampToValueAtTime(pulsarFreq * 0.5, now + 0.08);
+
+                clickGain.gain.setValueAtTime(0.08, now);
+                clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+                clickOsc.connect(clickGain);
+                clickGain.connect(convolverNode); // Echoes through the orbital reverb space
+
+                clickOsc.start(now);
+                clickOsc.stop(now + 0.09);
+            }
         }
 
         function startDynamicDrumEngine() {
             clearInterval(drumInterval);
-            let stepTime = Math.max(400, 750 - ((issVelocity - 27000) * 0.1));
+            let stepTime = Math.max(350, 700 - ((issVelocity - 27000) * 0.15));
             let beatCounter = 0;
 
             drumInterval = setInterval(() => {
-                if (!isPlaying || !drumsActive) return;
-
-                if (beatCounter % 4 === 0) {
-                    playDynamicSubKick(false); 
-                } else if (beatCounter % 4 === 2) {
-                    playDynamicSubKick(false); 
-                } else if (beatCounter % 4 === 3 && issVelocity > 27550) {
-                    playDynamicSubKick(true);  
-                }
-
+                playEvolvingBeat(beatCounter);
                 beatCounter = (beatCounter + 1) % 16;
             }, stepTime);
         }
@@ -644,7 +618,7 @@
                 }
                 isPlaying = true;
                 btn.textContent = "STOP SOUNDSCAPE";
-                status.textContent = "Orbital ambient & physics-driven harmonic engine online.";
+                status.textContent = "Orbital ambient & evolving rhythm engine online.";
 
                 playRandomDrone();
                 synthInterval = setInterval(playRandomDrone, 4500);
