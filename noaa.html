@@ -136,6 +136,7 @@
             background: #030712;
             border-radius: 6px;
             border: 1px solid #1e1b4b;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
         }
     </style>
 </head>
@@ -154,7 +155,6 @@
             <div class="stat-box">Velocity<br><val id="velVal">Syncing...</val></div>
         </div>
 
-        <!-- Enhanced Waypoint Tracker -->
         <div class="waypoint-banner">
             <div class="waypoint-top">
                 <span>📍 Nearest Waypoint: <span id="waypointDisplay" style="color: #ffffff; font-weight: bold;">Scanning track...</span></span>
@@ -204,7 +204,7 @@
         <button id="playBtn" onclick="toggleAudio()">INITIALIZE AUDIO STREAM</button>
         <div id="status">Contacting location and orbital services...</div>
 
-        <canvas id="visualizer" width="540" height="100"></canvas>
+        <canvas id="visualizer" width="540" height="120"></canvas>
     </div>
 
     <script>
@@ -226,7 +226,7 @@
         let drumInterval = null;
         let drumsActive = true;
 
-        let solarPhaseSeconds = 0; // Tracks real duration in current solar state
+        let solarPhaseSeconds = 0;
         let lastAnnouncedCity = "";
         let announcementCooldown = 0;
         let selectedWaveType = "all";
@@ -383,7 +383,6 @@
                     issAltitude = parseFloat(data.altitude) || 415;
                     issFootprint = parseFloat(data.footprint) || 4500;
 
-                    // If visibility state flipped from API, reset the elapsed phase counter
                     if (oldVisibility !== issVisibility) {
                         solarPhaseSeconds = 0;
                     }
@@ -391,7 +390,6 @@
                     issDistKm = calculateDistance(userLat, userLon, issLat, issLon);
                     checkWaypoints();
 
-                    // Real Range Vector relative to your location
                     if (issDistKm < prevDistKm) {
                         document.getElementById("proximityLabel").textContent = "Range Vector (Closing In)";
                         document.getElementById("proximityClock").textContent = `-${Math.round(prevDistKm - issDistKm)} km / sample`;
@@ -423,7 +421,6 @@
             }
         }
 
-        // Live Second Counter for Solar Phase & Announcement Cooldowns
         setInterval(() => {
             solarPhaseSeconds++;
             if (announcementCooldown > 0) announcementCooldown--;
@@ -460,7 +457,8 @@
             masterGain.gain.value = 0.35;
 
             analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 256;
+            analyser.fftSize = 128; // Reduced FFT size so lower bins spread wider across canvas
+            analyser.smoothingTimeConstant = 0.8; // Smooth out jittery bar transitions
 
             filterNode = audioCtx.createBiquadFilter();
             filterNode.type = "lowpass";
@@ -523,6 +521,28 @@
             osc.stop(now + duration + 0.05);
         }
 
+        function startDynamicDrumEngine() {
+            clearInterval(drumInterval);
+            let stepTime = Math.max(400, 750 - ((issVelocity - 27000) * 0.1));
+            let beatCounter = 0;
+
+            drumInterval = setInterval(() => {
+                if (!isPlaying || !drumsActive) return;
+
+                if (beatCounter % 4 === 0) {
+                    playDynamicSubKick(false); 
+                } else if (beatCounter % 4 === 2) {
+                    playDynamicSubKick(false); 
+                } else if (beatCounter % 4 === 3 && issVelocity > 27550) {
+                    playDynamicSubKick(true);  
+                }
+
+                beatCounter = (beatCounter + 1) / 16; // Fixed loop counter step down below
+            }, stepTime);
+        }
+
+        // Fixed inner counter increment adjustment
+        // Note: keeping counter logic intact: beatCounter = (beatCounter + 1) % 16;
         function startDynamicDrumEngine() {
             clearInterval(drumInterval);
             let stepTime = Math.max(400, 750 - ((issVelocity - 27000) * 0.1));
@@ -619,21 +639,33 @@
             if (!isPlaying) return;
             requestAnimationFrame(drawVisualizer);
 
-            let bufferLength = analyser.frequencyBinCount;
+            let bufferLength = analyser.frequencyBinCount; // With fftSize 128, this is 64 bins
             let dataArray = new Uint8Array(bufferLength);
             analyser.getByteFrequencyData(dataArray);
 
             canvasCtx.fillStyle = "#030712";
             canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
 
-            let barWidth = (canvas.width / bufferLength) * 2.5;
-            let barHeight;
+            // Spread active bins across the full width of the canvas
+            let barWidth = (canvas.width / bufferLength) * 1.3;
             let x = 0;
 
             for (let i = 0; i < bufferLength; i++) {
-                barHeight = dataArray[i] / 2;
-                canvasCtx.fillStyle = `rgb(56, 189, ${Math.min(255, barHeight + 100)})`;
-                canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                let barHeight = (dataArray[i] / 255) * canvas.height;
+
+                // Create a neon gradient style for a high-tech instrument monitor look
+                let gradient = canvasCtx.createLinearGradient(0, canvas.height, 0, 0);
+                gradient.addColorStop(0, "#312e81");
+                gradient.addColorStop(0.5, "#4f46e5");
+                gradient.addColorStop(1, "#38bdf8");
+
+                canvasCtx.fillStyle = gradient;
+                canvasCtx.fillRect(x, canvas.height - barHeight, barWidth - 1, barHeight);
+
+                // Add small top indicator cap for retro synth aesthetic
+                canvasCtx.fillStyle = "#ffffff";
+                canvasCtx.fillRect(x, canvas.height - barHeight - 2, barWidth - 1, 2);
+
                 x += barWidth + 1;
             }
         }
