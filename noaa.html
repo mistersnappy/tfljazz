@@ -144,7 +144,7 @@
 
     <div class="container">
         <h1>ISS ORBITAL AMBIENT</h1>
-        <p style="font-size: 12px; color: #c7d2fe;">Fully-integrated telemetry synth powered by real-time orbital physics.</p>
+        <p style="font-size: 12px; color: #c7d2fe;">Dynamic telemetry synth powered by real-time orbital physics.</p>
         
         <div class="stats">
             <div class="stat-box">Your Location<br><val id="userLoc">Locating...</val></div>
@@ -224,7 +224,7 @@
 
         let audioCtx = null;
         let isPlaying = false;
-        let masterGain, filterNode, pannerNode, convolverNode, dryGain, wetGain, analyser;
+        let masterGain, filterNode, pannerNode, convolverNode, delayNode, dryGain, wetGain, analyser;
         let synthInterval = null;
         let drumInterval = null;
         let drumsActive = true;
@@ -358,7 +358,6 @@
             if (closestCity) {
                 document.getElementById("waypointDisplay").textContent = `${closestCity.name} (~${Math.round(minDistance)} km away)`;
 
-                // Expanded radius threshold set to 1500 km
                 if (minDistance <= 1500) {
                     isCityLocked = true;
                     currentFrequencies = closestCity.scale;
@@ -367,7 +366,7 @@
 
                     if (closestCity.name !== lastAnnouncedCity && announcementCooldown <= 0) {
                         lastAnnouncedCity = closestCity.name;
-                        announcementCooldown = 240; // Cooldown adjusted for a wider 1500km zone
+                        announcementCooldown = 240; 
                         speakWaypoint(closestCity.name);
                     }
                 } else {
@@ -427,7 +426,11 @@
                         wetGain.gain.setTargetAtTime(footprintWetness * 0.9, audioCtx.currentTime, 3.0);
                         dryGain.gain.setTargetAtTime((1.0 - (footprintWetness * 0.4)) * 0.4, audioCtx.currentTime, 3.0);
 
-                        let mappedQ = 1.0 + ((issAltitude - 390) / 40) * 6.0 + ((issVelocity - 27600) * 0.001);
+                        // Dynamic filter breathing based on velocity variations
+                        let dynamicCutoff = 800 + ((issVelocity - 27000) * 1.5) + Math.sin(Date.now() / 3000) * 300;
+                        filterNode.frequency.setTargetAtTime(Math.max(400, Math.min(2400, dynamicCutoff)), audioCtx.currentTime, 2.0);
+
+                        let mappedQ = 1.0 + ((issAltitude - 390) / 40) * 6.0;
                         filterNode.Q.setTargetAtTime(Math.max(1.0, Math.min(9.0, mappedQ)), audioCtx.currentTime, 2.0);
 
                         let panValue = Math.sin(issFootprint) * 0.7;
@@ -477,6 +480,17 @@
             filterNode.type = "lowpass";
             filterNode.frequency.setValueAtTime(1200, audioCtx.currentTime);
             filterNode.Q.setValueAtTime(3.0, audioCtx.currentTime);
+
+            // Added Space Echo Delay Line for dynamic cascading echoes
+            delayNode = audioCtx.createDelay(5.0);
+            delayNode.delayTime.value = 0.75; // 750ms cosmic bounce
+
+            let delayFeedback = audioCtx.createGain();
+            delayFeedback.gain.value = 0.4;
+
+            delayNode.connect(delayFeedback);
+            delayFeedback.connect(delayNode);
+            delayNode.connect(filterNode); // feed delay back into filter/reverb chain
 
             pannerNode = audioCtx.createStereoPanner();
             pannerNode.pan.setValueAtTime(0, audioCtx.currentTime);
@@ -542,7 +556,7 @@
                 clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
 
                 clickOsc.connect(clickGain);
-                clickGain.connect(convolverNode);
+                clickGain.connect(delayNode); // Send clicks into the cosmic delay line
 
                 clickOsc.start(now);
                 clickOsc.stop(now + 0.09);
@@ -560,48 +574,55 @@
             }, stepTime);
         }
 
+        // Upgraded to trigger rich, multi-note harmonic chord clusters
         function playRandomDrone() {
             if (!isPlaying) return;
 
-            let seedIndex = Math.floor((dayNum * 100000) + Math.random() * currentFrequencies.length) % currentFrequencies.length;
-            let freq = currentFrequencies[seedIndex];
-            
             let now = audioCtx.currentTime;
-            let duration = 8.0 + (Math.random() * 6.0);
+            let duration = 9.0 + (Math.random() * 5.0);
 
             let noteGain = audioCtx.createGain();
             noteGain.gain.setValueAtTime(0, now);
-            noteGain.gain.linearRampToValueAtTime(0.12, now + 4.0);
+            noteGain.gain.linearRampToValueAtTime(0.09, now + 4.5);
             noteGain.gain.linearRampToValueAtTime(0, now + duration);
 
-            let activeWaves = [];
-            if (selectedWaveType === "all") {
-                activeWaves = ["sine", "triangle", "sawtooth", "square"];
-            } else if (selectedWaveType === "random") {
-                const types = ["sine", "triangle", "sawtooth", "square"];
-                activeWaves = [types[Math.floor(Math.random() * types.length)]];
-            } else {
-                activeWaves = [selectedWaveType];
-            }
+            // Pick 2 harmonious notes from the scale simultaneously (chord stacking)
+            let rootIndex = Math.floor((dayNum * 100000) + Math.random() * currentFrequencies.length) % currentFrequencies.length;
+            let harmonyIndex = (rootIndex + 2) % currentFrequencies.length; // interval spacing
 
-            let subGainScale = 1.0 / activeWaves.length;
+            let chordFreqs = [currentFrequencies[rootIndex], currentFrequencies[harmonyIndex]];
 
-            activeWaves.forEach(wType => {
-                let osc = audioCtx.createOscillator();
-                let subGain = audioCtx.createGain();
-                subGain.gain.value = subGainScale;
+            chordFreqs.forEach((freq, idx) => {
+                let activeWaves = [];
+                if (selectedWaveType === "all") {
+                    activeWaves = ["sine", "triangle", "sawtooth", "square"];
+                } else if (selectedWaveType === "random") {
+                    const types = ["sine", "triangle", "sawtooth", "square"];
+                    activeWaves = [types[Math.floor(Math.random() * types.length)]];
+                } else {
+                    activeWaves = [selectedWaveType];
+                }
 
-                osc.type = wType;
-                osc.frequency.setValueAtTime(freq, now);
+                let subGainScale = (1.0 / activeWaves.length) * (idx === 0 ? 1.0 : 0.7);
 
-                osc.connect(subGain);
-                subGain.connect(noteGain);
+                activeWaves.forEach(wType => {
+                    let osc = audioCtx.createOscillator();
+                    let subGain = audioCtx.createGain();
+                    subGain.gain.value = subGainScale;
 
-                osc.start(now);
-                osc.stop(now + duration);
+                    osc.type = wType;
+                    osc.frequency.setValueAtTime(freq, now);
+
+                    osc.connect(subGain);
+                    subGain.connect(noteGain);
+
+                    osc.start(now);
+                    osc.stop(now + duration);
+                });
             });
 
             noteGain.connect(filterNode);
+            noteGain.connect(delayNode); // Send chords echoing into space delay
         }
 
         function toggleAudio() {
@@ -615,10 +636,10 @@
                 }
                 isPlaying = true;
                 btn.textContent = "STOP SOUNDSCAPE";
-                status.textContent = "Orbital ambient & evolving rhythm engine online.";
+                status.textContent = "Orbital ambient & dynamic rhythm engine online.";
 
                 playRandomDrone();
-                synthInterval = setInterval(playRandomDrone, 4500);
+                synthInterval = setInterval(playRandomDrone, 5500);
                 if (drumsActive) startDynamicDrumEngine();
 
                 drawVisualizer();
