@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Parallel Eras: Synchronous Multi-Column History Timeline</title>
+    <title>Parallel Eras: Granular Synchronous History Timeline</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⏳</text></svg>">
     <style>
         :root {
@@ -43,10 +43,9 @@
             max-width: 1400px;
             margin: 0 auto;
         }
-        /* Multi-column grid layout */
         .grid-header {
             display: grid;
-            grid-template-columns: 100px repeat(4, 1fr);
+            grid-template-columns: 120px repeat(4, 1fr);
             gap: 15px;
             margin-bottom: 20px;
             font-weight: bold;
@@ -63,7 +62,7 @@
 
         .time-row {
             display: grid;
-            grid-template-columns: 100px repeat(4, 1fr);
+            grid-template-columns: 120px repeat(4, 1fr);
             gap: 15px;
             margin-bottom: 25px;
             align-items: stretch;
@@ -145,11 +144,10 @@
 
     <header>
         <h1>PARALLEL ERAS</h1>
-        <p class="subtitle">Synchronous multi-column history tracking precise chronological intersections with Wikipedia references.</p>
+        <p class="subtitle">Granular multi-column history tracking precise chronological intersections with Wikipedia references.</p>
     </header>
 
     <div class="timeline-container" id="timelineGrid">
-        <!-- Header Row -->
         <div class="grid-header">
             <div class="col-header" style="background:#111827; border:1px solid #1f2937; color:#9ca3af;">Period</div>
             <div class="col-header h-biblical">📜 Biblical & Near East</div>
@@ -158,82 +156,123 @@
             <div class="col-header h-british">🇬🇧 British & European</div>
         </div>
 
-        <!-- Chronological Rows -->
         <div id="rowsContainer"></div>
     </div>
 
     <script>
-        // Strictly aligned chronological rows tracking parallel history
+        // High-granularity synchronous dataset
         const synchronousData = [
             {
-                period: "c. 3500 – 3000 BCE",
-                biblical: { title: "Early Patriarchal Era / Ur", desc: "Rise of early city-states in Mesopotamia, originating from regions like Ur.", url: "https://en.wikipedia.org/wiki/Ur" },
+                period: "c. 3500 BCE",
+                biblical: { title: "Early Uruk & Sumerian Rise", desc: "Development of temple administration and early proto-cuneiform records in Mesopotamia.", url: "https://en.wikipedia.org/wiki/Uruk" },
                 explorer: null,
-                invention: { title: "Invention of the Wheel & Writing", desc: "Sumerians develop cuneiform script and the earliest wheeled vehicles.", url: "https://en.wikipedia.org/wiki/Invention_of_the_wheel" },
-                british: { title: "Stonehenge (Phase 1)", desc: "Construction begins on the outer circular bank and ditch in Wiltshire.", url: "https://en.wikipedia.org/wiki/Stonehenge" }
+                invention: { title: "Invention of the Wheel", desc: "First use of the wheel for pottery and transport across Mesopotamia.", url: "https://en.wikipedia.org/wiki/Invention_of_the_wheel" },
+                british: { title: "Stonehenge Phase 1", desc: "Excavation of the outer ditch and circular bank in Wiltshire begins.", url: "https://en.wikipedia.org/wiki/Stonehenge" }
             },
             {
-                period: "c. 1450 – 1400 BCE",
-                biblical: { title: "The Exodus Era", desc: "Biblical tradition records the liberation of Israelites from Egypt and desert wanderings.", url: "https://en.wikipedia.org/wiki/The_Exodus" },
+                period: "c. 2100 BCE",
+                biblical: { title: "The Migration of Abraham", desc: "Biblical narrative records Abraham moving from Ur of the Chaldees toward Canaan.", url: "https://en.wikipedia.org/wiki/Abraham" },
                 explorer: null,
-                invention: { title: "Late Bronze Age Metallurgy", desc: "Advanced bronze casting spreads rapidly for tools, armor, and weaponry.", url: "https://en.wikipedia.org/wiki/Bronze_Age" },
-                british: { title: "Wessex Culture Bronze Hoards", desc: "Wealthy trade networks across Britain export gold artifacts to continental Europe.", url: "https://en.wikipedia.org/wiki/Wessex_culture" }
+                invention: { title: "Bronze Metallurgy Flourishes", desc: "Alloying copper and tin becomes widespread for durable tools and weapons.", url: "https://en.wikipedia.org/wiki/Bronze_Age" },
+                british: { title: "Early Beaker Culture Trade", desc: "Beaker pottery and copper metallurgy arrive in Britain via continental trade networks.", url: "https://en.wikipedia.org/wiki/Beaker_culture" }
             },
             {
-                period: "c. 950 – 900 BCE",
-                biblical: { title: "Solomon's Temple Built", desc: "King Solomon completes the First Temple in Jerusalem.", url: "https://en.wikipedia.org/wiki/Solomon%27s_Temple" },
+                period: "c. 1446 BCE",
+                biblical: { title: "The Biblical Exodus", desc: "Traditional dating for the departure of Israelites from Egypt and Sinai covenant.", url: "https://en.wikipedia.org/wiki/The_Exodus" },
                 explorer: null,
-                invention: { title: "Early Iron Age Expansion", desc: "Iron working replaces bronze as the primary material for heavy tools.", url: "https://en.wikipedia.org/wiki/Iron_Age" },
-                british: { title: "Celtic Hillfort Beginnings", desc: "Early fortified hilltop settlements begin appearing across Celtic Britain.", url: "https://en.wikipedia.org/wiki/Hillfort" }
+                invention: { title: "Alphabetical Writing (Proto-Sinaitic)", desc: "Early alphabetic scripts emerge in the Sinai Peninsula, simplifying written language.", url: "https://en.wikipedia.org/wiki/Proto-Sinaitic_script" },
+                british: { title: "Wessex Elite Burials", desc: "Chieftain graves rich in imported gold and amber indicate thriving British trade routes.", url: "https://en.wikipedia.org/wiki/Wessex_culture" }
             },
             {
-                period: "c. 586 – 538 BCE",
-                biblical: { title: "Babylonian Exile", desc: "Nebuchadnezzar II destroys Jerusalem; Jews are exiled to Babylon until Cyrus permits return.", url: "https://en.wikipedia.org/wiki/Babylonian_captivity" },
-                explorer: { title: "Scylax's Indian Ocean Voyage", desc: "Persian-commissioned maritime expedition explores the Indus River and Arabian Sea.", url: "https://en.wikipedia.org/wiki/Scylax_of_Caryanda" },
-                invention: { title: "Coinage Invented in Lydia", desc: "First standardized metal coins minted in Asia Minor, revolutionizing trade.", url: "https://en.wikipedia.org/wiki/History_of_coinage" },
-                british: { title: "La Tène Culture Emerges", desc: "Distinct artistic and iron-working styles spread among British and European Celtic tribes.", url: "https://en.wikipedia.org/wiki/La_T%C3%A8ne_culture" }
+                period: "c. 950 BCE",
+                biblical: { title: "Solomon's Temple Completed", desc: "King Solomon finishes construction of the First Temple in Jerusalem.", url: "https://en.wikipedia.org/wiki/Solomon%27s_Temple" },
+                explorer: null,
+                invention: { title: "Early Iron Smelting Spread", desc: "Iron metallurgy becomes viable for mass production of tools and farm implements.", url: "https://en.wikipedia.org/wiki/Iron_Age" },
+                british: { title: "Hillfort Construction Begins", desc: "Celtic communities start building fortified hilltop enclosures across Britain.", url: "https://en.wikipedia.org/wiki/Hillfort" }
+            },
+            {
+                period: "c. 586 BCE",
+                biblical: { title: "Babylonian Exile of Judah", desc: "Nebuchadnezzar II captures Jerusalem, destroys the First Temple, and deports citizens.", url: "https://en.wikipedia.org/wiki/Babylonian_captivity" },
+                explorer: { title: "Scylax's Indian Ocean Expedition", desc: "First recorded maritime exploration mapping river routes into the Indian Ocean for Persia.", url: "https://en.wikipedia.org/wiki/Scylax_of_Caryanda" },
+                invention: { title: "First Standardized Coinage", desc: "The Kingdom of Lydia mints the first official metal coins, accelerating commerce.", url: "https://en.wikipedia.org/wiki/History_of_coinage" },
+                british: { title: "La Tène Celtic Culture", desc: "Distinct European Celtic art and iron-craft styles begin influencing British tribes.", url: "https://en.wikipedia.org/wiki/La_T%C3%A8ne_culture" }
+            },
+            {
+                period: "c. 516 BCE",
+                biblical: { title: "Completion of Second Temple", desc: "The rebuilt Temple is dedicated in Jerusalem following the return from Babylon.", url: "https://en.wikipedia.org/wiki/Second_Temple" },
+                explorer: { title: "Hanno the Navigator's African Voyage", desc: "Carthaginian explorer sails down the western coast of Africa past modern-day Morocco.", url: "https://en.wikipedia.org/wiki/Hanno_the_Navigator" },
+                invention: { title: "The Trebuchet & Siege Engines", desc: "Advanced military engineering develops heavy torsion and tension catapults.", url: "https://en.wikipedia.org/wiki/Catapult" },
+                british: { title: "Iron Age Farming Villages", desc: "Circular timber roundhouses and grain storage pits dominate rural British settlements.", url: "https://en.wikipedia.org/wiki/Roundhouse_(dwelling)" }
+            },
+            {
+                period: "54 BCE",
+                biblical: { title: "Herod the Great's Rise", desc: "Rome appoints Herod as client king of Judea, setting the stage for massive architectural projects.", url: "https://en.wikipedia.org/wiki/Herod_the_Great" },
+                explorer: { title: "Julius Caesar Crosses to Britain", desc: "Roman legions launch their first military reconnaissance and invasion expeditions of Britain.", url: "https://en.wikipedia.org/wiki/Caesar%27s_invasions_of_Britain" },
+                invention: { title: "Advanced Roman Engineering", desc: "Widespread military adoption of standardized roads, locks, and fortifications.", url: "https://en.wikipedia.org/wiki/Roman_technology" },
+                british: { title: "First Minting of British Coins", desc: "Southern British tribes begin striking their own gold and silver coins modeled after Rome.", url: "https://en.wikipedia.org/wiki/British_Iron_Age" }
             },
             {
                 period: "c. 4 BCE – 30 CE",
-                biblical: { title: "Life & Ministry of Jesus", desc: "Events of the Gospels unfold across Roman-occupied Judea and Galilee.", url: "https://en.wikipedia.org/wiki/Jesus" },
-                explorer: { title: "Roman Maritime Trade to India", desc: "Monsoon shipping routes established connecting Red Sea ports directly to western India.", url: "https://en.wikipedia.org/wiki/Indo-Roman_trade_relations" },
-                invention: { title: "Roman Concrete & Aqueducts", desc: "Engineers master hydraulic concrete, building massive infrastructure across the empire.", url: "https://en.wikipedia.org/wiki/Roman_concrete" },
-                british: { title: "Pre-Roman British Kingdoms", desc: "Trading kingdoms like the Catuvellauni issue native coins prior to Roman invasion.", url: "https://en.wikipedia.org/wiki/Catuvellauni" }
+                biblical: { title: "Life & Ministry of Jesus", desc: "Historical window of Jesus' life and ministry in Roman-controlled Judea and Galilee.", url: "https://en.wikipedia.org/wiki/Jesus" },
+                explorer: { title: "Indo-Roman Monsoon Maritime Routes", desc: "Direct merchant shipping lanes open between Red Sea ports and southwestern India.", url: "https://en.wikipedia.org/wiki/Indo-Roman_trade_relations" },
+                invention: { title: "Invention of Hydraulic Concrete", desc: "Roman engineers invent opus caementicium, allowing massive harbors and domes.", url: "https://en.wikipedia.org/wiki/Roman_concrete" },
+                british: { title: "Pre-Conquest Client Kingdoms", desc: "British tribal kingdoms maintain heavy diplomatic and trade ties with the Roman Empire.", url: "https://en.wikipedia.org/wiki/Catuvellauni" }
             },
             {
                 period: "70 – 79 CE",
-                biblical: { title: "Destruction of Second Temple", desc: "Roman legions under Titus siege Jerusalem and dismantle the Second Temple.", url: "https://en.wikipedia.org/wiki/Siege_of_Jerusalem_(70_CE)" },
-                explorer: { title: "Agricola's Exploration of Britain", desc: "Roman governor Gnaeus Julius Agricola sails fleets around the northern tip of Britain.", url: "https://en.wikipedia.org/wiki/Gnaeus_Julius_Agricola" },
-                invention: { title: "Advanced Surgical Tools", desc: "Roman medical innovation produces specialized surgical scalpels, bone drills, and forceps.", url: "https://en.wikipedia.org/wiki/Roman_medicine" },
-                british: { title: "Eruption of Mount Vesuvius", desc: "While Roman legions campaign in Britain, Pompeii is buried under volcanic ash.", url: "https://en.wikipedia.org/wiki/Pompeii" }
+                biblical: { title: "Siege & Destruction of Jerusalem", desc: "Roman armies under Titus crush the Jewish revolt and dismantle the Second Temple.", url: "https://en.wikipedia.org/wiki/Siege_of_Jerusalem_(70_CE)" },
+                explorer: { title: "Agricola Circumnavigates Britain", desc: "Roman naval fleet maps the northernmost coasts and islands of Scotland.", url: "https://en.wikipedia.org/wiki/Gnaeus_Julius_Agricola" },
+                invention: { title: "Advanced Surgical Instruments", desc: "Roman medicine sees sophisticated metal scalpels, hooks, and bone levers.", url: "https://en.wikipedia.org/wiki/Roman_medicine" },
+                british: { title: "Eruption of Mount Vesuvius", desc: "While Roman legions solidify control over Britain, Pompeii is buried by Vesuvius (79 CE).", url: "https://en.wikipedia.org/wiki/Pompeii" }
             },
             {
-                period: "1215 – 1295 CE",
-                biblical: { title: "Maimonides & Scholasticism", desc: "Philosophical integration of biblical texts with Aristotelian logic flourishes in medieval thought.", url: "https://en.wikipedia.org/wiki/Maimonides" },
-                explorer: { title: "Marco Polo's Journey", desc: "Venetian explorer journeys along the Silk Road to the court of Kublai Khan.", url: "https://en.wikipedia.org/wiki/Marco_Polo" },
-                invention: { title: "Spectacles Invented in Italy", desc: "First wearable eyeglasses with convex lenses developed in Northern Italy.", url: "https://en.wikipedia.org/wiki/Glasses" },
-                british: { title: "Signing of the Magna Carta", desc: "King John signs the historic charter at Runnymede limiting royal authority.", url: "https://en.wikipedia.org/wiki/Magna_Carta" }
+                period: "122 CE",
+                biblical: { title: "Bar Kokhba Revolt Preparations", desc: "Tensions rise in Judea leading up to the final major Jewish-Roman war.", url: "https://en.wikipedia.org/wiki/Bar_Kokhba_revolt" },
+                explorer: { title: "Ptolemy's Geographia Mapping", desc: "Greco-Roman scholar compiles global coordinates and trade routes across the known world.", url: "https://en.wikipedia.org/wiki/Geographia" },
+                invention: { title: "Heavy Stone Masonry Techniques", desc: "Standardized quarrying and crane technology used for massive imperial structures.", url: "https://en.wikipedia.org/wiki/Crane_(machine)#History" },
+                british: { title: "Construction of Hadrian's Wall", desc: "Emperor Hadrian orders a massive stone wall built across northern Britain.", url: "https://en.wikipedia.org/wiki/Hadrian%27s_Wall" }
             },
             {
-                period: "1405 – 1492 CE",
-                biblical: { title: "Hebrew Printing & Renaissance", desc: "First printed Hebrew Bibles produced in Italy shortly after Gutenberg's breakthrough.", url: "https://en.wikipedia.org/wiki/Hebrew_incunabula" },
-                explorer: { title: "Zheng He & Columbus Voyages", desc: "Chinese treasure fleets cross the Indian Ocean; decades later Columbus reaches the Americas.", url: "https://en.wikipedia.org/wiki/Zheng_He" },
-                invention: { title: "Gutenberg's Printing Press", desc: "Movable type revolutionizes mass communication across Europe.", url: "https://en.wikipedia.org/wiki/Printing_press" },
-                british: { title: "End of the Wars of the Roses", desc: "Tudor dynasty begins under Henry VII, stabilizing internal British rule.", url: "https://en.wikipedia.org/wiki/Wars_of_the_Roses" }
+                period: "1215 CE",
+                biblical: { title: "Maimonides' Legacy & Scholasticism", desc: "Integration of biblical philosophy and Aristotelian science peaks in Mediterranean scholarship.", url: "https://en.wikipedia.org/wiki/Maimonides" },
+                explorer: { title: "Mongol Empire Trans-Eurasian Routes", desc: "Pax Mongolica secures safe trade and diplomatic travel across the entire Asian continent.", url: "https://en.wikipedia.org/wiki/Pax_Mongolica" },
+                invention: { title: "Invention of Eyeglasses", desc: "First wearable convex reading lenses invented in Northern Italy.", url: "https://en.wikipedia.org/wiki/Glasses" },
+                british: { title: "Signing of the Magna Carta", desc: "King John signs the historic charter at Runnymede establishing rule of law.", url: "https://en.wikipedia.org/wiki/Magna_Carta" }
+            },
+            {
+                period: "1271 – 1295 CE",
+                biblical: { title: "Syrian Christian Expansion", desc: "Nestorian Christian communities thrive along Asian trade routes visited by western travelers.", url: "https://en.wikipedia.org/wiki/Church_of_the_East_in_China" },
+                explorer: { title: "Marco Polo's Journey to China", desc: "Venetian merchant travels the Silk Road and serves in the court of Kublai Khan.", url: "https://en.wikipedia.org/wiki/Marco_Polo" },
+                invention: { title: "Early Mechanical Clocks", desc: "Weight-driven mechanical clocks begin appearing in European monasteries and towers.", url: "https://en.wikipedia.org/wiki/Clock#History" },
+                british: { title: "Model Parliament Convened", desc: "King Edward I summons the Model Parliament, setting a precedent for representative governance.", url: "https://en.wikipedia.org/wiki/Model_Parliament" }
+            },
+            {
+                period: "1405 – 1433 CE",
+                biblical: { title: "Judean Communities in Ming China", desc: "Kaifeng Jewish community flourishes along active Silk Road trade intersections.", url: "https://en.wikipedia.org/wiki/Kaifeng_Jews" },
+                explorer: { title: "Zheng He's Treasure Fleet Voyages", desc: "Chinese admiral commands massive fleets across the Indian Ocean to East Africa.", url: "https://en.wikipedia.org/wiki/Zheng_He" },
+                invention: { title: "Multimast Treasure Ships", desc: "Chinese shipbuilding masters watertight bulkheads and balanced rudder systems.", url: "https://en.wikipedia.org/wiki/Chinese_treasure_ship" },
+                british: { title: "Battle of Agincourt", desc: "King Henry V achieves a stunning military victory during the Hundred Years' War.", url: "https://en.wikipedia.org/wiki/Battle_of_Agincourt" }
+            },
+            {
+                period: "1455 – 1492 CE",
+                biblical: { title: "First Printed Hebrew Bibles", desc: "Gutenberg's press enables the rapid production of Hebrew script and biblical texts in Europe.", url: "https://en.wikipedia.org/wiki/Hebrew_incunabula" },
+                explorer: { title: "Columbus Crosses the Atlantic", desc: "Christopher Columbus reaches the Americas, permanently uniting world maps.", url: "https://en.wikipedia.org/wiki/Voyages_of_Christopher_Columbus" },
+                invention: { title: "Gutenberg's Movable-Type Press", desc: "Mechanical printing revolutionizes information sharing and literacy in Europe.", url: "https://en.wikipedia.org/wiki/Printing_press" },
+                british: { title: "End of the Wars of the Roses", desc: "The Tudor dynasty is established under Henry VII, bringing internal peace to England.", url: "https://en.wikipedia.org/wiki/Wars_of_the_Roses" }
             },
             {
                 period: "1768 – 1771 CE",
-                biblical: { title: "The Haskalah (Jewish Enlightenment)", desc: "Cultural movement in Europe advocates integration into secular society and scientific study.", url: "https://en.wikipedia.org/wiki/Haskalah" },
-                explorer: { title: "Captain James Cook's 1st Voyage", desc: "HMS Endeavour charts Tahiti, New Zealand, and the eastern coast of Australia.", url: "https://en.wikipedia.org/wiki/First_voyage_of_James_Cook" },
-                invention: { title: "Watt's Steam Engine Patented", desc: "James Watt patents the separate condenser, igniting the Industrial Revolution.", url: "https://en.wikipedia.org/wiki/Watt_steam_engine" },
-                british: { title: "Georgian Agricultural & Tech Boom", desc: "Britain experiences rapid industrial growth and agricultural modernization.", url: "https://en.wikipedia.org/wiki/Georgian_era" }
+                biblical: { title: "The Haskalah (Jewish Enlightenment)", desc: "European movement encourages secular education, scientific study, and biblical critique.", url: "https://en.wikipedia.org/wiki/Haskalah" },
+                explorer: { title: "Captain James Cook's First Voyage", desc: "HMS Endeavour maps Tahiti, New Zealand, and the eastern seaboard of Australia.", url: "https://en.wikipedia.org/wiki/First_voyage_of_James_Cook" },
+                invention: { title: "Watt's Steam Engine Patented", desc: "James Watt patents the separate condenser, fueling the Industrial Revolution.", url: "https://en.wikipedia.org/wiki/Watt_steam_engine" },
+                british: { title: "Agricultural & Industrial Boom", desc: "Britain undergoes rapid modernization in farming, textiles, and factory production.", url: "https://en.wikipedia.org/wiki/Industrial_Revolution_in_Britain" }
             },
             {
                 period: "1867 – 1879 CE",
-                biblical: { title: "Rise of Biblical Archaeology", desc: "Scientific excavation of Near Eastern historical sites and ancient Jerusalem begins.", url: "https://en.wikipedia.org/wiki/Biblical_archaeology" },
-                explorer: { title: "Stanley & Livingstone in Africa", desc: "Henry Morton Stanley tracks down David Livingstone deep within the African interior.", url: "https://en.wikipedia.org/wiki/David_Livingstone" },
-                invention: { title: "Edison's Incandescent Light Bulb", desc: "Practical electric lighting begins replacing gas lamps in homes and streets.", url: "https://en.wikipedia.org/wiki/Incandescent_light_bulb" },
-                british: { title: "Peak Victorian Empire", desc: "Queen Victoria is proclaimed Empress of India; Britain's global influence peaks.", url: "https://en.wikipedia.org/wiki/Victorian_era" }
+                biblical: { title: "Birth of Modern Biblical Archaeology", desc: "Scientific excavation begins on ancient Near Eastern ruins and Jerusalem's foundations.", url: "https://en.wikipedia.org/wiki/Biblical_archaeology" },
+                explorer: { title: "Stanley & Livingstone Expeditions", desc: "Exploration maps the interior river basins and lakes of Central Africa.", url: "https://en.wikipedia.org/wiki/Henry_Morton_Stanley" },
+                invention: { title: "Edison's Incandescent Light Bulb", desc: "Practical electric lighting begins replacing oil and gas lamps globally.", url: "https://en.wikipedia.org/wiki/Incandescent_light_bulb" },
+                british: { title: "Peak of the Victorian Empire", desc: "Queen Victoria is named Empress of India; Britain governs a global superpower empire.", url: "https://en.wikipedia.org/wiki/Victorian_era" }
             }
         ];
 
@@ -245,13 +284,11 @@
                 const rowDiv = document.createElement("div");
                 rowDiv.className = "time-row";
 
-                // Time Badge
                 const badge = document.createElement("div");
                 badge.className = "time-badge";
                 badge.textContent = row.period;
                 rowDiv.appendChild(badge);
 
-                // Helper to create card or empty slot
                 const createCard = (data, catClass) => {
                     if (!data) {
                         const empty = document.createElement("div");
