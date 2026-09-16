@@ -233,6 +233,7 @@
         let announcementCooldown = 0;
         let selectedWaveType = "all";
 
+        // Expanded global waypoint database with unique regional musical scales
         const majorCities = [
             { name: "Tokyo, Japan", lat: 35.6762, lon: 139.6503, scale: [146.83, 164.81, 196.00, 220.00, 293.66], flavor: "Insen Pentatonic (East Asian)" },
             { name: "New York City, United States", lat: 40.7128, lon: -74.0060, scale: [130.81, 164.81, 196.00, 246.94, 293.66], flavor: "Lydian Modern (Western)" },
@@ -242,7 +243,17 @@
             { name: "Paris, France", lat: 48.8566, lon: 2.3522, scale: [130.81, 196.00, 233.08, 293.66, 349.23], flavor: "Dorian Cinematic (European)" },
             { name: "Singapore", lat: 1.3521, lon: 103.8198, scale: [164.81, 196.00, 246.94, 293.66, 329.63], flavor: "Equatorial Luminous" },
             { name: "Beijing, China", lat: 39.9042, lon: 116.4074, scale: [130.81, 146.83, 196.00, 220.00, 261.63], flavor: "Traditional Pentatonic" },
-            { name: "Dubai, United Arab Emirates", lat: 25.2048, lon: 55.2708, scale: [138.59, 164.81, 207.65, 246.94, 277.18], flavor: "Desert Mirage Mode" }
+            { name: "Dubai, United Arab Emirates", lat: 25.2048, lon: 55.2708, scale: [138.59, 164.81, 207.65, 246.94, 277.18], flavor: "Desert Mirage Mode" },
+            // New additions
+            { name: "Reykjavik, Iceland", lat: 64.1466, lon: -21.9426, scale: [110.00, 123.47, 164.81, 196.00, 246.94], flavor: "Nordic Frost Drone" },
+            { name: "Honolulu, Hawaii", lat: 21.3069, lon: -157.8583, scale: [174.61, 220.00, 261.63, 329.63, 392.00], flavor: "Pacific Oceanic Major" },
+            { name: "Mumbai, India", lat: 19.0760, lon: 72.8777, scale: [130.81, 138.59, 174.61, 196.00, 233.08], flavor: "Raga Bhairav Mystical" },
+            { name: "Buenos Aires, Argentina", lat: -34.6037, lon: -58.3816, scale: [138.59, 164.81, 185.00, 220.00, 277.18], flavor: "Tango Melancholy Minor" },
+            { name: "Cape Town, South Africa", lat: -33.9249, lon: 18.4241, scale: [146.83, 174.61, 196.00, 233.08, 293.66], flavor: "Cape Horizon Open" },
+            { name: "London, United Kingdom", lat: 51.5074, lon: -0.1278, scale: [130.81, 146.83, 196.00, 233.08, 293.66], flavor: "Thames Fog Ambient" },
+            { name: "Los Angeles, United States", lat: 34.0522, lon: -118.2437, scale: [164.81, 196.00, 246.94, 293.66, 329.63], flavor: "West Coast Sunset" },
+            { name: "Nairobi, Kenya", lat: -1.2921, lon: 36.8219, scale: [130.81, 155.56, 196.00, 233.08, 261.63], flavor: "Savannah Pulsar" },
+            { name: "Bangkok, Thailand", lat: 13.7563, lon: 100.5018, scale: [146.83, 164.81, 185.00, 220.00, 293.66], flavor: "Monsoon Temple Scale" }
         ];
 
         const palettes = {
@@ -324,7 +335,7 @@
             if (!document.getElementById("voiceToggle").checked) return;
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
-                let utterance = new SpeechSynthesisUtterance(`Passing over ${cityName}`);
+                let utterance = new SpeechSynthesisUtterance(`Passing near ${cityName}`);
                 utterance.rate = 0.85; 
                 utterance.pitch = 0.9;  
                 utterance.volume = 0.7;
@@ -349,15 +360,16 @@
             if (closestCity) {
                 document.getElementById("waypointDisplay").textContent = `${closestCity.name} (~${Math.round(minDistance)} km away)`;
 
-                if (minDistance <= 350) {
+                // Expanded radius threshold set to 1000 km
+                if (minDistance <= 1000) {
                     isCityLocked = true;
                     currentFrequencies = closestCity.scale;
-                    statusElem.textContent = `✨ HARMONIC LOCK ACTIVE: ${closestCity.flavor} (${closestCity.name})`;
+                    statusElem.textContent = `✨ CONTINENTAL HARMONIC LOCK: ${closestCity.flavor} (${closestCity.name})`;
                     statusElem.style.color = "#34d399";
 
                     if (closestCity.name !== lastAnnouncedCity && announcementCooldown <= 0) {
                         lastAnnouncedCity = closestCity.name;
-                        announcementCooldown = 120; 
+                        announcementCooldown = 180; // slightly longer cooldown for a 1000km span
                         speakWaypoint(closestCity.name);
                     }
                 } else {
@@ -404,7 +416,6 @@
                         document.getElementById("proximityClock").textContent = `+${Math.round(avgDelta)} km/s trend`;
                     }
 
-                    // Update UI with real live sub-solar point coordinates
                     document.getElementById("solarPointVal").textContent = `${solarLat.toFixed(1)}°, ${solarLon.toFixed(1)}°`;
 
                     document.getElementById("distVal").textContent = Math.round(issDistKm) + " km";
