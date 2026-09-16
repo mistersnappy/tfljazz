@@ -164,10 +164,10 @@
 
         <div class="countdown-row">
             <div class="countdown-box">
-                Next Day/Night Shift<br><val id="terminatorClock">Calculating...</val>
+                Solar Phase Duration<br><val id="terminatorClock">Syncing...</val>
             </div>
             <div class="countdown-box">
-                <span id="proximityLabel">Orbit Direction</span><br><val id="proximityClock">Calculating...</val>
+                <span id="proximityLabel">Range Vector</span><br><val id="proximityClock">Syncing...</val>
             </div>
         </div>
 
@@ -226,13 +226,11 @@
         let drumInterval = null;
         let drumsActive = true;
 
-        let visibilityTimerSecs = 1350; 
-        let closestApproachSecs = 900;  
+        let solarPhaseSeconds = 0; // Tracks real duration in current solar state
         let lastAnnouncedCity = "";
         let announcementCooldown = 0;
         let selectedWaveType = "all";
 
-        // Major cities equipped with custom regional harmonic scales (in Hz frequencies)
         const majorCities = [
             { name: "Tokyo, Japan", lat: 35.6762, lon: 139.6503, scale: [146.83, 164.81, 196.00, 220.00, 293.66], flavor: "Insen Pentatonic (East Asian)" },
             { name: "New York City, United States", lat: 40.7128, lon: -74.0060, scale: [130.81, 164.81, 196.00, 246.94, 293.66], flavor: "Lydian Modern (Western)" },
@@ -349,7 +347,6 @@
             if (closestCity) {
                 document.getElementById("waypointDisplay").textContent = `${closestCity.name} (~${Math.round(minDistance)} km away)`;
 
-                // Flyover threshold set to 350 km
                 if (minDistance <= 350) {
                     isCityLocked = true;
                     currentFrequencies = closestCity.scale;
@@ -386,18 +383,21 @@
                     issAltitude = parseFloat(data.altitude) || 415;
                     issFootprint = parseFloat(data.footprint) || 4500;
 
+                    // If visibility state flipped from API, reset the elapsed phase counter
+                    if (oldVisibility !== issVisibility) {
+                        solarPhaseSeconds = 0;
+                    }
+
                     issDistKm = calculateDistance(userLat, userLon, issLat, issLon);
                     checkWaypoints();
 
-                    if (oldVisibility !== issVisibility) {
-                        visibilityTimerSecs = 1350; 
-                    }
-
-                    if (issDistKm > prevDistKm) {
-                        document.getElementById("proximityLabel").textContent = "Est. Furthest Point (Apogee)";
+                    // Real Range Vector relative to your location
+                    if (issDistKm < prevDistKm) {
+                        document.getElementById("proximityLabel").textContent = "Range Vector (Closing In)";
+                        document.getElementById("proximityClock").textContent = `-${Math.round(prevDistKm - issDistKm)} km / sample`;
                     } else {
-                        document.getElementById("proximityLabel").textContent = "Est. Closest Point (Perigee)";
-                        closestApproachSecs = 900; 
+                        document.getElementById("proximityLabel").textContent = "Range Vector (Moving Away)";
+                        document.getElementById("proximityClock").textContent = `+${Math.round(issDistKm - prevDistKm)} km / sample`;
                     }
 
                     document.getElementById("distVal").textContent = Math.round(issDistKm) + " km";
@@ -423,18 +423,14 @@
             }
         }
 
+        // Live Second Counter for Solar Phase & Announcement Cooldowns
         setInterval(() => {
-            if (visibilityTimerSecs > 0) visibilityTimerSecs--;
-            if (closestApproachSecs > 0) closestApproachSecs--;
+            solarPhaseSeconds++;
             if (announcementCooldown > 0) announcementCooldown--;
 
-            let vMins = Math.floor(visibilityTimerSecs / 60);
-            let vSecs = visibilityTimerSecs % 60;
-            document.getElementById("terminatorClock").textContent = `${vMins}:${vSecs < 10 ? '0' : ''}${vSecs}`;
-
-            let cMins = Math.floor(closestApproachSecs / 60);
-            let cSecs = closestApproachSecs % 60;
-            document.getElementById("proximityClock").textContent = `${cMins}:${cSecs < 10 ? '0' : ''}${cSecs}`;
+            let pMins = Math.floor(solarPhaseSeconds / 60);
+            let pSecs = solarPhaseSeconds % 60;
+            document.getElementById("terminatorClock").textContent = `${issVisibility.toUpperCase()} (${pMins}m ${pSecs < 10 ? '0' : ''}${pSecs}s)`;
         }, 1000);
 
         locateUser().then(() => {
