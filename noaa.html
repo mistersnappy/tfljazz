@@ -164,7 +164,7 @@
 
         <div class="countdown-row">
             <div class="countdown-box">
-                Solar Phase Duration<br><val id="terminatorClock">Syncing...</val>
+                Sub-Solar Point (Sun At Zenith)<br><val id="solarPointVal">Syncing...</val>
             </div>
             <div class="countdown-box">
                 <span id="proximityLabel">Range Vector</span><br><val id="proximityClock">Syncing...</val>
@@ -229,7 +229,6 @@
         let drumInterval = null;
         let drumsActive = true;
 
-        let solarPhaseTimestamp = Math.floor(Date.now() / 1000);
         let lastAnnouncedCity = "";
         let announcementCooldown = 0;
         let selectedWaveType = "all";
@@ -384,12 +383,7 @@
                     solarLon = parseFloat(data.solar_lon) || 0.0;
                     dayNum = parseFloat(data.daynum) || 0.0;
 
-                    let newVisibility = data.visibility || "eclipses";
-                    if (newVisibility !== issVisibility) {
-                        issVisibility = newVisibility;
-                        solarPhaseTimestamp = Math.floor(Date.now() / 1000);
-                    }
-
+                    issVisibility = data.visibility || "eclipses";
                     issVelocity = parseFloat(data.velocity) || 27600;
                     issAltitude = parseFloat(data.altitude) || 415;
                     issFootprint = parseFloat(data.footprint) || 4500;
@@ -409,6 +403,9 @@
                         document.getElementById("proximityLabel").textContent = "Range Vector (Moving Away)";
                         document.getElementById("proximityClock").textContent = `+${Math.round(avgDelta)} km/s trend`;
                     }
+
+                    // Update UI with real live sub-solar point coordinates
+                    document.getElementById("solarPointVal").textContent = `${solarLat.toFixed(1)}°, ${solarLon.toFixed(1)}°`;
 
                     document.getElementById("distVal").textContent = Math.round(issDistKm) + " km";
                     document.getElementById("visVal").textContent = issVisibility.toUpperCase();
@@ -441,11 +438,6 @@
 
         setInterval(() => {
             if (announcementCooldown > 0) announcementCooldown--;
-
-            let elapsedSeconds = Math.floor(Date.now() / 1000) - solarPhaseTimestamp;
-            let pMins = Math.floor(elapsedSeconds / 60);
-            let pSecs = elapsedSeconds % 60;
-            document.getElementById("terminatorClock").textContent = `${issVisibility.toUpperCase()} (${pMins}m ${pSecs < 10 ? '0' : ''}${pSecs}s)`;
         }, 1000);
 
         locateUser().then(() => {
@@ -486,7 +478,7 @@
             masterGain.gain.value = 0.35;
 
             analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 64; // Smaller FFT size so fewer bins represent the spectrum explicitly
+            analyser.fftSize = 64;
             analyser.smoothingTimeConstant = 0.85;
 
             filterNode = audioCtx.createBiquadFilter();
@@ -671,14 +663,11 @@
             canvasCtx.fillStyle = "#030712";
             canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // We define a fixed number of equalizer columns (e.g., 28 bands) 
-            // and map them across the canvas to look like a hardware graphic EQ display
             const numBands = 28;
             let totalBarWidth = canvas.width / numBands;
-            let barWidth = totalBarWidth - 3; // Gap between bars
+            let barWidth = totalBarWidth - 3;
 
             for (let i = 0; i < numBands; i++) {
-                // Logarithmic mapping index so lower-end bins stretch out across the EQ display
                 let dataIndex = Math.floor(Math.pow(i / numBands, 1.8) * (bufferLength / 2));
                 let barHeight = (dataArray[dataIndex] / 255) * canvas.height;
 
@@ -692,7 +681,6 @@
                 canvasCtx.fillStyle = gradient;
                 canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, Math.max(2, barHeight));
 
-                // Peak indicator cap
                 canvasCtx.fillStyle = "#ffffff";
                 canvasCtx.fillRect(x, canvas.height - barHeight - 2, barWidth, 2);
             }
