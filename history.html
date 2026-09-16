@@ -11,10 +11,10 @@
             --border-color: #1f2937;
             --text-main: #f3f4f6;
             --text-muted: #9ca3af;
-            --accent-1: #38bdf8; /* Science */
+            --accent-1: #38bdf8; /* Science & Archaeology */
             --accent-2: #f43f5e; /* Empires */
             --accent-3: #34d399; /* Culture */
-            --accent-4: #fbbf24; /* Global */
+            --accent-4: #fbbf24; /* British & Global */
         }
         body {
             background-color: var(--bg-color);
@@ -104,9 +104,6 @@
             margin-bottom: 20px;
             align-items: center;
         }
-        .row.left-heavy .card-right { opacity: 0.3; }
-        .row.right-heavy .card-left { opacity: 0.3; }
-        
         .card {
             background: var(--card-bg);
             border: 1px solid var(--border-color);
@@ -121,9 +118,9 @@
             transform: translateY(-2px);
         }
         .card.cat-empire { border-left: 4px solid var(--accent-2); }
-        .card.cat-science { border-left: 4px solid var(--accent-1); }
+        .card.cat-archaeology { border-left: 4px solid var(--accent-1); }
         .card.cat-culture { border-left: 4px solid var(--accent-3); }
-        .card.cat-global { border-left: 4px solid var(--accent-4); }
+        .card.cat-british { border-left: 4px solid var(--accent-4); }
 
         .year-badge {
             font-size: 12px;
@@ -172,14 +169,14 @@
 
     <header>
         <h1>PARALLEL ERAS</h1>
-        <p class="subtitle">Discover what actually happened at the same time in human history.</p>
+        <p class="subtitle">Discovering archaeological milestones, British history, and global synchronicity.</p>
         
         <div class="controls">
             <button class="filter-btn active" onclick="filterCategory('all', this)">All Categories</button>
+            <button class="filter-btn" onclick="filterCategory('archaeology', this)">🏺 Archaeology & Relics</button>
+            <button class="filter-btn" onclick="filterCategory('british', this)">🇬🇧 British History</button>
             <button class="filter-btn" onclick="filterCategory('empire', this)">🏛️ Empires & Power</button>
-            <button class="filter-btn" onclick="filterCategory('science', this)">💡 Science & Invention</button>
             <button class="filter-btn" onclick="filterCategory('culture', this)">🎨 Culture & Philosophy</button>
-            <button class="filter-btn" onclick="filterCategory('global', this)">🌍 Americas & Global</button>
         </div>
     </header>
 
@@ -188,62 +185,61 @@
     </div>
 
     <script>
-        // Curated dataset showing synchronous historical moments
         const timelineData = [
             {
-                era: "Ancient Wonders & Early Empires",
+                era: "Ancient Foundations & Megaliths",
                 events: [
-                    { year: "c. 2500 BCE", title: "Building the Great Pyramid of Giza", desc: "The Khufu pyramid is completed in Egypt. Woolly mammoths are still roaming Wrangel Island off Siberia at this exact time.", category: "empire" },
-                    { year: "c. 2500 BCE", title: "Rise of the Indus Valley Civilization", desc: "Harappa and Mohenjo-daro feature advanced urban planning, grid systems, and complex drainage while Egypt builds pyramids.", category: "global" }
+                    { year: "c. 3000 BCE", title: "Construction of Stonehenge (Phase 1)", desc: "The first henge monument is built in Wiltshire, England—consisting of a circular ditch and bank.", category: "british" },
+                    { year: "c. 950 BCE", title: "King Solomon Builds the First Temple", desc: "The First Temple (Solomon's Temple) is completed in Jerusalem, housing the Ark of the Covenant.", category: "archaeology" }
                 ]
             },
             {
-                era: "Classical Antiquity Overlaps",
+                era: "Iron Age Britain & Empires",
                 events: [
-                    { year: "c. 500 BCE", title: "Birth of Athenian Democracy", desc: "Cleisthenes introduces democratic reforms in Athens, setting the stage for Western political philosophy.", category: "culture" },
-                    { year: "c. 500 BCE", title: "Life of Confucius & Buddha", desc: "Confucius in China and Siddhartha Gautama (The Buddha) in India are shaping Eastern philosophy and spiritual thought simultaneously.", category: "culture" }
+                    { year: "c. 586 BCE", title: "Destruction of Solomon's Temple", desc: "Nebuchadnezzar II and the Neo-Babylonian Empire besiege Jerusalem, destroying the First Temple and exiling the Jews.", category: "archaeology" },
+                    { year: "c. 500 BCE", title: "Iron Age Hillforts Spread in Britain", desc: "Celtic-speaking communities across Britain construct massive defensive hillforts like Maiden Castle.", category: "british" }
                 ]
             },
             {
-                era: "The Roman & Han Parallel",
+                era: "The Second Temple Era & Ancient Britain",
                 events: [
-                    { year: "c. 100 CE", title: "Height of the Roman Empire", desc: "Trajan expands Rome to its greatest territorial extent around the Mediterranean basin.", category: "empire" },
-                    { year: "c. 100 CE", title: "Han Dynasty Invents Paper", desc: "Cai Lun invents papermaking in China during the Han Dynasty, revolutionizing global record-keeping long before Europe adopts it.", category: "science" }
+                    { year: "c. 516 BCE", title: "Completion of the Second Temple", desc: "Following the Persian return from exile, the Second Temple is finished in Jerusalem.", category: "archaeology" },
+                    { year: "54 BCE", title: "Julius Caesar Invades Britain", desc: "Roman legions cross the English Channel for the first time, clashing with Celtic British tribes.", category: "british" }
                 ]
             },
             {
-                era: "The Middle Ages Across Continents",
+                era: "The Crucible: Pompeii & Roman Britain",
                 events: [
-                    { year: "1088 CE", title: "Founding of Oxford University", desc: "Teaching begins in Oxford, making the university older than the entire Aztec Empire.", category: "culture" },
-                    { year: "1325 CE", title: "Founding of Tenochtitlan", desc: "The Mexica people establish the magnificent floating city of Tenochtitlan, the heart of the Aztec Empire.", category: "global" }
+                    { year: "70 CE", title: "Destruction of the Second Temple", desc: "Roman legions under Titus siege Jerusalem and utterly destroy the Second Temple, leaving only the Western Wall.", category: "archaeology" },
+                    { year: "79 CE", title: "Mount Vesuvius Erupts (Pompeii)", desc: "While Roman generals are expanding into Britain, Mount Vesuvius erupts, perfectly preserving Pompeii and Herculaneum in ash.", category: "archaeology" }
                 ]
             },
             {
-                era: "The Renaissance & Global Encounters",
+                era: "Roman Britain & The Dark Ages",
                 events: [
-                    { year: "1455 CE", title: "Gutenberg Prints the Bible", desc: "Johannes Gutenberg unleashes the movable-type printing press in Germany, sparking the information revolution.", category: "science" },
-                    { year: "1492 CE", title: "Columbus Crosses the Atlantic", desc: "Christopher Columbus makes landfall in the Bahamas, permanently connecting the Eastern and Western hemispheres.", category: "global" }
+                    { year: "122 CE", title: "Construction of Hadrian's Wall", desc: "Emperor Hadrian orders a massive stone wall built across northern Britain to mark the frontier of the Roman Empire.", category: "british" },
+                    { year: "c. 410 CE", title: "Romans Leave Britain", desc: "Rome withdraws its legions from Britain to defend the homeland, plunging Britain into the Anglo-Saxon transition era.", category: "british" }
                 ]
             },
             {
-                era: "The Age of Reason & Shogunate Japan",
+                era: "Medieval Castles & Crusades",
                 events: [
-                    { year: "1687 CE", title: "Newton Publishes Principia", desc: "Isaac Newton lays the groundwork for classical mechanics and universal gravitation in England.", category: "science" },
-                    { year: "1688 CE", title: "Edo Period Cultural Boom", desc: "Japan is flourishing under the Tokugawa Shogunate during a long era of peace, producing Kabuki theater and master woodblock prints.", category: "culture" }
+                    { year: "1066 CE", title: "The Norman Conquest of England", desc: "William the Conqueror defeats King Harold at the Battle of Hastings, fundamentally changing British language and law.", category: "british" },
+                    { year: "1099 CE", title: "First Crusade Captures Jerusalem", desc: "Christian crusaders capture Jerusalem, establishing a medieval kingdom over the ancient ruins of the city.", category: "archaeology" }
                 ]
             },
             {
-                era: "The Industrial Revolution & Global Shifts",
+                era: "Magna Carta & Early Parliaments",
                 events: [
-                    { year: "1889 CE", title: "Eiffel Tower Opens & Nintendo Founded", desc: "The Eiffel Tower opens in Paris for the World's Fair, while in Japan, a small playing card company named Nintendo is founded.", category: "culture" },
-                    { year: "1903 CE", title: "First Powered Flight", desc: "The Wright brothers achieve the first controlled, sustained powered heavier-than-air flight in North Carolina.", category: "science" }
+                    { year: "1215 CE", title: "King John Signs the Magna Carta", desc: "Rebellious barons force King John to sign the Magna Carta at Runnymede, establishing the principle that everyone is subject to the law.", category: "british" },
+                    { year: "1265 CE", title: "First English Parliament", desc: "Simon de Montfort summons the first elected English parliament, laying the foundations for modern representative government.", category: "british" }
                 ]
             },
             {
-                era: "The Modern Era Confluence",
+                era: "Industrial Power & Victorian Exploration",
                 events: [
-                    { year: "1969 CE", title: "Apollo 11 Moon Landing", desc: "Humanity lands on the Moon, watched live by an estimated 650 million people worldwide.", category: "science" },
-                    { year: "1969 CE", title: "Birth of ARPANET", desc: "The precursor to the modern internet successfully transmits its first message between UCLA and Stanford.", category: "science" }
+                    { year: "1837 CE", title: "Queen Victoria Ascends the Throne", desc: "The Victorian era begins, marking Britain's rise as the world's foremost industrial and naval superpower.", category: "british" },
+                    { year: "1867 CE", title: "Beginnings of Modern Archaeology", desc: "Charles Warren begins underground excavations in Jerusalem, unearthing the foundations of the Temple Mount and ancient water systems.", category: "archaeology" }
                 ]
             }
         ];
@@ -269,7 +265,6 @@
                     </div>
                 `;
 
-                // Group events into rows of 2 (Left and Right)
                 for (let i = 0; i < filteredEvents.length; i += 2) {
                     const leftEvent = filteredEvents[i];
                     const rightEvent = filteredEvents[i+1];
@@ -277,7 +272,6 @@
                     const row = document.createElement("div");
                     row.className = "row";
 
-                    // Left Card
                     const leftCardHtml = leftEvent ? `
                         <div class="card cat-${leftEvent.category}">
                             <span class="year-badge">${leftEvent.year}</span>
@@ -286,7 +280,6 @@
                         </div>
                     ` : `<div class="empty-slot"></div>`;
 
-                    // Right Card
                     const rightCardHtml = rightEvent ? `
                         <div class="card cat-${rightEvent.category}">
                             <span class="year-badge">${rightEvent.year}</span>
@@ -314,7 +307,6 @@
             renderTimeline(cat);
         }
 
-        // Initial render
         renderTimeline();
     </script>
 </body>
