@@ -214,6 +214,7 @@
         let issLat = 0.0, issLon = 0.0;
         let issDistKm = 5000;
         let prevDistKm = 5000;
+        let distanceDeltaHistory = []; // Rolling buffer for stable vector trend
         let issVisibility = "eclipses";
         let issVelocity = 27600;
         let issAltitude = 415;
@@ -226,7 +227,7 @@
         let drumInterval = null;
         let drumsActive = true;
 
-        let solarPhaseSeconds = 0;
+        let solarPhaseTimestamp = Math.floor(Date.now() / 1000); // Accurate state change marker
         let lastAnnouncedCity = "";
         let announcementCooldown = 0;
         let selectedWaveType = "all";
@@ -377,25 +378,31 @@
                     issLat = parseFloat(data.latitude);
                     issLon = parseFloat(data.longitude);
                     
-                    let oldVisibility = issVisibility;
-                    issVisibility = data.visibility || "eclipses";
+                    let newVisibility = data.visibility || "eclipses";
+                    if (newVisibility !== issVisibility) {
+                        issVisibility = newVisibility;
+                        solarPhaseTimestamp = Math.floor(Date.now() / 1000); // Reset timer precisely on true state change
+                    }
+
                     issVelocity = parseFloat(data.velocity) || 27600;
                     issAltitude = parseFloat(data.altitude) || 415;
                     issFootprint = parseFloat(data.footprint) || 4500;
 
-                    if (oldVisibility !== issVisibility) {
-                        solarPhaseSeconds = 0;
-                    }
-
                     issDistKm = calculateDistance(userLat, userLon, issLat, issLon);
                     checkWaypoints();
 
-                    if (issDistKm < prevDistKm) {
+                    // Calculate a smoothed running average trend of distance change
+                    let sampleDelta = issDistKm - prevDistKm;
+                    distanceDeltaHistory.push(sampleDelta);
+                    if (distanceDeltaHistory.length > 3) distanceDeltaHistory.shift();
+                    let avgDelta = distanceDeltaHistory.reduce((a, b) => a + b, 0) / distanceDeltaHistory.length;
+
+                    if (avgDelta < 0) {
                         document.getElementById("proximityLabel").textContent = "Range Vector (Closing In)";
-                        document.getElementById("proximityClock").textContent = `-${Math.round(prevDistKm - issDistKm)} km / sample`;
+                        document.getElementById("proximityClock").textContent = `${Math.round(Math.abs(avgDelta))} km/s trend`;
                     } else {
                         document.getElementById("proximityLabel").textContent = "Range Vector (Moving Away)";
-                        document.getElementById("proximityClock").textContent = `+${Math.round(issDistKm - prevDistKm)} km / sample`;
+                        document.getElementById("proximityClock").textContent = `+${Math.round(avgDelta)} km/s trend`;
                     }
 
                     document.getElementById("distVal").textContent = Math.round(issDistKm) + " km";
@@ -421,12 +428,13 @@
             }
         }
 
+        // Real-time UI ticker based on actual transition anchors
         setInterval(() => {
-            solarPhaseSeconds++;
             if (announcementCooldown > 0) announcementCooldown--;
 
-            let pMins = Math.floor(solarPhaseSeconds / 60);
-            let pSecs = solarPhaseSeconds % 60;
+            let elapsedSeconds = Math.floor(Date.now() / 1000) - solarPhaseTimestamp;
+            let pMins = Math.floor(elapsedSeconds / 60);
+            let pSecs = elapsedSeconds % 60;
             document.getElementById("terminatorClock").textContent = `${issVisibility.toUpperCase()} (${pMins}m ${pSecs < 10 ? '0' : ''}${pSecs}s)`;
         }, 1000);
 
@@ -457,8 +465,8 @@
             masterGain.gain.value = 0.35;
 
             analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 128; // Reduced FFT size so lower bins spread wider across canvas
-            analyser.smoothingTimeConstant = 0.8; // Smooth out jittery bar transitions
+            analyser.fftSize = 128;
+            analyser.smoothingTimeConstant = 0.8;
 
             filterNode = audioCtx.createBiquadFilter();
             filterNode.type = "lowpass";
@@ -521,28 +529,6 @@
             osc.stop(now + duration + 0.05);
         }
 
-        function startDynamicDrumEngine() {
-            clearInterval(drumInterval);
-            let stepTime = Math.max(400, 750 - ((issVelocity - 27000) * 0.1));
-            let beatCounter = 0;
-
-            drumInterval = setInterval(() => {
-                if (!isPlaying || !drumsActive) return;
-
-                if (beatCounter % 4 === 0) {
-                    playDynamicSubKick(false); 
-                } else if (beatCounter % 4 === 2) {
-                    playDynamicSubKick(false); 
-                } else if (beatCounter % 4 === 3 && issVelocity > 27550) {
-                    playDynamicSubKick(true);  
-                }
-
-                beatCounter = (beatCounter + 1) / 16; // Fixed loop counter step down below
-            }, stepTime);
-        }
-
-        // Fixed inner counter increment adjustment
-        // Note: keeping counter logic intact: beatCounter = (beatCounter + 1) % 16;
         function startDynamicDrumEngine() {
             clearInterval(drumInterval);
             let stepTime = Math.max(400, 750 - ((issVelocity - 27000) * 0.1));
@@ -639,21 +625,19 @@
             if (!isPlaying) return;
             requestAnimationFrame(drawVisualizer);
 
-            let bufferLength = analyser.frequencyBinCount; // With fftSize 128, this is 64 bins
+            let bufferLength = analyser.frequencyBinCount;
             let dataArray = new Uint8Array(bufferLength);
             analyser.getByteFrequencyData(dataArray);
 
             canvasCtx.fillStyle = "#030712";
             canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Spread active bins across the full width of the canvas
             let barWidth = (canvas.width / bufferLength) * 1.3;
             let x = 0;
 
             for (let i = 0; i < bufferLength; i++) {
                 let barHeight = (dataArray[i] / 255) * canvas.height;
 
-                // Create a neon gradient style for a high-tech instrument monitor look
                 let gradient = canvasCtx.createLinearGradient(0, canvas.height, 0, 0);
                 gradient.addColorStop(0, "#312e81");
                 gradient.addColorStop(0.5, "#4f46e5");
@@ -662,7 +646,6 @@
                 canvasCtx.fillStyle = gradient;
                 canvasCtx.fillRect(x, canvas.height - barHeight, barWidth - 1, barHeight);
 
-                // Add small top indicator cap for retro synth aesthetic
                 canvasCtx.fillStyle = "#ffffff";
                 canvasCtx.fillRect(x, canvas.height - barHeight - 2, barWidth - 1, 2);
 
