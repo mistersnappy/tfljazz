@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ISS Orbital Peaceful Ambient</title>
+    <title>ISS Orbital Ambient & Regional Harmonic Map</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛰️</text></svg>">
     <style>
         body {
-            background-color: #03050c;
-            color: #a5b4fc;
+            background-color: #050814;
+            color: #c7d2fe;
             font-family: monospace;
             text-align: center;
             margin: 0;
@@ -15,28 +15,28 @@
         }
         h1 {
             letter-spacing: 3px;
-            color: #6366f1;
-            text-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+            color: #818cf8;
+            text-shadow: 0 0 15px rgba(129, 140, 248, 0.5);
             margin-bottom: 5px;
         }
         .container {
             max-width: 720px;
             margin: 0 auto;
-            background: #070b19;
-            border: 1px solid #1e1b4b;
+            background: #0b1126;
+            border: 1px solid #312e81;
             padding: 20px;
             border-radius: 12px;
-            box-shadow: 0 0 30px rgba(15, 23, 42, 0.5);
+            box-shadow: 0 0 30px rgba(49, 46, 129, 0.3);
         }
         .stats {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 8px;
             margin: 15px 0;
-            background: #02040a;
+            background: #030712;
             padding: 10px;
             border-radius: 6px;
-            border: 1px solid #0f172a;
+            border: 1px solid #1e1b4b;
         }
         .stat-box val {
             font-size: 13px;
@@ -50,20 +50,20 @@
             margin-bottom: 15px;
         }
         .countdown-box {
-            background: #02040a;
-            border: 1px solid #0f172a;
+            background: #030712;
+            border: 1px solid #1e1b4b;
             padding: 10px;
             border-radius: 6px;
             font-size: 12px;
         }
         .countdown-box val {
             font-size: 14px;
-            color: #38bdf8;
+            color: #f43f5e;
             font-weight: bold;
         }
         .waypoint-banner {
-            background: #02040a;
-            border: 1px solid #312e81;
+            background: #030712;
+            border: 1px solid #4f46e5;
             padding: 12px;
             border-radius: 6px;
             margin-bottom: 15px;
@@ -93,9 +93,9 @@
             flex-wrap: wrap;
         }
         select {
-            background: #02040a;
+            background: #030712;
             color: #38bdf8;
-            border: 1px solid #1e1b4b;
+            border: 1px solid #312e81;
             padding: 8px;
             font-family: monospace;
             border-radius: 6px;
@@ -110,41 +110,41 @@
             cursor: pointer;
         }
         button {
-            background: #312e81;
+            background: #4f46e5;
             color: white;
             border: none;
-            padding: 14px 30px;
+            padding: 12px 25px;
             font-size: 15px;
             font-family: monospace;
             border-radius: 6px;
             cursor: pointer;
-            box-shadow: 0 0 15px rgba(49, 46, 129, 0.4);
+            box-shadow: 0 0 15px rgba(79, 70, 229, 0.5);
             transition: 0.2s;
         }
         button:hover {
-            background: #4338ca;
-            box-shadow: 0 0 25px rgba(67, 56, 202, 0.6);
+            background: #6366f1;
+            box-shadow: 0 0 25px rgba(99, 102, 241, 0.8);
         }
         #status {
             margin: 10px 0;
             font-size: 12px;
-            color: #64748b;
+            color: #94a3b8;
         }
         canvas {
             display: block;
             margin: 10px auto;
-            background: #02040a;
+            background: #030712;
             border-radius: 6px;
-            border: 1px solid #0f172a;
-            box-shadow: inset 0 0 15px rgba(0,0,0,0.9);
+            border: 1px solid #1e1b4b;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.8);
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>ISS SERENITY AMBIENT</h1>
-        <p style="font-size: 12px; color: #818cf8;">Soft, low-frequency planetary soundscapes for deep relaxation.</p>
+        <h1>ISS ORBITAL AMBIENT</h1>
+        <p style="font-size: 12px; color: #c7d2fe;">Dynamic regional harmonic mapping & real-time telemetry synth.</p>
         
         <div class="stats">
             <div class="stat-box">Your Location<br><val id="userLoc">Locating...</val></div>
@@ -159,7 +159,7 @@
             <div class="waypoint-top">
                 <span>📍 Nearest Waypoint: <span id="waypointDisplay" style="color: #ffffff; font-weight: bold;">Scanning track...</span></span>
             </div>
-            <div id="harmonicStatus" class="harmonic-status">Harmonic Status: Deep Space Drift</div>
+            <div id="harmonicStatus" class="harmonic-status">Harmonic Status: Deep Space Void Cruise</div>
         </div>
 
         <div class="countdown-row">
@@ -173,7 +173,7 @@
 
         <div class="controls-row">
             <div>
-                <label for="baseScaleSelect" style="font-size: 12px;"><strong>Palette:</strong></label>
+                <label for="baseScaleSelect" style="font-size: 12px;"><strong>Default Palette:</strong></label>
                 <select id="baseScaleSelect" onchange="updateBasePalette(this.value)">
                     <option value="ethereal">Ethereal Drones</option>
                     <option value="deepspace" selected>Deep Space Sub-Bass</option>
@@ -181,23 +181,23 @@
                 </select>
             </div>
             <div>
-                <label for="waveSelect" style="font-size: 12px;"><strong>Wave Texture:</strong></label>
+                <label for="waveSelect" style="font-size: 12px;"><strong>Wave:</strong></label>
                 <select id="waveSelect" onchange="updateWaveType(this.value)">
-                    <option value="sine" selected>Sine (Warm & Soft)</option>
-                    <option value="triangle">Triangle (Mellow)</option>
+                    <option value="sine" selected>Sine (Soft)</option>
+                    <option value="triangle">Triangle (Warm)</option>
                     <option value="all">Soft Ensemble</option>
                 </select>
             </div>
             <div class="toggle-label">
-                <input type="checkbox" id="voiceToggle">
-                <strong>Voice Waypoints</strong>
+                <input type="checkbox" id="voiceToggle" checked>
+                <strong>Voice</strong>
             </div>
         </div>
 
-        <button id="playBtn" onclick="toggleAudio()">INITIALIZE PEACEFUL STREAM</button>
-        <div id="status">Ready for relaxation...</div>
+        <button id="playBtn" onclick="toggleAudio()">INITIALIZE AUDIO STREAM</button>
+        <div id="status">Contacting location and orbital services...</div>
 
-        <canvas id="visualizer" width="540" height="100"></canvas>
+        <canvas id="visualizer" width="540" height="120"></canvas>
     </div>
 
     <script>
@@ -217,34 +217,47 @@
 
         let audioCtx = null;
         let isPlaying = false;
-        let masterGain, filterNode, pannerNode, convolverNode, dryGain, wetGain, analyser;
+        let masterGain, filterNode, pannerNode, convolverNode, delayNode, dryGain, wetGain, analyser;
         let synthInterval = null;
 
         let lastAnnouncedCity = "";
         let announcementCooldown = 0;
         let selectedWaveType = "sine";
 
+        // Full 18-City Global Waypoint Scale Database
         const majorCities = [
-            { name: "Tokyo, Japan", lat: 35.6762, lon: 139.6503, scale: [98.00, 110.00, 130.81, 146.83, 196.00], flavor: "Insen Pentatonic (Relaxing)" },
-            { name: "New York City, United States", lat: 40.7128, lon: -74.0060, scale: [87.31, 110.00, 130.81, 164.81, 196.00], flavor: "Lydian Calm" },
-            { name: "Cairo, Egypt", lat: 30.0444, lon: 31.2357, scale: [87.31, 92.50, 110.00, 130.81, 138.59], flavor: "Warm Mystic Pad" },
-            { name: "Sydney, Australia", lat: -33.8688, lon: 151.2093, scale: [98.00, 146.83, 164.81, 196.00, 220.00], flavor: "Open Coastal Wave" },
-            { name: "Rio de Janeiro, Brazil", lat: -22.9068, lon: -43.1729, scale: [98.00, 123.47, 146.83, 185.00, 220.00], flavor: "Soft Latin Warmth" },
-            { name: "Paris, France", lat: 48.8566, lon: 2.3522, scale: [87.31, 130.81, 155.56, 196.00, 233.08], flavor: "Dorian Serenity" }
+            { name: "Tokyo, Japan", lat: 35.6762, lon: 139.6503, scale: [146.83, 164.81, 196.00, 220.00, 293.66], flavor: "Insen Pentatonic (East Asian)" },
+            { name: "New York City, United States", lat: 40.7128, lon: -74.0060, scale: [130.81, 164.81, 196.00, 246.94, 293.66], flavor: "Lydian Modern (Western)" },
+            { name: "Cairo, Egypt", lat: 30.0444, lon: 31.2357, scale: [130.81, 138.59, 164.81, 196.00, 207.65], flavor: "Hijaz Exotic (Middle Eastern)" },
+            { name: "Sydney, Australia", lat: -33.8688, lon: 151.2093, scale: [146.83, 220.00, 246.94, 293.66, 329.63], flavor: "Open Coast Modal" },
+            { name: "Rio de Janeiro, Brazil", lat: -22.9068, lon: -43.1729, scale: [146.83, 185.00, 220.00, 277.18, 329.63], flavor: "Harmonic Warmth (Latin)" },
+            { name: "Paris, France", lat: 48.8566, lon: 2.3522, scale: [130.81, 196.00, 233.08, 293.66, 349.23], flavor: "Dorian Cinematic (European)" },
+            { name: "Singapore", lat: 1.3521, lon: 103.8198, scale: [164.81, 196.00, 246.94, 293.66, 329.63], flavor: "Equatorial Luminous" },
+            { name: "Beijing, China", lat: 39.9042, lon: 116.4074, scale: [130.81, 146.83, 196.00, 220.00, 261.63], flavor: "Traditional Pentatonic" },
+            { name: "Dubai, United Arab Emirates", lat: 25.2048, lon: 55.2708, scale: [138.59, 164.81, 207.65, 246.94, 277.18], flavor: "Desert Mirage Mode" },
+            { name: "Reykjavik, Iceland", lat: 64.1466, lon: -21.9426, scale: [110.00, 123.47, 164.81, 196.00, 246.94], flavor: "Nordic Frost Drone" },
+            { name: "Honolulu, Hawaii", lat: 21.3069, lon: -157.8583, scale: [174.61, 220.00, 261.63, 329.63, 392.00], flavor: "Pacific Oceanic Major" },
+            { name: "Mumbai, India", lat: 19.0760, lon: 72.8777, scale: [130.81, 138.59, 174.61, 196.00, 233.08], flavor: "Raga Bhairav Mystical" },
+            { name: "Buenos Aires, Argentina", lat: -34.6037, lon: -58.3816, scale: [138.59, 164.81, 185.00, 220.00, 277.18], flavor: "Tango Melancholy Minor" },
+            { name: "Cape Town, South Africa", lat: -33.9249, lon: 18.4241, scale: [146.83, 174.61, 196.00, 233.08, 293.66], flavor: "Cape Horizon Open" },
+            { name: "London, United Kingdom", lat: 51.5074, lon: -0.1278, scale: [130.81, 146.83, 196.00, 233.08, 293.66], flavor: "Thames Fog Ambient" },
+            { name: "Los Angeles, United States", lat: 34.0522, lon: -118.2437, scale: [164.81, 196.00, 246.94, 293.66, 329.63], flavor: "West Coast Sunset" },
+            { name: "Nairobi, Kenya", lat: -1.2921, lon: 36.8219, scale: [130.81, 155.56, 196.00, 233.08, 261.63], flavor: "Savannah Pulsar" },
+            { name: "Bangkok, Thailand", lat: 13.7563, lon: 100.5018, scale: [146.83, 164.81, 185.00, 220.00, 293.66], flavor: "Monsoon Temple Scale" }
         ];
 
         const palettes = {
             ethereal: {
-                minor: [87.31, 130.81, 155.56, 196.00, 233.08, 261.63], 
-                major: [87.31, 110.00, 130.81, 164.81, 196.00, 220.00]  
+                minor: [130.81, 196.00, 233.08, 293.66, 349.23, 392.00], 
+                major: [130.81, 164.81, 196.00, 246.94, 293.66, 329.63]  
             },
             deepspace: {
-                minor: [55.00, 82.41, 98.00, 110.00, 130.81, 146.83], 
-                major: [55.00, 65.41, 82.41, 98.00, 110.00, 130.81]
+                minor: [65.41, 98.00, 116.54, 146.83, 174.61, 196.00], 
+                major: [65.41, 82.41, 98.00, 123.47, 146.83, 164.81]
             },
             cosmic: {
-                minor: [98.00, 146.83, 164.81, 196.00, 220.00, 293.66], 
-                major: [98.00, 123.47, 146.83, 185.00, 220.00, 246.94]
+                minor: [146.83, 220.00, 246.94, 293.66, 329.63, 440.00], 
+                major: [146.83, 185.00, 220.00, 277.18, 329.63, 370.00]
             }
         };
 
@@ -302,10 +315,10 @@
             if (!document.getElementById("voiceToggle").checked) return;
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
-                let utterance = new SpeechSynthesisUtterance(`Drifting near ${cityName}`);
-                utterance.rate = 0.75; 
-                utterance.pitch = 0.8;  
-                utterance.volume = 0.5;
+                let utterance = new SpeechSynthesisUtterance(`Passing over ${cityName}`);
+                utterance.rate = 0.8; 
+                utterance.pitch = 0.85;  
+                utterance.volume = 0.6;
                 window.speechSynthesis.speak(utterance);
             }
         }
@@ -327,21 +340,22 @@
             if (closestCity) {
                 document.getElementById("waypointDisplay").textContent = `${closestCity.name} (~${Math.round(minDistance)} km away)`;
 
+                // 1500km Continental Trigger Zone
                 if (minDistance <= 1500) {
                     isCityLocked = true;
-                    currentFrequencies = city.scale;
-                    statusElem.textContent = `☁️ GENTLE PASS: ${closestCity.flavor} (${closestCity.name})`;
-                    statusElem.style.color = "#38bdf8";
+                    currentFrequencies = closestCity.scale;
+                    statusElem.textContent = `✨ CONTINENTAL HARMONIC LOCK: ${closestCity.flavor} (${closestCity.name})`;
+                    statusElem.style.color = "#34d399";
 
                     if (closestCity.name !== lastAnnouncedCity && announcementCooldown <= 0) {
                         lastAnnouncedCity = closestCity.name;
-                        announcementCooldown = 300; 
+                        announcementCooldown = 240; 
                         speakWaypoint(closestCity.name);
                     }
                 } else {
                     isCityLocked = false;
-                    statusElem.textContent = `🌌 Deep Space Calm (Approaching ${closestCity.name} in ~${Math.round(minDistance)} km)`;
-                    statusElem.style.color = "#818cf8";
+                    statusElem.textContent = `🚀 Deep Space Void Cruise (Approaching ${closestCity.name} in ~${Math.round(minDistance)} km)`;
+                    statusElem.style.color = "#38bdf8";
                     applyVisibilityMode();
                 }
             }
@@ -375,11 +389,11 @@
                     let avgDelta = distanceDeltaHistory.reduce((a, b) => a + b, 0) / distanceDeltaHistory.length;
 
                     if (avgDelta < 0) {
-                        document.getElementById("proximityLabel").textContent = "Range Vector (Drifting Closer)";
-                        document.getElementById("proximityClock").textContent = `${Math.round(Math.abs(avgDelta))} km/s`;
+                        document.getElementById("proximityLabel").textContent = "Range Vector (Closing In)";
+                        document.getElementById("proximityClock").textContent = `${Math.round(Math.abs(avgDelta))} km/s trend`;
                     } else {
-                        document.getElementById("proximityLabel").textContent = "Range Vector (Drifting Further)";
-                        document.getElementById("proximityClock").textContent = `+${Math.round(avgDelta)} km/s`;
+                        document.getElementById("proximityLabel").textContent = "Range Vector (Moving Away)";
+                        document.getElementById("proximityClock").textContent = `+${Math.round(avgDelta)} km/s trend`;
                     }
 
                     document.getElementById("solarPointVal").textContent = `${solarLat.toFixed(1)}°, ${solarLon.toFixed(1)}°`;
@@ -391,13 +405,17 @@
                     document.getElementById("velVal").textContent = Math.round(issVelocity) + " km/h";
 
                     if (audioCtx) {
-                        // Very soft, relaxed reverb expansion based on footprint
-                        let footprintWetness = Math.min(0.9, 0.6 + (issFootprint / 15000));
-                        wetGain.gain.setTargetAtTime(footprintWetness, audioCtx.currentTime, 4.0);
-                        dryGain.gain.setTargetAtTime(0.3, audioCtx.currentTime, 4.0);
+                        // Dynamic spatial reverb expansion based on footprint
+                        let footprintWetness = Math.min(0.9, 0.5 + (issFootprint / 10000));
+                        wetGain.gain.setTargetAtTime(footprintWetness, audioCtx.currentTime, 3.0);
+                        dryGain.gain.setTargetAtTime(0.4, audioCtx.currentTime, 3.0);
 
-                        // Keep filter very dark and low so it never pierces or hurts ears
-                        filterNode.frequency.setTargetAtTime(550, audioCtx.currentTime, 3.0);
+                        // Dynamic filter breathing based on velocity & altitude (keeping it warm and safe for ears)
+                        let dynamicCutoff = 700 + ((issVelocity - 27000) * 0.8) + Math.sin(Date.now() / 4000) * 200;
+                        filterNode.frequency.setTargetAtTime(Math.max(400, Math.min(1500, dynamicCutoff)), audioCtx.currentTime, 2.0);
+
+                        let panValue = Math.sin(issFootprint) * 0.7;
+                        pannerNode.pan.setTargetAtTime(panValue, audioCtx.currentTime, 3.0);
                     }
                 }
             } catch (e) {
@@ -416,13 +434,13 @@
 
         function createReverbBuffer(audioContext) {
             const rate = audioContext.sampleRate;
-            const length = rate * 6.0; // Extra long, lush, calming tail
+            const length = rate * 5.5;
             const impulse = audioContext.createBuffer(2, length, rate);
             const left = impulse.getChannelData(0);
             const right = impulse.getChannelData(1);
 
             for (let i = 0; i < length; i++) {
-                let decay = Math.exp(-i / (rate * 1.8));
+                let decay = Math.exp(-i / (rate * 1.5));
                 left[i] = (Math.random() * 2 - 1) * decay;
                 right[i] = (Math.random() * 2 - 1) * decay;
             }
@@ -433,17 +451,27 @@
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
             masterGain = audioCtx.createGain();
-            masterGain.gain.value = 0.3; // Gentle overall volume
+            masterGain.gain.value = 0.35;
 
             analyser = audioCtx.createAnalyser();
             analyser.fftSize = 64;
-            analyser.smoothingTimeConstant = 0.9; // Smooth visual bars
+            analyser.smoothingTimeConstant = 0.85;
 
-            // Dark, warm lowpass filter to completely remove any harsh high frequencies
             filterNode = audioCtx.createBiquadFilter();
             filterNode.type = "lowpass";
-            filterNode.frequency.setValueAtTime(500, audioCtx.currentTime);
-            filterNode.Q.setValueAtTime(1.0, audioCtx.currentTime);
+            filterNode.frequency.setValueAtTime(800, audioCtx.currentTime);
+            filterNode.Q.setValueAtTime(2.0, audioCtx.currentTime);
+
+            // Space Echo Delay Line for lush bouncing trails
+            delayNode = audioCtx.createDelay(6.0);
+            delayNode.delayTime.value = 0.8;
+
+            let delayFeedback = audioCtx.createGain();
+            delayFeedback.gain.value = 0.35;
+
+            delayNode.connect(delayFeedback);
+            delayFeedback.connect(delayNode);
+            delayNode.connect(filterNode);
 
             pannerNode = audioCtx.createStereoPanner();
             pannerNode.pan.setValueAtTime(0, audioCtx.currentTime);
@@ -454,8 +482,8 @@
             dryGain = audioCtx.createGain();
             wetGain = audioCtx.createGain();
 
-            dryGain.gain.value = 0.3;
-            wetGain.gain.value = 0.7; // Immersive wash of reverb
+            dryGain.gain.value = 0.4;
+            wetGain.gain.value = 0.6;
 
             filterNode.connect(pannerNode);
             pannerNode.connect(dryGain);
@@ -467,30 +495,35 @@
             analyser.connect(audioCtx.destination);
         }
 
-        // Extremely slow, gentle, headache-free multi-note ambient pads
-        function playRelaxingPad() {
+        // Dynamic, evolving multi-note chord pads driven by orbital epoch data
+        function playOrbitalPad() {
             if (!isPlaying) return;
 
             let now = audioCtx.currentTime;
-            let duration = 12.0 + (Math.random() * 4.0); // Very long, slow notes
+            let duration = 10.0 + (Math.random() * 5.0);
 
             let noteGain = audioCtx.createGain();
             noteGain.gain.setValueAtTime(0, now);
-            noteGain.gain.linearRampToValueAtTime(0.08, now + 5.0); // 5-second slow fade in
-            noteGain.gain.linearRampToValueAtTime(0, now + duration); // 5+ second fade out
+            noteGain.gain.linearRampToValueAtTime(0.09, now + 4.0); // Gentle attack fade-in
+            noteGain.gain.linearRampToValueAtTime(0, now + duration); // Gentle release fade-out
 
-            // Pick root and a soothing fifth/fourth interval
+            // Stack harmonious chord intervals based on daily orbital progression
             let rootIndex = Math.floor((dayNum * 100000) + Math.random() * currentFrequencies.length) % currentFrequencies.length;
             let harmonyIndex = (rootIndex + 2) % currentFrequencies.length;
             let chordFreqs = [currentFrequencies[rootIndex], currentFrequencies[harmonyIndex]];
 
             chordFreqs.forEach((freq) => {
-                let waves = selectedWaveType === "all" ? ["sine", "triangle"] : [selectedWaveType];
-                
+                let waves = [];
+                if (selectedWaveType === "all") {
+                    waves = ["sine", "triangle"];
+                } else {
+                    waves = [selectedWaveType];
+                }
+
                 waves.forEach(wType => {
                     let osc = audioCtx.createOscillator();
                     let subGain = audioCtx.createGain();
-                    subGain.gain.value = 1.0 / waves.length;
+                    subGain.gain.value = 1.0 / (waves.length * chordFreqs.length);
 
                     osc.type = wType;
                     osc.frequency.setValueAtTime(freq, now);
@@ -504,6 +537,7 @@
             });
 
             noteGain.connect(filterNode);
+            noteGain.connect(delayNode);
         }
 
         function toggleAudio() {
@@ -516,17 +550,17 @@
                     audioCtx.resume();
                 }
                 isPlaying = true;
-                btn.textContent = "PAUSE STREAM";
-                status.textContent = "Serenity engine active. Breathe slow and relax.";
+                btn.textContent = "STOP SOUNDSCAPE";
+                status.textContent = "Orbital harmonic map & dynamic engine online.";
 
-                playRelaxingPad();
-                synthInterval = setInterval(playRelaxingPad, 7000); // Generous space between notes
+                playOrbitalPad();
+                synthInterval = setInterval(playOrbitalPad, 5500);
 
                 drawVisualizer();
             } else {
                 isPlaying = false;
                 clearInterval(synthInterval);
-                btn.textContent = "INITIALIZE PEACEFUL STREAM";
+                btn.textContent = "INITIALIZE AUDIO STREAM";
                 status.textContent = "Stream paused.";
             }
         }
@@ -542,25 +576,29 @@
             let dataArray = new Uint8Array(bufferLength);
             analyser.getByteFrequencyData(dataArray);
 
-            canvasCtx.fillStyle = "#02040a";
+            canvasCtx.fillStyle = "#030712";
             canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
 
-            const numBands = 20;
+            const numBands = 28;
             let totalBarWidth = canvas.width / numBands;
-            let barWidth = totalBarWidth - 4;
+            let barWidth = totalBarWidth - 3;
 
             for (let i = 0; i < numBands; i++) {
-                let dataIndex = Math.floor(Math.pow(i / numBands, 1.5) * (bufferLength / 2));
+                let dataIndex = Math.floor(Math.pow(i / numBands, 1.8) * (bufferLength / 2));
                 let barHeight = (dataArray[dataIndex] / 255) * canvas.height;
 
-                let x = i * totalBarWidth + 2;
+                let x = i * totalBarWidth + 1.5;
 
                 let gradient = canvasCtx.createLinearGradient(0, canvas.height, 0, 0);
-                gradient.addColorStop(0, "#1e1b4b");
+                gradient.addColorStop(0, "#312e81");
+                gradient.addColorStop(0.5, "#4f46e5");
                 gradient.addColorStop(1, "#38bdf8");
 
                 canvasCtx.fillStyle = gradient;
                 canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, Math.max(2, barHeight));
+
+                canvasCtx.fillStyle = "#ffffff";
+                canvasCtx.fillRect(x, canvas.height - barHeight - 2, barWidth, 2);
             }
         }
     </script>
