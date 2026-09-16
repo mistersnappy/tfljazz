@@ -144,7 +144,7 @@
 
     <div class="container">
         <h1>ISS ORBITAL AMBIENT</h1>
-        <p style="font-size: 12px; color: #c7d2fe;">Regional harmonic mapping & generative world drone synth.</p>
+        <p style="font-size: 12px; color: #c7d2fe;">Fully-integrated telemetry synth powered by real-time orbital physics.</p>
         
         <div class="stats">
             <div class="stat-box">Your Location<br><val id="userLoc">Locating...</val></div>
@@ -212,9 +212,11 @@
         let userLon = -0.1278;
         
         let issLat = 0.0, issLon = 0.0;
+        let solarLat = 0.0, solarLon = 0.0;
+        let dayNum = 0.0;
         let issDistKm = 5000;
         let prevDistKm = 5000;
-        let distanceDeltaHistory = []; // Rolling buffer for stable vector trend
+        let distanceDeltaHistory = [];
         let issVisibility = "eclipses";
         let issVelocity = 27600;
         let issAltitude = 415;
@@ -222,12 +224,12 @@
 
         let audioCtx = null;
         let isPlaying = false;
-        let masterGain, filterNode, pannerNode, convolverNode, dryGain, wetGain, analyser;
+        let masterGain, filterNode, pannerNode, convolverNode, dryGain, wetGain, analyser, solarNoiseGain;
         let synthInterval = null;
         let drumInterval = null;
         let drumsActive = true;
 
-        let solarPhaseTimestamp = Math.floor(Date.now() / 1000); // Accurate state change marker
+        let solarPhaseTimestamp = Math.floor(Date.now() / 1000);
         let lastAnnouncedCity = "";
         let announcementCooldown = 0;
         let selectedWaveType = "all";
@@ -378,10 +380,15 @@
                     issLat = parseFloat(data.latitude);
                     issLon = parseFloat(data.longitude);
                     
+                    // Capture unused solar coordinates and epoch daynum
+                    solarLat = parseFloat(data.solar_lat) || 0.0;
+                    solarLon = parseFloat(data.solar_lon) || 0.0;
+                    dayNum = parseFloat(data.daynum) || 0.0;
+
                     let newVisibility = data.visibility || "eclipses";
                     if (newVisibility !== issVisibility) {
                         issVisibility = newVisibility;
-                        solarPhaseTimestamp = Math.floor(Date.now() / 1000); // Reset timer precisely on true state change
+                        solarPhaseTimestamp = Math.floor(Date.now() / 1000);
                     }
 
                     issVelocity = parseFloat(data.velocity) || 27600;
@@ -391,7 +398,6 @@
                     issDistKm = calculateDistance(userLat, userLon, issLat, issLon);
                     checkWaypoints();
 
-                    // Calculate a smoothed running average trend of distance change
                     let sampleDelta = issDistKm - prevDistKm;
                     distanceDeltaHistory.push(sampleDelta);
                     if (distanceDeltaHistory.length > 3) distanceDeltaHistory.shift();
@@ -412,12 +418,21 @@
                     document.getElementById("velVal").textContent = Math.round(issVelocity) + " km/h";
 
                     if (audioCtx) {
-                        let wetness = Math.min(1.0, issDistKm / 15000);
-                        wetGain.gain.setTargetAtTime(wetness * 0.8, audioCtx.currentTime, 2.0);
-                        dryGain.gain.setTargetAtTime((1.0 - (wetness * 0.5)) * 0.4, audioCtx.currentTime, 2.0);
+                        // 1. Map Footprint to Reverb Convolver Room Size / Wetness expansion
+                        let footprintWetness = Math.min(1.0, issFootprint / 5000);
+                        wetGain.gain.setTargetAtTime(footprintWetness * 0.9, audioCtx.currentTime, 3.0);
+                        dryGain.gain.setTargetAtTime((1.0 - (footprintWetness * 0.4)) * 0.4, audioCtx.currentTime, 3.0);
 
-                        let mappedQ = 1.0 + ((issAltitude - 390) / 40) * 6.0;
-                        filterNode.Q.setTargetAtTime(Math.max(1.0, Math.min(8.0, mappedQ)), audioCtx.currentTime, 2.0);
+                        // 2. Map Sub-Solar distance to Cosmic Solar Wind Noise Wash
+                        let solarDist = calculateDistance(issLat, issLon, solarLat, solarLon);
+                        let noiseMix = Math.max(0.01, Math.min(0.08, 1.0 - (solarDist / 10000)));
+                        if (solarNoiseGain) {
+                            solarNoiseGain.gain.setTargetAtTime(noiseMix, audioCtx.currentTime, 4.0);
+                        }
+
+                        // 3. Map Altitude & Velocity anomaly to Filter Resonance & Q
+                        let mappedQ = 1.0 + ((issAltitude - 390) / 40) * 6.0 + ((issVelocity - 27600) * 0.001);
+                        filterNode.Q.setTargetAtTime(Math.max(1.0, Math.min(9.0, mappedQ)), audioCtx.currentTime, 2.0);
 
                         let panValue = Math.sin(issFootprint) * 0.7;
                         pannerNode.pan.setTargetAtTime(panValue, audioCtx.currentTime, 3.0);
@@ -428,7 +443,6 @@
             }
         }
 
-        // Real-time UI ticker based on actual transition anchors
         setInterval(() => {
             if (announcementCooldown > 0) announcementCooldown--;
 
@@ -445,17 +459,28 @@
 
         function createReverbBuffer(audioContext) {
             const rate = audioContext.sampleRate;
-            const length = rate * 4.5;
+            const length = rate * 5.0;
             const impulse = audioContext.createBuffer(2, length, rate);
             const left = impulse.getChannelData(0);
             const right = impulse.getChannelData(1);
 
             for (let i = 0; i < length; i++) {
-                let decay = Math.exp(-i / (rate * 1.2));
+                let decay = Math.exp(-i / (rate * 1.4));
                 left[i] = (Math.random() * 2 - 1) * decay;
                 right[i] = (Math.random() * 2 - 1) * decay;
             }
             return impulse;
+        }
+
+        function createCosmicNoiseBuffer(audioContext) {
+            const rate = audioContext.sampleRate;
+            const length = rate * 2;
+            const buffer = audioContext.createBuffer(1, length, rate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < length; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+            return buffer;
         }
 
         function initAudio() {
@@ -482,9 +507,26 @@
             dryGain = audioCtx.createGain();
             wetGain = audioCtx.createGain();
 
-            let initialWet = Math.min(1.0, issDistKm / 15000);
-            wetGain.gain.value = initialWet * 0.8;
-            dryGain.gain.value = (1.0 - (initialWet * 0.5)) * 0.4;
+            wetGain.gain.value = 0.5;
+            dryGain.gain.value = 0.4;
+
+            // Cosmic Solar Wind Noise Generator (driven by sub-solar point)
+            let noiseSource = audioCtx.createBufferSource();
+            noiseSource.buffer = createCosmicNoiseBuffer(audioCtx);
+            noiseSource.loop = true;
+
+            let noiseFilter = audioCtx.createBiquadFilter();
+            noiseFilter.type = "bandpass";
+            noiseFilter.frequency.value = 800;
+            noiseFilter.Q.value = 3.0;
+
+            solarNoiseGain = audioCtx.createGain();
+            solarNoiseGain.gain.value = 0.02;
+
+            noiseSource.connect(noiseFilter);
+            noiseFilter.connect(solarNoiseGain);
+            solarNoiseGain.connect(convolverNode); // Send noise straight into reverb space
+            noiseSource.start();
 
             filterNode.connect(pannerNode);
             pannerNode.connect(dryGain);
@@ -552,7 +594,10 @@
         function playRandomDrone() {
             if (!isPlaying) return;
 
-            let freq = currentFrequencies[Math.floor(Math.random() * currentFrequencies.length)];
+            // Use the fractional epoch dayNum to seed subtle micro-variations in drone timing and frequency offsets
+            let seedIndex = Math.floor((dayNum * 100000) + Math.random() * currentFrequencies.length) % currentFrequencies.length;
+            let freq = currentFrequencies[seedIndex];
+            
             let now = audioCtx.currentTime;
             let duration = 8.0 + (Math.random() * 6.0);
 
@@ -602,7 +647,7 @@
                 }
                 isPlaying = true;
                 btn.textContent = "STOP SOUNDSCAPE";
-                status.textContent = "Orbital ambient & regional harmonic engine online.";
+                status.textContent = "Orbital ambient & physics-driven harmonic engine online.";
 
                 playRandomDrone();
                 synthInterval = setInterval(playRandomDrone, 4500);
