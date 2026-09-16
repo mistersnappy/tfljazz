@@ -358,7 +358,8 @@
             if (closestCity) {
                 document.getElementById("waypointDisplay").textContent = `${closestCity.name} (~${Math.round(minDistance)} km away)`;
 
-                if (minDistance <= 1000) {
+                // Expanded radius threshold set to 1500 km
+                if (minDistance <= 1500) {
                     isCityLocked = true;
                     currentFrequencies = closestCity.scale;
                     statusElem.textContent = `✨ CONTINENTAL HARMONIC LOCK: ${closestCity.flavor} (${closestCity.name})`;
@@ -366,7 +367,7 @@
 
                     if (closestCity.name !== lastAnnouncedCity && announcementCooldown <= 0) {
                         lastAnnouncedCity = closestCity.name;
-                        announcementCooldown = 180; 
+                        announcementCooldown = 240; // Cooldown adjusted for a wider 1500km zone
                         speakWaypoint(closestCity.name);
                     }
                 } else {
@@ -499,13 +500,11 @@
             analyser.connect(audioCtx.destination);
         }
 
-        // Evolving Percussion & Sub Pulse Engine (Replacing the noise hiss)
         function playEvolvingBeat(step) {
             if (!isPlaying || !drumsActive) return;
 
             let now = audioCtx.currentTime;
 
-            // 1. Sub-Bass Kick on specific beat steps
             if (step % 4 === 0 || (step % 8 === 6 && issVelocity > 27550)) {
                 let osc = audioCtx.createOscillator();
                 let kickGain = audioCtx.createGain();
@@ -530,12 +529,10 @@
                 osc.stop(now + duration + 0.05);
             }
 
-            // 2. Evolving Cosmic Pulsar / Metallic Click (replaces background hiss)
             if (step % 2 !== 0 || step % 8 === 2) {
                 let clickOsc = audioCtx.createOscillator();
                 let clickGain = audioCtx.createGain();
                 
-                // Frequency shifts dynamically based on current day number and orbit velocity
                 let pulsarFreq = 440 + ((dayNum * 1000) % 600) + ((issVelocity - 27000) * 0.1);
                 clickOsc.type = "triangle";
                 clickOsc.frequency.setValueAtTime(pulsarFreq, now);
@@ -545,7 +542,7 @@
                 clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
 
                 clickOsc.connect(clickGain);
-                clickGain.connect(convolverNode); // Echoes through the orbital reverb space
+                clickGain.connect(convolverNode);
 
                 clickOsc.start(now);
                 clickOsc.stop(now + 0.09);
