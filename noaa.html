@@ -380,7 +380,6 @@
                     issLat = parseFloat(data.latitude);
                     issLon = parseFloat(data.longitude);
                     
-                    // Capture unused solar coordinates and epoch daynum
                     solarLat = parseFloat(data.solar_lat) || 0.0;
                     solarLon = parseFloat(data.solar_lon) || 0.0;
                     dayNum = parseFloat(data.daynum) || 0.0;
@@ -418,19 +417,16 @@
                     document.getElementById("velVal").textContent = Math.round(issVelocity) + " km/h";
 
                     if (audioCtx) {
-                        // 1. Map Footprint to Reverb Convolver Room Size / Wetness expansion
                         let footprintWetness = Math.min(1.0, issFootprint / 5000);
                         wetGain.gain.setTargetAtTime(footprintWetness * 0.9, audioCtx.currentTime, 3.0);
                         dryGain.gain.setTargetAtTime((1.0 - (footprintWetness * 0.4)) * 0.4, audioCtx.currentTime, 3.0);
 
-                        // 2. Map Sub-Solar distance to Cosmic Solar Wind Noise Wash
                         let solarDist = calculateDistance(issLat, issLon, solarLat, solarLon);
                         let noiseMix = Math.max(0.01, Math.min(0.08, 1.0 - (solarDist / 10000)));
                         if (solarNoiseGain) {
                             solarNoiseGain.gain.setTargetAtTime(noiseMix, audioCtx.currentTime, 4.0);
                         }
 
-                        // 3. Map Altitude & Velocity anomaly to Filter Resonance & Q
                         let mappedQ = 1.0 + ((issAltitude - 390) / 40) * 6.0 + ((issVelocity - 27600) * 0.001);
                         filterNode.Q.setTargetAtTime(Math.max(1.0, Math.min(9.0, mappedQ)), audioCtx.currentTime, 2.0);
 
@@ -490,8 +486,8 @@
             masterGain.gain.value = 0.35;
 
             analyser = audioCtx.createAnalyser();
-            analyser.fftSize = 128;
-            analyser.smoothingTimeConstant = 0.8;
+            analyser.fftSize = 64; // Smaller FFT size so fewer bins represent the spectrum explicitly
+            analyser.smoothingTimeConstant = 0.85;
 
             filterNode = audioCtx.createBiquadFilter();
             filterNode.type = "lowpass";
@@ -510,7 +506,6 @@
             wetGain.gain.value = 0.5;
             dryGain.gain.value = 0.4;
 
-            // Cosmic Solar Wind Noise Generator (driven by sub-solar point)
             let noiseSource = audioCtx.createBufferSource();
             noiseSource.buffer = createCosmicNoiseBuffer(audioCtx);
             noiseSource.loop = true;
@@ -525,7 +520,7 @@
 
             noiseSource.connect(noiseFilter);
             noiseFilter.connect(solarNoiseGain);
-            solarNoiseGain.connect(convolverNode); // Send noise straight into reverb space
+            solarNoiseGain.connect(convolverNode);
             noiseSource.start();
 
             filterNode.connect(pannerNode);
@@ -594,7 +589,6 @@
         function playRandomDrone() {
             if (!isPlaying) return;
 
-            // Use the fractional epoch dayNum to seed subtle micro-variations in drone timing and frequency offsets
             let seedIndex = Math.floor((dayNum * 100000) + Math.random() * currentFrequencies.length) % currentFrequencies.length;
             let freq = currentFrequencies[seedIndex];
             
@@ -677,11 +671,18 @@
             canvasCtx.fillStyle = "#030712";
             canvasCtx.fillRect(0, 0, canvas.width, canvas.height);
 
-            let barWidth = (canvas.width / bufferLength) * 1.3;
-            let x = 0;
+            // We define a fixed number of equalizer columns (e.g., 28 bands) 
+            // and map them across the canvas to look like a hardware graphic EQ display
+            const numBands = 28;
+            let totalBarWidth = canvas.width / numBands;
+            let barWidth = totalBarWidth - 3; // Gap between bars
 
-            for (let i = 0; i < bufferLength; i++) {
-                let barHeight = (dataArray[i] / 255) * canvas.height;
+            for (let i = 0; i < numBands; i++) {
+                // Logarithmic mapping index so lower-end bins stretch out across the EQ display
+                let dataIndex = Math.floor(Math.pow(i / numBands, 1.8) * (bufferLength / 2));
+                let barHeight = (dataArray[dataIndex] / 255) * canvas.height;
+
+                let x = i * totalBarWidth + 1.5;
 
                 let gradient = canvasCtx.createLinearGradient(0, canvas.height, 0, 0);
                 gradient.addColorStop(0, "#312e81");
@@ -689,12 +690,11 @@
                 gradient.addColorStop(1, "#38bdf8");
 
                 canvasCtx.fillStyle = gradient;
-                canvasCtx.fillRect(x, canvas.height - barHeight, barWidth - 1, barHeight);
+                canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, Math.max(2, barHeight));
 
+                // Peak indicator cap
                 canvasCtx.fillStyle = "#ffffff";
-                canvasCtx.fillRect(x, canvas.height - barHeight - 2, barWidth - 1, 2);
-
-                x += barWidth + 1;
+                canvasCtx.fillRect(x, canvas.height - barHeight - 2, barWidth, 2);
             }
         }
     </script>
